@@ -97,21 +97,17 @@ l'utilisateur le demande, en plus de l'écrire dans `migrations/`.
   columns to `payments`, plus a partial unique index on `order_id` (used
   by the webhook for idempotent lookup). Old SoleasPay columns
   (`reference`, etc.) are kept for historical rows.
-- `006_multi_provider.sql` — multi-provider support: adds `provider smallint`
-  column to `orders` and `earnings` (default 1, check IN (1,2,3)), drops the
-  old single-column unique index on `earnings.provider_order_id` and recreates
-  it as a composite `(provider, provider_order_id)` so two SMM panels can
-  legitimately return the same numeric order id; creates the new
-  `smm_providers_config` table (one row per provider 1/2/3 with display_order,
-  enabled, header_title, header_text) with public-read RLS. The API server
-  expects all three changes; until applied, multi-provider features fall back
-  to provider 1 only and the admin "providers" tab uses in-memory defaults.
-  - **Provider 4 (Peakerr)**: the code accepts provider id 4 everywhere and
-    requires `SMM_PANEL_4_API_URL` + `SMM_PANEL_4_API_KEY` secrets. The
-    matching `smm_providers_config` row must be inserted manually (the
-    schema check on `provider IN (1,2,3,4)` is added implicitly by the
-    code; if your existing CHECK constraint hard-codes 1/2/3, drop and
-    recreate it before inserting the row).
+- `006_realtime_orders.sql` — enable Supabase Realtime publication for the
+  `orders` table so the UI receives live INSERT/UPDATE events without polling.
+- `007_multi_provider.sql` — multi-provider support: adds `provider integer`
+  column (default 1) to both `orders` and `earnings`; creates the
+  `smm_providers_config` table (one row per provider 1–4 with `display_order`,
+  `enabled`, `header_title`, `header_text`) seeded with defaults. Apply this
+  before using the admin "Providers" tab or any provider 2/3/4 features.
+- `008_afribapay.sql` — AfribaPay columns on `payments`: adds `operator`,
+  `country`, `phone_number`, `currency`, `transaction_id`, `order_id` for
+  Mobile Money tracking and webhook reconciliation. Apply before accepting
+  AfribaPay deposits.
 
 ## SMM provider integration (Peakerr-aware)
 
