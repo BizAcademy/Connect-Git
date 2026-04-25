@@ -214,8 +214,10 @@ router.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req: A
     const existing = await readEarnings();
     // Composite key: two providers can legitimately return the same numeric
     // order id, so dedup must be scoped on (provider, provider_order_id).
-    const seenKey = (provider: number | null | undefined, orderId: string) =>
-      `${provider === 2 || provider === 3 ? provider : 1}::${orderId}`;
+    const seenKey = (provider: number | null | undefined, orderId: string) => {
+      const p = provider === 2 || provider === 3 || provider === 4 ? provider : 1;
+      return `${p}::${orderId}`;
+    };
     const seen = new Set(existing.map((r) => seenKey(r.provider, r.provider_order_id)));
 
     // -----------------------------------------------------------------
@@ -238,7 +240,7 @@ router.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req: A
         const { provider_cost_fcfa, gain_fcfa } = estimateGainFromRevenue(r.user_price_fcfa);
         if (gain_fcfa === 0) continue;
         try {
-          const recProvider = r.provider === 2 || r.provider === 3 ? r.provider : 1;
+          const recProvider = r.provider === 2 || r.provider === 3 || r.provider === 4 ? r.provider : 1;
           const patch = await fetch(
             `${SUPABASE_URL}/rest/v1/earnings?provider_order_id=eq.${encodeURIComponent(r.provider_order_id)}&provider=eq.${recProvider}`,
             {
@@ -306,7 +308,7 @@ router.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req: A
       // have happened either) — including them would inflate revenue from
       // potentially client-fabricated rows.
       if (!o.external_order_id) { skipped_no_external_id++; continue; }
-      const key = String(o.external_order_id);
+      const key = seenKey(o.provider, String(o.external_order_id));
       if (seen.has(key)) { skipped++; continue; }
       const userPrice = Number(o.price) || 0;
       const { provider_cost_fcfa, gain_fcfa } = estimateGainFromRevenue(userPrice);
@@ -315,7 +317,7 @@ router.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req: A
         // to the right SMM provider (1, 2, or 3). Legacy rows where the
         // column is NULL default to provider 1, which matches the schema
         // default applied by the SQL migration.
-        const orderProvider = (o.provider === 2 || o.provider === 3) ? o.provider : 1;
+        const orderProvider = (o.provider === 2 || o.provider === 3 || o.provider === 4) ? o.provider : 1;
         await appendEarning({
           ts: o.created_at,
           provider_order_id: key,
@@ -454,8 +456,8 @@ router.get("/admin/providers", requireUser, requireAdmin, async (_req, res) => {
 // (server-side) so the UI never has to coordinate two writes.
 router.put("/admin/providers/:id", requireUser, requireAdmin, async (req: AuthedRequest, res) => {
   const id = Number(req.params["id"]);
-  if (id !== 1 && id !== 2 && id !== 3) {
-    return res.status(400).json({ error: "provider id invalide (1, 2 ou 3)" });
+  if (id !== 1 && id !== 2 && id !== 3 && id !== 4) {
+    return res.status(400).json({ error: "provider id invalide (1, 2, 3 ou 4)" });
   }
   const b = (req.body || {}) as Record<string, unknown>;
   type ProviderPatch = Partial<{
