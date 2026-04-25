@@ -1,5 +1,9 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startSupportCleanup } from "./lib/support";
+import { purgeSensitiveSettingRows } from "./lib/settings-cleanup";
+import { startOrderStatusPoller } from "./lib/order-status-poller";
+import { syncOrderInternal } from "./routes/smm";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +26,16 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  startSupportCleanup();
+  void purgeSensitiveSettingRows();
+  // Background poller: pushes provider status updates onto local orders so
+  // user/admin views always reflect "Terminée" without depending on someone
+  // having the page open. Realtime then propagates the change to any
+  // connected client instantly.
+  startOrderStatusPoller(async (externalId, providerId) => {
+    const r = await syncOrderInternal({ externalId, providerId });
+    return r.ok
+      ? { ok: true, status: r.status, refunded: r.refunded }
+      : { ok: false };
+  });
 });
