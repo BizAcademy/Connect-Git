@@ -263,14 +263,14 @@ const Auth = () => {
     );
   }
 
-  // ─── SIGNUP (Growfollows-inspired) ──────────────────────────────────────────
+  // ─── SIGNUP (Growfollows-inspired, blue & green palette) ───────────────────
   return (
-    <div className="min-h-screen bg-[#07070f] flex flex-col">
+    <div className="min-h-screen bg-[#050d12] flex flex-col">
       {/* Topbar */}
-      <header className="flex items-center justify-between px-8 py-4 bg-[#0d0d1e]/80 backdrop-blur border-b border-white/5">
+      <header className="flex items-center justify-between px-8 py-4 bg-[#071520]/80 backdrop-blur border-b border-white/5">
         <span className="text-xl font-bold tracking-tight">
-          <span className="text-orange-400">BUZZ</span>{" "}
-          <span className="text-purple-400">BOOST</span>
+          <span className="text-orange-500">BUZZ</span>{" "}
+          <span className="text-blue-400">BOOST</span>
         </span>
         <div className="flex items-center gap-4">
           <button
@@ -281,7 +281,7 @@ const Auth = () => {
           </button>
           <button
             onClick={() => setTab("signup")}
-            className="text-sm font-semibold text-white border border-purple-500 rounded-full px-4 py-1.5 hover:bg-purple-500/20 transition"
+            className="text-sm font-semibold text-white border border-blue-500 rounded-full px-4 py-1.5 hover:bg-blue-500/20 transition"
           >
             S'inscrire
           </button>
@@ -295,16 +295,16 @@ const Auth = () => {
           {/* Left — Text + Form */}
           <div>
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 border border-purple-500/40 rounded-full px-4 py-1.5 mb-6 bg-purple-500/10">
-              <span className="text-purple-400 text-xs">✦</span>
-              <span className="text-purple-300 text-xs font-semibold tracking-wide">BUZZ BOOST — #1 en Afrique</span>
+            <div className="inline-flex items-center gap-2 border border-blue-500/40 rounded-full px-4 py-1.5 mb-6 bg-blue-500/10">
+              <span className="text-green-400 text-xs">✦</span>
+              <span className="text-blue-300 text-xs font-semibold tracking-wide">BUZZ BOOST — #1 en Afrique</span>
             </div>
 
             <h2 className="text-4xl font-extrabold leading-tight mb-2">
               <span className="text-white">Boostez</span>
             </h2>
             <h2 className="text-4xl font-extrabold leading-tight mb-5">
-              <span className="bg-gradient-to-r from-orange-400 to-purple-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent">
                 Votre Présence
               </span>
             </h2>
@@ -316,7 +316,7 @@ const Auth = () => {
             </p>
 
             <div className="flex items-center gap-2 mb-8 text-sm text-gray-400">
-              <Clock size={14} className="text-orange-400" />
+              <Clock size={14} className="text-green-400" />
               <span>Des milliers de commandes traitées avec succès</span>
             </div>
 
@@ -331,7 +331,7 @@ const Auth = () => {
                     onChange={e => setUsername(e.target.value)}
                     required
                     placeholder="Nom d'utilisateur"
-                    className="w-full pl-9 pr-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    className="w-full pl-9 pr-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                 </div>
                 <div className="relative">
@@ -342,7 +342,7 @@ const Auth = () => {
                     onChange={e => setSignupEmail(e.target.value)}
                     required
                     placeholder="Email"
-                    className="w-full pl-9 pr-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    className="w-full pl-9 pr-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                 </div>
               </div>
@@ -357,7 +357,7 @@ const Auth = () => {
                     required
                     minLength={6}
                     placeholder="Mot de passe"
-                    className="w-full pl-9 pr-10 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    className="w-full pl-9 pr-10 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                   <button
                     type="button"
@@ -375,7 +375,7 @@ const Auth = () => {
                     onChange={e => setConfirmPassword(e.target.value)}
                     required
                     placeholder="Confirmer"
-                    className="w-full pl-9 pr-10 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    className="w-full pl-9 pr-10 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                   <button
                     type="button"
@@ -392,11 +392,11 @@ const Auth = () => {
                   type="checkbox"
                   checked={acceptPrivacy}
                   onChange={e => setAcceptPrivacy(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 accent-purple-500 cursor-pointer"
+                  className="mt-0.5 h-4 w-4 accent-blue-500 cursor-pointer"
                 />
                 <span className="text-xs text-gray-400 leading-snug">
                   J'accepte la{" "}
-                  <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-purple-400 underline hover:text-purple-300">
+                  <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">
                     politique de confidentialité
                   </a>{" "}
                   de BUZZ BOOST.
@@ -406,7 +406,7 @@ const Auth = () => {
               <button
                 type="submit"
                 disabled={loading || !acceptPrivacy}
-                className="w-full py-3 rounded-full bg-gradient-to-r from-orange-500 to-purple-600 text-white font-bold text-sm hover:from-orange-400 hover:to-purple-500 transition disabled:opacity-40 shadow-lg shadow-purple-900/40"
+                className="w-full py-3 rounded-full bg-gradient-to-r from-blue-600 to-green-500 text-white font-bold text-sm hover:from-blue-500 hover:to-green-400 transition disabled:opacity-40 shadow-lg shadow-blue-900/40"
               >
                 {loading ? "Création du compte…" : "Créer mon compte"}
               </button>
@@ -417,7 +417,7 @@ const Auth = () => {
               <button
                 type="button"
                 onClick={() => setTab("login")}
-                className="text-orange-400 font-semibold hover:underline"
+                className="text-blue-400 font-semibold hover:underline"
               >
                 Se connecter
               </button>
@@ -427,9 +427,9 @@ const Auth = () => {
           {/* Right — Dark decorative panel */}
           <div className="hidden lg:flex items-center justify-center">
             <div className="relative w-80 h-96">
-              {/* Glowing orb */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 rounded-full bg-purple-600/20 blur-3xl" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl" />
+              {/* Glowing orbs */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 rounded-full bg-blue-600/20 blur-3xl" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full bg-green-500/20 blur-2xl" />
 
               {/* Center card */}
               <div className="absolute inset-0 flex items-center justify-center">
@@ -450,11 +450,11 @@ const Auth = () => {
 
               {/* Floating stat cards */}
               <div className="absolute -top-2 -right-4 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white shadow-lg backdrop-blur-sm">
-                <p className="font-bold text-orange-400 text-lg">10K+</p>
+                <p className="font-bold text-blue-400 text-lg">10K+</p>
                 <p className="text-gray-400">Utilisateurs actifs</p>
               </div>
               <div className="absolute -bottom-2 -left-4 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white shadow-lg backdrop-blur-sm">
-                <p className="font-bold text-purple-400 text-lg">1M+</p>
+                <p className="font-bold text-green-400 text-lg">1M+</p>
                 <p className="text-gray-400">Commandes livrées</p>
               </div>
             </div>
@@ -463,7 +463,7 @@ const Auth = () => {
       </div>
 
       {/* Bottom social bar */}
-      <div className="border-t border-white/5 bg-[#0d0d1e]/60 backdrop-blur py-3">
+      <div className="border-t border-white/5 bg-[#071520]/60 backdrop-blur py-3">
         <div className="flex items-center justify-center gap-6 text-xs text-gray-600">
           {["Facebook", "Instagram", "Twitter (X)", "YouTube", "TikTok", "Telegram"].map((s) => (
             <span key={s} className="hover:text-gray-400 cursor-pointer transition">{s}</span>
