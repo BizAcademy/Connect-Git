@@ -469,8 +469,8 @@ router.put("/admin/providers/:id", requireUser, requireAdmin, async (req: Authed
   const patch: ProviderPatch = {};
   if (b["display_order"] !== undefined && b["display_order"] !== null && b["display_order"] !== "") {
     const n = Number(b["display_order"]);
-    if (!Number.isFinite(n) || (n !== 1 && n !== 2 && n !== 3)) {
-      return res.status(400).json({ error: "display_order invalide (1, 2 ou 3)" });
+    if (!Number.isFinite(n) || (n !== 1 && n !== 2 && n !== 3 && n !== 4)) {
+      return res.status(400).json({ error: "display_order invalide (1, 2, 3 ou 4)" });
     }
     patch.display_order = n;
   }
