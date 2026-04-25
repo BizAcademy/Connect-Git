@@ -2046,7 +2046,8 @@ const AdminProvidersConfig = ({ onChanged }: { onChanged?: () => void }) => {
                   >
                     <option value="1">1 (premier)</option>
                     <option value="2">2</option>
-                    <option value="3">3 (dernier)</option>
+                    <option value="3">3</option>
+                    <option value="4">4 (dernier)</option>
                   </select>
                 </div>
                 <p className="text-[11px] text-muted-foreground -mt-1">
