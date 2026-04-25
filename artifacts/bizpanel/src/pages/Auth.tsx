@@ -1,20 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, User, Lock, Mail, CheckCircle2, Zap, Shield, Clock } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [tab, setTab] = useState("login");
+  const [tab, setTab] = useState<"login" | "signup">("login");
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -32,16 +27,8 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
-    if (error) {
-      setLoading(false);
-      toast.error(error.message);
-      return;
-    }
-    // Vérifier si l'utilisateur est admin
-    const { data: isAdmin } = await supabase.rpc("has_role", {
-      _user_id: data.user.id,
-      _role: "admin",
-    });
+    if (error) { setLoading(false); toast.error(error.message); return; }
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: data.user.id, _role: "admin" });
     setLoading(false);
     toast.success("Connexion réussie !");
     navigate(isAdmin ? "/admin" : "/dashboard");
@@ -73,111 +60,416 @@ const Auth = () => {
     else { toast.success("Email de récupération envoyé !"); setShowForgot(false); }
   };
 
+  // ─── FORGOT PASSWORD ────────────────────────────────────────────────────────
   if (showForgot) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="font-heading text-2xl">
-              <span className="text-primary">BUZZ</span> <span className="text-accent">BOOST</span>
-            </CardTitle>
-            <CardDescription>Récupération du mot de passe</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleForgotPassword} className="space-y-4">
-              <div>
-                <Label htmlFor="forgot-email">Email</Label>
-                <Input id="forgot-email" type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} required placeholder="votre@email.com" />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>{loading ? "Envoi..." : "Envoyer le lien"}</Button>
-              <Button type="button" variant="ghost" className="w-full" onClick={() => setShowForgot(false)}>Retour à la connexion</Button>
-            </form>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-[#f0f0f0] flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold">
+              <span className="text-orange-500">BUZZ</span>{" "}
+              <span className="text-blue-600">BOOST</span>
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">Récupération du mot de passe</p>
+          </div>
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input
+                type="email"
+                value={forgotEmail}
+                onChange={e => setForgotEmail(e.target.value)}
+                required
+                placeholder="votre@email.com"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-gray-900 text-white font-semibold text-sm hover:bg-gray-800 transition disabled:opacity-60"
+            >
+              {loading ? "Envoi en cours…" : "Envoyer le lien"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForgot(false)}
+              className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 transition"
+            >
+              ← Retour à la connexion
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="font-heading text-2xl">
-            <span className="text-primary">BUZZ</span> <span className="text-accent">BOOST</span>
-          </CardTitle>
-          <CardDescription>Plateforme SMM de référence en Afrique</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Connexion</TabsTrigger>
-              <TabsTrigger value="signup">Inscription</TabsTrigger>
-            </TabsList>
+  // ─── LOGIN (Peakerr-inspired) ────────────────────────────────────────────────
+  if (tab === "login") {
+    return (
+      <div className="min-h-screen bg-[#ebebeb] flex flex-col">
+        {/* Topbar */}
+        <header className="flex items-center justify-between px-8 py-4 bg-white shadow-sm">
+          <span className="text-xl font-bold tracking-tight">
+            <span className="text-orange-500">BUZZ</span>{" "}
+            <span className="text-blue-600">BOOST</span>
+          </span>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setTab("login")}
+              className="text-sm font-semibold text-gray-800 border-b-2 border-orange-500 pb-0.5"
+            >
+              Se connecter
+            </button>
+            <button
+              onClick={() => setTab("signup")}
+              className="text-sm font-semibold text-gray-400 hover:text-gray-700 transition"
+            >
+              S'inscrire
+            </button>
+          </div>
+        </header>
 
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4 mt-4">
-                <div>
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input id="login-email" type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} required placeholder="votre@email.com" />
-                </div>
-                <div>
-                  <Label htmlFor="login-password">Mot de passe</Label>
-                  <div className="relative">
-                    <Input id="login-password" type={showPassword ? "text" : "password"} value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
-                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>{loading ? "Connexion..." : "Se connecter"}</Button>
-                <button type="button" className="text-sm text-primary hover:underline w-full text-center" onClick={() => setShowForgot(true)}>Mot de passe oublié ?</button>
-              </form>
-            </TabsContent>
+        {/* Hero */}
+        <div className="flex flex-1 items-center">
+          <div className="max-w-6xl mx-auto w-full px-6 py-12 grid lg:grid-cols-2 gap-12 items-center">
 
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4 mt-4">
-                <div>
-                  <Label htmlFor="signup-email">Adresse e-mail</Label>
-                  <Input id="signup-email" type="email" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} required placeholder="votre@email.com" />
-                </div>
-                <div>
-                  <Label htmlFor="username">Nom d'utilisateur</Label>
-                  <Input id="username" value={username} onChange={e => setUsername(e.target.value)} required placeholder="bizuser123" />
-                </div>
-                <div>
-                  <Label htmlFor="signup-password">Mot de passe</Label>
+            {/* Left — Text + Form */}
+            <div>
+              <h2 className="text-4xl font-extrabold text-gray-900 leading-tight mb-2">
+                Plateforme SMM
+              </h2>
+              <p className="text-lg font-semibold text-gray-700 mb-4">
+                N°1 la plus rapide & la moins chère pour l'Afrique francophone
+              </p>
+              <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+                BUZZ BOOST est la meilleure plateforme SMM pour booster votre présence sociale.
+                Obtenez des abonnés Instagram, TikTok, Facebook et YouTube — sans carte bancaire.
+                Service rapide, sécurisé et sans mot de passe.
+              </p>
+
+              <div className="flex flex-wrap gap-3 mb-8">
+                {[
+                  { icon: <CheckCircle2 size={14} />, label: "Politique de remboursement 100%" },
+                  { icon: <Zap size={14} />, label: "Livraison instantanée" },
+                  { icon: <Shield size={14} />, label: "Paiement sécurisé" },
+                ].map((item) => (
+                  <span key={item.label} className="flex items-center gap-1.5 text-xs bg-white border border-gray-200 rounded-full px-3 py-1.5 text-gray-600 shadow-sm">
+                    <span className="text-orange-500">{item.icon}</span>
+                    {item.label}
+                  </span>
+                ))}
+              </div>
+
+              {/* Login form */}
+              <form onSubmit={handleLogin} className="space-y-3">
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <input
+                    type="email"
+                    value={loginEmail}
+                    onChange={e => setLoginEmail(e.target.value)}
+                    required
+                    placeholder="Email"
+                    className="px-4 py-3 rounded-xl border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm shadow-sm"
+                  />
                   <div className="relative">
-                    <Input id="signup-password" type={showPassword ? "text" : "password"} value={signupPassword} onChange={e => setSignupPassword(e.target.value)} required minLength={6} placeholder="Minimum 6 caractères" />
-                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={loginPassword}
+                      onChange={e => setLoginPassword(e.target.value)}
+                      required
+                      placeholder="Mot de passe"
+                      className="w-full px-4 py-3 pr-10 rounded-xl border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm shadow-sm"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="confirm-password">Confirmer le mot de passe</Label>
-                  <div className="relative">
-                    <Input id="confirm-password" type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required placeholder="Répétez votre mot de passe" />
-                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 pt-1">
-                  <input id="privacy" type="checkbox" checked={acceptPrivacy} onChange={e => setAcceptPrivacy(e.target.checked)} className="mt-1 h-4 w-4 cursor-pointer accent-primary" />
-                  <label htmlFor="privacy" className="text-sm text-muted-foreground leading-snug cursor-pointer">
-                    J'accepte la{" "}
-                    <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">politique de confidentialité</a>{" "}
-                    de BUZZ BOOST.
+
+                <div className="flex items-center justify-between text-sm">
+                  <label className="flex items-center gap-2 text-gray-500 cursor-pointer select-none">
+                    <input type="checkbox" className="accent-orange-500" />
+                    Se souvenir de moi
                   </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgot(true)}
+                    className="text-orange-500 hover:underline font-medium"
+                  >
+                    Mot de passe oublié ?
+                  </button>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading || !acceptPrivacy}>
-                  {loading ? "Création du compte..." : "Créer mon compte"}
-                </Button>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 rounded-xl bg-gray-900 text-white font-semibold text-sm hover:bg-gray-800 transition disabled:opacity-60 shadow"
+                >
+                  {loading ? "Connexion en cours…" : "Se connecter"}
+                </button>
               </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+
+              <p className="mt-4 text-sm text-gray-500">
+                Nouveau ici ?{" "}
+                <button
+                  type="button"
+                  onClick={() => setTab("signup")}
+                  className="text-orange-500 font-semibold hover:underline"
+                >
+                  S'inscrire
+                </button>
+              </p>
+            </div>
+
+            {/* Right — Illustration */}
+            <div className="hidden lg:flex items-center justify-center">
+              <div className="relative w-80 h-80">
+                {/* Central circle */}
+                <div className="absolute inset-0 rounded-full bg-white/60 backdrop-blur-sm border border-gray-200 shadow-xl flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-5xl mb-2">🚀</div>
+                    <p className="font-bold text-gray-800 text-lg">BUZZ BOOST</p>
+                    <p className="text-xs text-gray-500 mt-1">SMM Panel Afrique</p>
+                  </div>
+                </div>
+                {/* Floating social icons */}
+                {[
+                  { emoji: "📸", top: "0%", left: "50%", label: "Instagram" },
+                  { emoji: "🎵", top: "25%", left: "92%", label: "TikTok" },
+                  { emoji: "▶️", top: "70%", left: "80%", label: "YouTube" },
+                  { emoji: "📘", top: "80%", left: "28%", label: "Facebook" },
+                  { emoji: "✈️", top: "30%", left: "2%", label: "Telegram" },
+                  { emoji: "🐦", top: "5%", left: "18%", label: "Twitter" },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white shadow-md border border-gray-100 flex items-center justify-center text-xl"
+                    style={{ top: item.top, left: item.left }}
+                    title={item.label}
+                  >
+                    {item.emoji}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── SIGNUP (Growfollows-inspired) ──────────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-[#07070f] flex flex-col">
+      {/* Topbar */}
+      <header className="flex items-center justify-between px-8 py-4 bg-[#0d0d1e]/80 backdrop-blur border-b border-white/5">
+        <span className="text-xl font-bold tracking-tight">
+          <span className="text-orange-400">BUZZ</span>{" "}
+          <span className="text-purple-400">BOOST</span>
+        </span>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setTab("login")}
+            className="text-sm font-semibold text-gray-400 hover:text-white transition"
+          >
+            Se connecter
+          </button>
+          <button
+            onClick={() => setTab("signup")}
+            className="text-sm font-semibold text-white border border-purple-500 rounded-full px-4 py-1.5 hover:bg-purple-500/20 transition"
+          >
+            S'inscrire
+          </button>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <div className="flex flex-1 items-center">
+        <div className="max-w-6xl mx-auto w-full px-6 py-12 grid lg:grid-cols-2 gap-12 items-center">
+
+          {/* Left — Text + Form */}
+          <div>
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 border border-purple-500/40 rounded-full px-4 py-1.5 mb-6 bg-purple-500/10">
+              <span className="text-purple-400 text-xs">✦</span>
+              <span className="text-purple-300 text-xs font-semibold tracking-wide">BUZZ BOOST — #1 en Afrique</span>
+            </div>
+
+            <h2 className="text-4xl font-extrabold leading-tight mb-2">
+              <span className="text-white">Boostez</span>
+            </h2>
+            <h2 className="text-4xl font-extrabold leading-tight mb-5">
+              <span className="bg-gradient-to-r from-orange-400 to-purple-500 bg-clip-text text-transparent">
+                Votre Présence
+              </span>
+            </h2>
+
+            <p className="text-gray-400 text-sm mb-3 leading-relaxed">
+              Vous souhaitez développer votre présence sur les réseaux sociaux ?
+              Rejoignez BUZZ BOOST, la plateforme SMM de confiance avec plus de
+              5 ans d'expérience. Nous boostons vos abonnés, likes et vues efficacement.
+            </p>
+
+            <div className="flex items-center gap-2 mb-8 text-sm text-gray-400">
+              <Clock size={14} className="text-orange-400" />
+              <span>Des milliers de commandes traitées avec succès</span>
+            </div>
+
+            {/* Signup form */}
+            <form onSubmit={handleSignup} className="space-y-3">
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={15} />
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    required
+                    placeholder="Nom d'utilisateur"
+                    className="w-full pl-9 pr-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  />
+                </div>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={15} />
+                  <input
+                    type="email"
+                    value={signupEmail}
+                    onChange={e => setSignupEmail(e.target.value)}
+                    required
+                    placeholder="Email"
+                    className="w-full pl-9 pr-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={15} />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={signupPassword}
+                    onChange={e => setSignupPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    placeholder="Mot de passe"
+                    className="w-full pl-9 pr-10 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={15} />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    required
+                    placeholder="Confirmer"
+                    className="w-full pl-9 pr-10 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+
+              <label className="flex items-start gap-3 cursor-pointer select-none mt-1">
+                <input
+                  type="checkbox"
+                  checked={acceptPrivacy}
+                  onChange={e => setAcceptPrivacy(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-purple-500 cursor-pointer"
+                />
+                <span className="text-xs text-gray-400 leading-snug">
+                  J'accepte la{" "}
+                  <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-purple-400 underline hover:text-purple-300">
+                    politique de confidentialité
+                  </a>{" "}
+                  de BUZZ BOOST.
+                </span>
+              </label>
+
+              <button
+                type="submit"
+                disabled={loading || !acceptPrivacy}
+                className="w-full py-3 rounded-full bg-gradient-to-r from-orange-500 to-purple-600 text-white font-bold text-sm hover:from-orange-400 hover:to-purple-500 transition disabled:opacity-40 shadow-lg shadow-purple-900/40"
+              >
+                {loading ? "Création du compte…" : "Créer mon compte"}
+              </button>
+            </form>
+
+            <p className="mt-4 text-sm text-gray-500">
+              Déjà inscrit ?{" "}
+              <button
+                type="button"
+                onClick={() => setTab("login")}
+                className="text-orange-400 font-semibold hover:underline"
+              >
+                Se connecter
+              </button>
+            </p>
+          </div>
+
+          {/* Right — Dark decorative panel */}
+          <div className="hidden lg:flex items-center justify-center">
+            <div className="relative w-80 h-96">
+              {/* Glowing orb */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 rounded-full bg-purple-600/20 blur-3xl" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full bg-orange-500/20 blur-2xl" />
+
+              {/* Center card */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-56 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 text-center shadow-2xl">
+                  <div className="text-5xl mb-3">⚡</div>
+                  <p className="text-white font-bold text-base mb-1">Rejoignez-nous</p>
+                  <p className="text-gray-400 text-xs leading-relaxed">
+                    La communauté SMM la plus active d'Afrique francophone
+                  </p>
+                  <div className="mt-4 flex justify-center gap-3 text-lg">
+                    <span title="Instagram">📸</span>
+                    <span title="TikTok">🎵</span>
+                    <span title="YouTube">▶️</span>
+                    <span title="Facebook">📘</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating stat cards */}
+              <div className="absolute -top-2 -right-4 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white shadow-lg backdrop-blur-sm">
+                <p className="font-bold text-orange-400 text-lg">10K+</p>
+                <p className="text-gray-400">Utilisateurs actifs</p>
+              </div>
+              <div className="absolute -bottom-2 -left-4 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white shadow-lg backdrop-blur-sm">
+                <p className="font-bold text-purple-400 text-lg">1M+</p>
+                <p className="text-gray-400">Commandes livrées</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom social bar */}
+      <div className="border-t border-white/5 bg-[#0d0d1e]/60 backdrop-blur py-3">
+        <div className="flex items-center justify-center gap-6 text-xs text-gray-600">
+          {["Facebook", "Instagram", "Twitter (X)", "YouTube", "TikTok", "Telegram"].map((s) => (
+            <span key={s} className="hover:text-gray-400 cursor-pointer transition">{s}</span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
