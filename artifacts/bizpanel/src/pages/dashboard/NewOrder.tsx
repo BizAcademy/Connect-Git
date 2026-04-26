@@ -428,8 +428,9 @@ export default function NewOrder() {
                   {visibleServices.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-4 text-center">Aucun service trouvé.</p>
                   ) : (
-                    visibleServices.map((s) => {
+                    visibleServices.map((s, idx) => {
                       const isSelected = selectedService?.service === s.service;
+                      const isFirst = idx === 0;
                       return (
                         <button
                           key={s.service}
@@ -441,9 +442,17 @@ export default function NewOrder() {
                           className={`w-full text-left p-3 rounded-lg border bg-background text-sm transition-colors ${
                             isSelected
                               ? "border-primary bg-primary/10"
+                              : isFirst
+                              ? "border-green-400 hover:border-green-500 hover:bg-green-50/50"
                               : "border-border hover:border-primary/50 hover:bg-muted/50"
                           }`}
                         >
+                          {isFirst && (
+                            <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+                              <span className="text-green-600 text-sm">⭐</span>
+                              <span className="text-xs font-semibold text-green-700">Service le plus populaire — Recommandé par notre équipe</span>
+                            </div>
+                          )}
                           <div className="flex justify-between items-start gap-3 mb-2">
                             <div className="min-w-0 flex-1">
                               <div className="font-semibold text-sm break-words">
