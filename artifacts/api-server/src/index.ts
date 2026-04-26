@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { startSupportCleanup } from "./lib/support";
 import { purgeSensitiveSettingRows } from "./lib/settings-cleanup";
 import { startOrderStatusPoller } from "./lib/order-status-poller";
+import { startMissedRefundScanner } from "./lib/missed-refund-scanner";
 import { syncOrderInternal } from "./routes/smm";
 
 const rawPort = process.env["PORT"];
@@ -32,6 +33,7 @@ app.listen(port, (err) => {
   // user/admin views always reflect "Terminée" without depending on someone
   // having the page open. Realtime then propagates the change to any
   // connected client instantly.
+  startMissedRefundScanner();
   startOrderStatusPoller(async (externalId, providerId) => {
     const r = await syncOrderInternal({ externalId, providerId });
     return r.ok

@@ -416,7 +416,7 @@ export async function syncOrderInternal(opts: {
       `&provider=eq.${providerIn}`;
   const orderLookupUrl =
     `${SUPABASE_URL}/rest/v1/orders` + lookupQuery +
-    `&select=id,user_id,status,refunded_at,refunded_amount,provider,external_order_id&limit=1`;
+    `&select=id,user_id,status,refunded_at,refunded_amount,provider,external_order_id,price&limit=1`;
   const lookupRes = await fetch(orderLookupUrl, { headers: lookupHeader });
   if (!lookupRes.ok) {
     const txt = await lookupRes.text().catch(() => "");
@@ -428,6 +428,7 @@ export async function syncOrderInternal(opts: {
     refunded_at: string | null; refunded_amount: number | null;
     provider: number | null;
     external_order_id: string | null;
+    price: number | null;
   }>;
   if (!rows || rows.length === 0) {
     return { ok: false, status: 404, error: "Commande introuvable" };
@@ -444,15 +445,26 @@ export async function syncOrderInternal(opts: {
   // 2) Source the wallet owner and refundable amount from the SERVER-WRITTEN
   //    earnings ledger, scoped to the resolved provider so order ids cannot
   //    collide across providers.
+  //    FALLBACK: if no earnings record exists (legacy orders or missed write),
+  //    we fall back to orders.user_id and orders.price so the refund is never
+  //    silently skipped just because the earnings ledger is incomplete.
   const earning = await findEarning(externalId, providerId);
-  const trustedUserId: string | null = earning?.user_id ?? null;
-  const trustedAmount: number = earning ? Math.max(0, Math.round(Number(earning.user_price_fcfa) || 0)) : 0;
+  const trustedUserId: string | null = earning?.user_id ?? order.user_id ?? null;
+  const earningsAmount: number = earning ? Math.max(0, Math.round(Number(earning.user_price_fcfa) || 0)) : 0;
+  const orderPriceFallback: number = Math.max(0, Math.round(Number(order.price) || 0));
+  // Use earnings amount when available; fall back to the order price for
+  // orders placed before the earnings ledger was introduced.
+  const trustedAmount: number = earningsAmount > 0 ? earningsAmount : orderPriceFallback;
 
   if (expectedUserId && !earning) {
     return { ok: false, status: 404, error: "Commande introuvable dans le journal serveur" };
   }
   if (expectedUserId && trustedUserId && trustedUserId !== expectedUserId) {
     return { ok: false, status: 403, error: "Accès refusé" };
+  }
+
+  if (!trustedUserId) {
+    logger.error({ orderId: order.id, externalId }, "sync: cannot determine wallet owner — skipping refund");
   }
 
   // 3) Query the matching SMM provider for the up-to-date status
