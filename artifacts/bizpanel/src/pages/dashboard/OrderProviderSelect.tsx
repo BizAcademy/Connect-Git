@@ -66,15 +66,31 @@ export default function OrderProviderSelect() {
         </div>
 
         <div className="grid gap-3">
-          {providers.map((p) => (
+          {providers.map((p, idx) => {
+            const isFirst = idx === 0;
+            return (
             <Card
               key={p.provider_id}
-              className="hover:border-primary/60 transition-colors bg-white/90 backdrop-blur"
+              className={`transition-colors bg-white/90 backdrop-blur ${
+                isFirst
+                  ? "border-2 border-green-500 hover:border-green-600"
+                  : "hover:border-primary/60"
+              }`}
               onMouseEnter={() => prefetchSmmServices(p.provider_id)}
               onTouchStart={() => prefetchSmmServices(p.provider_id)}
             >
+              {isFirst && (
+                <div className="flex items-center gap-2 px-4 pt-3 pb-0">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-300 rounded-xl w-full">
+                    <span className="text-green-600">⭐</span>
+                    <span className="text-xs font-bold text-green-700">Recommandé par notre équipe — Le plus populaire</span>
+                  </div>
+                </div>
+              )}
               <CardContent className="p-4 sm:p-5 flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                  isFirst ? "bg-green-100 text-green-600" : "bg-primary/10 text-primary"
+                }`}>
                   <Server size={22} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -85,7 +101,7 @@ export default function OrderProviderSelect() {
                     <p className="text-sm font-bold text-blue-600 mt-1">{p.header_text}</p>
                   )}
                   <Button
-                    className="mt-3 h-9"
+                    className={`mt-3 h-9 ${isFirst ? "bg-green-600 hover:bg-green-700" : ""}`}
                     onClick={() => navigate(`/dashboard/order/${p.provider_id}`)}
                   >
                     Voir le catalogue
@@ -94,7 +110,8 @@ export default function OrderProviderSelect() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

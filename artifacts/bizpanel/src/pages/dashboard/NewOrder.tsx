@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -129,20 +129,19 @@ export default function NewOrder() {
       .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category, "fr"));
   }, [services, activePlatform]);
 
-  // Auto-select the only available category to skip a useless extra click.
+  // Auto-select first category whenever the platform changes (categories list updates).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (categoriesWithCounts.length === 1) {
-      const only = categoriesWithCounts[0]!.category;
-      if (activeCategory !== only) setActiveCategory(only);
-    } else if (
-      categoriesWithCounts.length > 1 &&
-      activeCategory &&
-      !categoriesWithCounts.some((c) => c.category === activeCategory)
-    ) {
-      // Active category disappeared after switching platform — reset.
+    if (categoriesWithCounts.length === 0) {
       setActiveCategory(null);
+      return;
     }
-  }, [categoriesWithCounts, activeCategory]);
+    const valid = categoriesWithCounts.map((c) => c.category);
+    if (!activeCategory || !valid.includes(activeCategory)) {
+      setActiveCategory(categoriesWithCounts[0]!.category);
+    }
+    // intentionally omitting `activeCategory` to avoid re-triggering on its own change
+  }, [categoriesWithCounts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const visibleCategories = useMemo(() => {
     const q = categorySearch.trim().toLowerCase();
@@ -157,6 +156,25 @@ export default function NewOrder() {
       .filter((s) => !activeCategory || s.category === activeCategory)
       .filter((s) => !q || s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q));
   }, [services, activePlatform, activeCategory, search]);
+
+  // Auto-select the first service whenever the category (or platform) changes,
+  // but only when there's no URL-based pre-selection active.
+  const autoServiceRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (searchParams.get("service")) return; // URL preset takes priority
+    if (visibleServices.length > 0) {
+      const first = visibleServices[0]!;
+      const key = `${activePlatform}|${activeCategory}|${first.service}`;
+      if (autoServiceRef.current !== key) {
+        autoServiceRef.current = key;
+        setSelectedService(first);
+        setQuantity(String(first.min));
+      }
+    } else {
+      autoServiceRef.current = null;
+      setSelectedService(null);
+    }
+  }, [activeCategory, activePlatform]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [servicesOpen, setServicesOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
@@ -261,7 +279,7 @@ export default function NewOrder() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">1. Choisissez une plateforme</CardTitle>
+          <CardTitle className="text-base font-bold italic text-primary">1. Choisissez une plateforme</CardTitle>
         </CardHeader>
         <CardContent>
           {loadingServices ? (
@@ -303,7 +321,7 @@ export default function NewOrder() {
       {showCategoryCard && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{stepCategoryNum}. Choisissez une catégorie</CardTitle>
+            <CardTitle className="text-base font-bold italic text-primary">{stepCategoryNum}. Choisissez une catégorie</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {/* Bouton menu déroulant */}
@@ -381,7 +399,7 @@ export default function NewOrder() {
       {!loadingServices && (activeCategory || !showCategoryCard) && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{stepServiceNum}. Sélectionnez un service</CardTitle>
+            <CardTitle className="text-base font-bold italic text-primary">{stepServiceNum}. Sélectionnez un service</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {/* Bouton menu déroulant */}
@@ -428,9 +446,8 @@ export default function NewOrder() {
                   {visibleServices.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-4 text-center">Aucun service trouvé.</p>
                   ) : (
-                    visibleServices.map((s, idx) => {
+                    visibleServices.map((s) => {
                       const isSelected = selectedService?.service === s.service;
-                      const isFirst = idx === 0;
                       return (
                         <button
                           key={s.service}
@@ -442,17 +459,9 @@ export default function NewOrder() {
                           className={`w-full text-left p-3 rounded-lg border bg-background text-sm transition-colors ${
                             isSelected
                               ? "border-primary bg-primary/10"
-                              : isFirst
-                              ? "border-green-400 hover:border-green-500 hover:bg-green-50/50"
                               : "border-border hover:border-primary/50 hover:bg-muted/50"
                           }`}
                         >
-                          {isFirst && (
-                            <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1.5 bg-green-50 border border-green-200 rounded-lg">
-                              <span className="text-green-600 text-sm">⭐</span>
-                              <span className="text-xs font-semibold text-green-700">Service le plus populaire — Recommandé par notre équipe</span>
-                            </div>
-                          )}
                           <div className="flex justify-between items-start gap-3 mb-2">
                             <div className="min-w-0 flex-1">
                               <div className="font-semibold text-sm break-words">
