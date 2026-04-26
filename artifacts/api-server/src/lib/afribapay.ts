@@ -271,7 +271,30 @@ export interface StatusResponse {
 }
 
 export async function getStatus(orderId: string): Promise<StatusResponse> {
-  const data = await authedFetch(`/v1/status?order_id=${encodeURIComponent(orderId)}`, { method: "GET" });
+  let data: any;
+  try {
+    data = await authedFetch(`/v1/status?order_id=${encodeURIComponent(orderId)}`, { method: "GET" });
+  } catch (err) {
+    // AfribaPay sandbox returns HTTP 429 for finalized transactions but
+    // still embeds the real status inside payload.data — extract it.
+    if (err instanceof AfribapayApiError && err.status === 429) {
+      const p = err.payload as Record<string, any> | null;
+      const inner = p?.data ?? p;
+      if (inner && typeof inner === "object") {
+        const s = String((inner as any).status || "").toUpperCase();
+        if (s) {
+          return {
+            status: s,
+            transaction_id: (inner as any).transaction_id || (inner as any).transactionId || undefined,
+            order_id: (inner as any).order_id || orderId,
+            amount: (inner as any).amount != null ? Number((inner as any).amount) : undefined,
+            raw: p,
+          };
+        }
+      }
+    }
+    throw err;
+  }
   const inner = data?.data ?? data;
   return {
     status: String(inner?.status || data?.status || "").toUpperCase(),

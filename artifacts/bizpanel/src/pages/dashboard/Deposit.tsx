@@ -14,8 +14,8 @@ import {
 const AMOUNTS = [1000, 2000, 5000, 10000, 20000, 50000];
 const BONUS_THRESHOLD = 5000;
 const BONUS_AMOUNT = 200;
-const POLL_INTERVAL_MS = 3000;
-const POLL_DURATION_MS = 120_000;
+const POLL_INTERVAL_MS = 15_000; // AfribaPay sandbox limits to 6 req/min → poll every 15s
+const POLL_DURATION_MS = 300_000; // 5 min max wait
 
 interface Operator {
   code: string;
