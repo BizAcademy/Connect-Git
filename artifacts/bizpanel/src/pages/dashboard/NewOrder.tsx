@@ -39,6 +39,126 @@ function detectPlatform(category: string, name: string): string {
   return "other";
 }
 
+// ── Contextual link hint based on platform + service keywords ──────────────
+const PLATFORM_DOMAINS: Record<string, string> = {
+  instagram: "www.instagram.com",
+  tiktok: "www.tiktok.com",
+  youtube: "www.youtube.com",
+  facebook: "www.facebook.com",
+  telegram: "t.me",
+  whatsapp: "wa.me",
+  spotify: "open.spotify.com",
+  other: "...",
+};
+
+function getLinkHint(service: SmmService | null, platform: string): { label: string; placeholder: string } {
+  const domain = PLATFORM_DOMAINS[platform] || "...";
+  const pLabel = (PLATFORMS.find((p) => p.key === platform)?.label) || "";
+
+  if (!service) {
+    return {
+      label: `URL de votre compte ou publication ${pLabel}`,
+      placeholder: `https://${domain}/...`,
+    };
+  }
+
+  const text = `${service.name} ${service.category}`.toLowerCase();
+
+  const isFollower = /follow|abonn|subscriber|fan|membre|member/.test(text);
+  const isView = /view|vue|watch|play|stream|impre|impression/.test(text);
+  const isReel = /reel/.test(text);
+  const isStory = /story|stories|storie/.test(text);
+  const isShort = /short/.test(text);
+  const isLive = /live/.test(text);
+  const isLike = /like|j'aime|j'aime/.test(text);
+  const isComment = /comment/.test(text);
+  const isShare = /share|partage/.test(text);
+  const isPost = isLike || isComment || isShare || /post|photo|publication|image/.test(text);
+  const isVideo = isView || isReel || isShort || /video|vid/.test(text);
+
+  if (isFollower) {
+    const examples: Record<string, string> = {
+      instagram: `https://www.instagram.com/votre_compte`,
+      tiktok: `https://www.tiktok.com/@votre_compte`,
+      youtube: `https://www.youtube.com/@votre_chaine`,
+      facebook: `https://www.facebook.com/votre_page`,
+      telegram: `https://t.me/votre_canal`,
+      spotify: `https://open.spotify.com/artist/XXXX`,
+    };
+    return {
+      label: `URL de votre compte / page ${pLabel}`,
+      placeholder: examples[platform] || `https://${domain}/votre_compte`,
+    };
+  }
+
+  if (isStory) {
+    return {
+      label: `URL de votre Story ${pLabel}`,
+      placeholder: platform === "instagram"
+        ? `https://www.instagram.com/stories/votre_compte/`
+        : `https://${domain}/...`,
+    };
+  }
+
+  if (isReel) {
+    return {
+      label: `URL de votre Reel ${pLabel}`,
+      placeholder: platform === "instagram"
+        ? `https://www.instagram.com/reel/XXXXXXXXXX/`
+        : platform === "tiktok"
+        ? `https://www.tiktok.com/@compte/video/1234567890`
+        : `https://${domain}/...`,
+    };
+  }
+
+  if (isShort) {
+    return {
+      label: `URL de votre Short YouTube`,
+      placeholder: `https://www.youtube.com/shorts/XXXXXXXXXX`,
+    };
+  }
+
+  if (isLive) {
+    return {
+      label: `URL de votre Live ${pLabel}`,
+      placeholder: platform === "youtube"
+        ? `https://www.youtube.com/watch?v=XXXXXXXXXX`
+        : `https://${domain}/...`,
+    };
+  }
+
+  if (isVideo) {
+    const examples: Record<string, string> = {
+      youtube: `https://www.youtube.com/watch?v=XXXXXXXXXX`,
+      tiktok: `https://www.tiktok.com/@compte/video/1234567890`,
+      instagram: `https://www.instagram.com/reel/XXXXXXXXXX/`,
+      facebook: `https://www.facebook.com/watch?v=1234567890`,
+    };
+    return {
+      label: `URL de votre vidéo ${pLabel}`,
+      placeholder: examples[platform] || `https://${domain}/...`,
+    };
+  }
+
+  if (isPost) {
+    const examples: Record<string, string> = {
+      instagram: `https://www.instagram.com/p/XXXXXXXXXX/`,
+      facebook: `https://www.facebook.com/photo?fbid=1234567890`,
+      tiktok: `https://www.tiktok.com/@compte/video/1234567890`,
+    };
+    return {
+      label: `URL de votre publication ${pLabel}`,
+      placeholder: examples[platform] || `https://${domain}/...`,
+    };
+  }
+
+  // Generic fallback
+  return {
+    label: `URL de votre compte ou publication ${pLabel}`,
+    placeholder: `https://${domain}/...`,
+  };
+}
+
 function shortLabel(name: string, platformLabel: string): string {
   let s = name.split(/[-\[(]/)[0].trim();
   s = s.replace(new RegExp(platformLabel, "i"), "").trim();
@@ -178,6 +298,11 @@ export default function NewOrder() {
 
   const [servicesOpen, setServicesOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+
+  const linkHint = useMemo(
+    () => getLinkHint(selectedService, activePlatform),
+    [selectedService, activePlatform],
+  );
 
   const qty = Number(quantity) || 0;
   const minQ = selectedService ? Number(selectedService.min) : 0;
@@ -520,12 +645,12 @@ export default function NewOrder() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="link">Lien (URL de votre compte / publication)</Label>
+              <Label htmlFor="link">{linkHint.label}</Label>
               <Input
                 id="link"
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
-                placeholder="https://www.instagram.com/votre_compte"
+                placeholder={linkHint.placeholder}
                 className="mt-1"
               />
             </div>

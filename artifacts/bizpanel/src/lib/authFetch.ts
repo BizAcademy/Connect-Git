@@ -62,7 +62,7 @@ function handleUnrecoverableAuth() {
     // Allow the toast to render before navigating.
     setTimeout(() => {
       if (typeof window !== "undefined") {
-        window.location.assign("/login");
+        window.location.assign("/auth");
       }
     }, 250);
   });

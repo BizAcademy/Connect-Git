@@ -56,6 +56,26 @@ export async function fetchMyTickets(): Promise<Ticket[]> {
   return (await r.json()).tickets;
 }
 
+// ── Ticket reply unread tracking (localStorage-based, no extra DB column) ──
+const SEEN_REPLIES_KEY = "buzz_seen_ticket_replies";
+
+export function getSeenTicketReplies(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(SEEN_REPLIES_KEY) || "[]")); }
+  catch { return new Set(); }
+}
+
+export function markTicketRepliesSeen(ids: string[]): void {
+  try { localStorage.setItem(SEEN_REPLIES_KEY, JSON.stringify(ids)); } catch { /* noop */ }
+}
+
+export async function fetchTicketReplyUnread(): Promise<number> {
+  try {
+    const tickets = await fetchMyTickets();
+    const seen = getSeenTicketReplies();
+    return tickets.filter((t) => t.admin_response && !seen.has(t.id)).length;
+  } catch { return 0; }
+}
+
 export async function fetchAdminTickets(): Promise<Ticket[]> {
   const headers = await authHeaders();
   const r = await fetch("/api/admin/tickets", { headers });

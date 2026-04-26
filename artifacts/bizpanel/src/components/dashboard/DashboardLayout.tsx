@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { fetchUnreadCount } from "@/lib/support";
+import { fetchTicketReplyUnread } from "@/lib/tickets";
 import {
   LayoutDashboard, ShoppingCart, Clock, Wallet, CreditCard, Receipt,
   LogOut, Menu, X, ChevronRight, Headphones, MessageCircle
@@ -32,13 +33,19 @@ export const DashboardLayout = () => {
     }
   }, [loading, user, isAdmin, navigate]);
 
-  // Poll unread support messages
+  // Poll unread count = chat messages + ticket replies not yet seen
   useEffect(() => {
     if (!user || isAdmin) return;
     let cancelled = false;
-    const refresh = () => fetchUnreadCount().then((n) => { if (!cancelled) setUnreadSupport(n); }).catch(() => {});
+    const refresh = async () => {
+      const [chat, ticketReplies] = await Promise.all([
+        fetchUnreadCount().catch(() => 0),
+        fetchTicketReplyUnread().catch(() => 0),
+      ]);
+      if (!cancelled) setUnreadSupport(chat + ticketReplies);
+    };
     refresh();
-    const id = setInterval(refresh, 15000);
+    const id = setInterval(refresh, 12000);
     return () => { cancelled = true; clearInterval(id); };
   }, [user, isAdmin, location.pathname]);
 

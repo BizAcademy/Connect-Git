@@ -10,7 +10,7 @@ import {
   markUserRead,
   type SupportMessage,
 } from "@/lib/support";
-import { fetchMyTickets, type Ticket } from "@/lib/tickets";
+import { fetchMyTickets, markTicketRepliesSeen, type Ticket } from "@/lib/tickets";
 import { SupportImage } from "@/components/SupportImage";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -127,6 +127,9 @@ function MyTickets() {
     try {
       const list = await fetchMyTickets();
       setTickets(list);
+      // Mark all replied tickets as seen so the nav badge clears
+      const repliedIds = list.filter((t) => t.admin_response).map((t) => t.id);
+      if (repliedIds.length) markTicketRepliesSeen(repliedIds);
       if (!silent) setOpen(list.length > 0);
     } catch {
     } finally {
