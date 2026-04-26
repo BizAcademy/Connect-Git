@@ -36,10 +36,12 @@ interface PendingPayment { id: string; user_id: string; order_id: string; create
 async function fetchPendingPayments(): Promise<PendingPayment[]> {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return [];
   const cutoff = new Date(Date.now() - MIN_AGE_MS).toISOString();
+  // Only fetch AfribaPay payments: order_id IS NOT NULL (old SoleasPay rows have no order_id)
   const url = `${SUPABASE_URL}/rest/v1/payments`
     + `?select=id,user_id,order_id,created_at,amount`
     + `&status=eq.pending`
     + `&credited_at=is.null`
+    + `&order_id=not.is.null`
     + `&created_at=lt.${encodeURIComponent(cutoff)}`
     + `&order=created_at.asc`
     + `&limit=${PAGE_SIZE}`;
@@ -57,14 +59,8 @@ async function reconcileOne(p: PendingPayment): Promise<"credited" | "failed" | 
   const current = await fetchPayment(p.id);
   if (!current || current.status !== "pending" || current.credited_at) return "skip";
 
-  if (!p.order_id) {
-    if (ageMs > AUTO_FAIL_MS) {
-      await markPaymentStatus(p.id, "failed").catch(() => undefined);
-      logger.warn({ paymentId: p.id }, "pending-payment-scanner: no order_id → marked failed");
-      return "failed";
-    }
-    return "skip";
-  }
+  // order_id is guaranteed non-null by the query filter — but guard defensively
+  if (!p.order_id) return "skip";
 
   try {
     const remote = await getStatus(p.order_id);
