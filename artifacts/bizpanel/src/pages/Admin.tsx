@@ -1702,10 +1702,30 @@ const AdminOrders = () => {
     return () => { void supabase.removeChannel(channel); };
   }, []);
 
+  const REFUND_STATUSES = new Set(["canceled", "cancelled", "failed", "refunded"]);
+
   const updateStatus = async (id: string, status: string) => {
+    const shouldRefund = REFUND_STATUSES.has(status.toLowerCase());
+
     await supabase.from("orders").update({ status }).eq("id", id);
     setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
-    toast.success("Statut mis à jour");
+
+    if (shouldRefund) {
+      try {
+        const result = await adminForceOrderRefund(id);
+        if (result.refunded && result.refunded_amount) {
+          toast.success(`Statut mis à jour · Remboursement de ${result.refunded_amount.toLocaleString()} FCFA crédité à l'utilisateur.`);
+        } else if (result.error) {
+          toast.warning(`Statut mis à jour, mais remboursement échoué : ${result.error}`);
+        } else {
+          toast.success("Statut mis à jour (commande déjà remboursée ou montant nul).");
+        }
+      } catch {
+        toast.warning("Statut mis à jour, mais erreur lors du remboursement. Vérifiez manuellement.");
+      }
+    } else {
+      toast.success("Statut mis à jour");
+    }
   };
 
   const filtered = useMemo(() => {
