@@ -3082,7 +3082,21 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
   useEffect(() => {
     refresh();
     const id = setInterval(refresh, 15000);
-    return () => clearInterval(id);
+
+    // Realtime: refresh list instantly when a ticket is inserted or updated
+    const channel = supabase
+      .channel("admin-tickets-list")
+      .on(
+        "postgres_changes" as any,
+        { event: "*", schema: "public", table: "tickets" },
+        () => { void refresh(); },
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(id);
+      void supabase.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -3391,7 +3405,7 @@ export default function Admin() {
     return () => { cancelled = true; clearInterval(id); };
   }, [isAdmin]);
 
-  // Poll open ticket count for the Tickets tab badge
+  // Poll open ticket count for the Tickets tab badge + Realtime instant update
   useEffect(() => {
     if (!isAdmin) return;
     let cancelled = false;
@@ -3401,7 +3415,29 @@ export default function Admin() {
         .catch(() => {});
     refresh();
     const id = setInterval(refresh, 15000);
-    return () => { cancelled = true; clearInterval(id); };
+
+    // Supabase Realtime: instant badge update when a new ticket is inserted
+    const channel = supabase
+      .channel("admin-tickets-badge")
+      .on(
+        "postgres_changes" as any,
+        { event: "INSERT", schema: "public", table: "tickets" },
+        () => {
+          if (!cancelled) {
+            refresh();
+            toast.info("Nouveau ticket reçu — vérifiez l'onglet Tickets.", {
+              duration: 6000,
+            });
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      void supabase.removeChannel(channel);
+    };
   }, [isAdmin]);
 
   if (loading || checking) {
