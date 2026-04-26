@@ -25,6 +25,8 @@ export interface PaymentRow {
   reference: string | null;
   method: string;
   created_at: string;
+  order_id?: string | null;
+  transaction_id?: string | null;
   bonus_amount?: number | null;
   bonus_status?: string | null;
   bonus_credited_at?: string | null;

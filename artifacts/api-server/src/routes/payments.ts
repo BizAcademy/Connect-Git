@@ -110,13 +110,13 @@ async function patchPayment(paymentId: string, patch: Record<string, unknown>, u
   });
 }
 
-async function findPaymentByOrderId(orderId: string): Promise<{ id: string; status: string; user_id: string } | null> {
+async function findPaymentByOrderId(orderId: string): Promise<{ id: string; status: string; user_id: string; transaction_id?: string | null } | null> {
   const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/payments?order_id=eq.${encodeURIComponent(orderId)}&select=id,status,user_id&limit=1`,
+    `${SUPABASE_URL}/rest/v1/payments?order_id=eq.${encodeURIComponent(orderId)}&select=id,status,user_id,transaction_id&limit=1`,
     { headers: serverHeaders() },
   );
   if (!r.ok) return null;
-  const rows = (await r.json()) as Array<{ id: string; status: string; user_id: string }>;
+  const rows = (await r.json()) as Array<{ id: string; status: string; user_id: string; transaction_id?: string | null }>;
   return rows[0] || null;
 }
 
@@ -343,6 +343,10 @@ router.get("/payments/status/:orderId", requireUser, async (req: AuthedRequest, 
   }
   try {
     const remote = await getStatus(orderId);
+    // Persist transaction_id whenever we learn it (idempotent)
+    if (remote.transaction_id && !local.transaction_id) {
+      await patchPayment(local.id, { transaction_id: remote.transaction_id }).catch(() => undefined);
+    }
     if (isSuccessStatus(remote.status)) {
       const result = await creditDeposit(local.id);
       if (result.ok) {
@@ -352,6 +356,7 @@ router.get("/payments/status/:orderId", requireUser, async (req: AuthedRequest, 
           already_credited: result.alreadyCredited,
           amount_credited: result.amountCredited,
           bonus_credited: result.bonusCredited,
+          transaction_id: remote.transaction_id,
         });
       }
       logger.error({ paymentId: local.id, err: result.error }, "status: creditDeposit failed");

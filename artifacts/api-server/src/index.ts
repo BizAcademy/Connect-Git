@@ -4,6 +4,7 @@ import { startSupportCleanup } from "./lib/support";
 import { purgeSensitiveSettingRows } from "./lib/settings-cleanup";
 import { startOrderStatusPoller } from "./lib/order-status-poller";
 import { startMissedRefundScanner } from "./lib/missed-refund-scanner";
+import { startPendingPaymentScanner } from "./lib/pending-payment-scanner";
 import { syncOrderInternal } from "./routes/smm";
 
 const rawPort = process.env["PORT"];
@@ -34,6 +35,7 @@ app.listen(port, (err) => {
   // having the page open. Realtime then propagates the change to any
   // connected client instantly.
   startMissedRefundScanner();
+  startPendingPaymentScanner();
   startOrderStatusPoller(async (externalId, providerId) => {
     const r = await syncOrderInternal({ externalId, providerId });
     return r.ok

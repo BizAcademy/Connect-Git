@@ -202,17 +202,23 @@ export default function Transactions() {
     const customer = { name: profile?.username, email: user?.email || profile?.email };
     if (r.kind === "deposit") {
       const p = r.raw;
+      const details: { label: string; value: string }[] = [
+        { label: "Méthode", value: String(p.method || "—").toUpperCase() },
+      ];
+      if (p.order_id)       details.push({ label: "Réf. commande",    value: String(p.order_id) });
+      if (p.transaction_id) details.push({ label: "Réf. AfribaPay",   value: String(p.transaction_id) });
+      if (p.reference)      details.push({ label: "Référence interne", value: String(p.reference) });
+      const bonus = Number(p.bonus_amount);
+      if (bonus > 0)        details.push({ label: "Bonus crédité",    value: `+${bonus.toLocaleString("fr-FR")} FCFA` });
       return {
         number: `BP-DEP-${shortId(p.id)}`,
         date: p.created_at,
         type: "deposit",
         customer,
-        amount: Number(p.amount),
+        amount: Number(p.amount) + (bonus > 0 ? bonus : 0),
         status: paymentStatusMap[p.status]?.label || p.status,
-        details: [
-          { label: "Méthode", value: String(p.method || "—").toUpperCase() },
-          { label: "Référence", value: p.reference || "—" },
-        ],
+        details,
+        note: bonus > 0 ? `Dont ${bonus.toLocaleString("fr-FR")} FCFA de bonus fidélité inclus dans le total crédité.` : undefined,
       };
     }
     if (r.kind === "order") {
