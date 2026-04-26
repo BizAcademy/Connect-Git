@@ -142,13 +142,29 @@ function pickCurrencyForCountry(c: { currency?: string; code: string }): string 
   return "XOF";
 }
 
+function extractAfribapayMessage(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== "object") return undefined;
+  const p = payload as Record<string, any>;
+  // Sandbox/prod wraps real detail inside payload.error.message
+  const inner = p["error"] ?? p["data"] ?? p;
+  if (inner && typeof inner === "object") {
+    const msg = (inner as Record<string, any>)["message"];
+    if (typeof msg === "string" && msg) return msg;
+  }
+  return undefined;
+}
+
 function handleAfribapayError(err: unknown, res: import("express").Response) {
   if (err instanceof AfribapayNotConfiguredError) {
     return res.status(503).json({ error: "Service de paiement non configuré" });
   }
   if (err instanceof AfribapayApiError) {
     logger.error({ status: err.status, payload: err.payload }, "AfribaPay API error");
-    return res.status(502).json({ error: err.message || "Erreur AfribaPay" });
+    // Surface the real AfribaPay message when available (e.g. "This phone number is unavailable for testing purposes")
+    const realMsg = extractAfribapayMessage(err.payload);
+    const userFacingError = realMsg || err.message || "Erreur AfribaPay";
+    const httpStatus = err.status === 404 || err.status === 403 ? 400 : 502;
+    return res.status(httpStatus).json({ error: userFacingError });
   }
   logger.error({ err }, "AfribaPay unexpected error");
   return res.status(500).json({ error: "Erreur interne" });
