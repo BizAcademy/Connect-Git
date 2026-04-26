@@ -131,26 +131,61 @@ export interface CountryEntry {
 
 export async function listCountries(): Promise<CountryEntry[]> {
   const data = await authedFetch("/v1/countries", { method: "GET" });
-  // The API may return {data: [...] } or [...] directly.
-  const rows: any[] = Array.isArray(data) ? data : (data?.data ?? data?.countries ?? []);
+
+  // Normalize to a flat array of raw country rows regardless of API shape:
+  //   • array:  [{country_code, operators, ...}, ...]          (production)
+  //   • object: {BF: {country_code, currencies: {XOF: {operators}}, ...}, ...} (sandbox)
+  //   • {data: <one of the above>}                             (both envs)
+  const inner = data?.data ?? data;
+  let rows: any[];
+  if (Array.isArray(inner)) {
+    rows = inner;
+  } else if (inner && typeof inner === "object") {
+    // sandbox: keys are ISO-2 country codes, values are country objects
+    rows = Object.values(inner);
+  } else {
+    rows = [];
+  }
+
   const normalized: CountryEntry[] = rows.map((row: any) => {
     const code = String(row.code || row.country_code || row.iso2 || "").toUpperCase();
-    const ops: any[] = row.operators || row.providers || [];
+
+    // Operators may live directly on row.operators OR nested inside row.currencies.<CUR>.operators
+    let ops: any[] = [];
+    if (Array.isArray(row.operators)) {
+      ops = row.operators;
+    } else if (row.currencies && typeof row.currencies === "object") {
+      // Pick first currency's operators (sandbox structure)
+      const firstCur = Object.values(row.currencies)[0] as any;
+      ops = Array.isArray(firstCur?.operators) ? firstCur.operators : [];
+    } else if (Array.isArray(row.providers)) {
+      ops = row.providers;
+    }
+
+    // Derive currency
+    let currency: string | undefined;
+    if (row.currency) {
+      currency = String(row.currency);
+    } else if (row.currencies && typeof row.currencies === "object") {
+      currency = Object.keys(row.currencies)[0];
+    }
+
     return {
       code,
       name: String(row.name || row.country_name || code),
-      prefix: row.prefix || row.dial_code || row.phone_prefix || undefined,
-      currency: row.currency || undefined,
+      prefix: String(row.prefix || row.dial_code || row.phone_prefix || "").replace(/^0+/, "") || undefined,
+      currency,
       operators: ops.map((op: any) => ({
         code: String(op.code || op.operator_code || op.id || op.name || ""),
-        name: String(op.name || op.display_name || op.code || ""),
+        name: String(op.name || op.operator_name || op.display_name || op.code || ""),
         otp_required: Boolean(
           op.otp_required === true || op.otp_required === 1 || op.otp_required === "1",
         ),
-        currency: op.currency || row.currency || undefined,
+        currency,
       })).filter((op) => op.code),
     };
   }).filter((c) => c.code && c.operators.length > 0);
+
   return normalized;
 }
 
