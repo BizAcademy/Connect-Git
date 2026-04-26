@@ -3066,11 +3066,29 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
   const [response, setResponse] = useState("");
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<"open" | "all">("open");
+  const [usernames, setUsernames] = useState<Record<string, string>>({});
+
+  const resolveUsernames = async (list: SupportTicket[]) => {
+    const ids = Array.from(new Set(list.map((t) => t.user_id).filter(Boolean)));
+    if (!ids.length) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("user_id, username, email")
+      .in("user_id", ids);
+    if (data) {
+      const map: Record<string, string> = {};
+      for (const p of data) {
+        map[p.user_id] = p.username || p.email || p.user_id.slice(0, 8) + "…";
+      }
+      setUsernames((prev) => ({ ...prev, ...map }));
+    }
+  };
 
   const refresh = async () => {
     try {
       const list = await fetchAdminTickets();
       setTickets(list);
+      void resolveUsernames(list);
       onChanged?.();
     } catch (err: any) {
       toast.error(err?.message || "Échec du chargement des tickets");
@@ -3125,7 +3143,7 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
     setBusy(true);
     try {
       await adminRespondTicket(active.id, response.trim(), resolve);
-      toast.success(resolve ? "Ticket résolu" : "Réponse enregistrée");
+      toast.success(resolve ? "Ticket fermé — l'utilisateur voit la réponse" : "Réponse envoyée à l'utilisateur");
       await refresh();
     } catch (err: any) {
       toast.error(err?.message || "Échec");
@@ -3278,7 +3296,11 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
               <div className="text-[11px] text-muted-foreground space-y-0.5">
                 <div>
                   <strong className="text-foreground">Utilisateur :</strong>{" "}
-                  <span className="font-mono">{active.user_id}</span>
+                  <span>
+                    {usernames[active.user_id]
+                      ? <><strong className="text-foreground">{usernames[active.user_id]}</strong></>
+                      : <span className="font-mono">{active.user_id.slice(0, 8)}…</span>}
+                  </span>
                 </div>
                 {active.order_external_id && (
                   <div>
@@ -3350,13 +3372,10 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
                 {active.status !== "closed" && (
                   <>
                     <Button variant="outline" size="sm" disabled={busy} onClick={() => onRespond(false)}>
-                      <Send size={14} className="mr-1" /> Répondre
+                      <Send size={14} className="mr-1" /> Envoyer la réponse
                     </Button>
-                    <Button variant="outline" size="sm" disabled={busy} onClick={() => onRespond(true)}>
-                      <CheckCircle2 size={14} className="mr-1" /> Marquer résolu
-                    </Button>
-                    <Button variant="ghost" size="sm" disabled={busy} onClick={onClose}>
-                      Fermer
+                    <Button variant="default" size="sm" disabled={busy} onClick={() => onRespond(true)}>
+                      <CheckCircle2 size={14} className="mr-1" /> Résolu &amp; Fermer
                     </Button>
                   </>
                 )}

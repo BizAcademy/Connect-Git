@@ -169,7 +169,7 @@ router.post(
       const patch: Parameters<typeof updateTicket>[1] = {};
       if (response) patch.admin_response = response;
       if (resolve) {
-        patch.status = "resolved";
+        patch.status = "closed";
         patch.resolved_at = new Date().toISOString();
         patch.resolved_by = req.userId;
       } else if (!found.ticket.admin_response && response) {
@@ -216,7 +216,7 @@ export async function markTicketCancelExecuted(
     cancel_executed_at: new Date().toISOString(),
     refunded: true,
     ...(refundedAmountFcfa != null ? { refunded_amount_fcfa: refundedAmountFcfa } : {}),
-    status: "resolved",
+    status: "closed",
     resolved_at: new Date().toISOString(),
     resolved_by: by,
   });

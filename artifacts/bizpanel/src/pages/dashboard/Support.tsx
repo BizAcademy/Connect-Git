@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Send, Image as ImageIcon, X, Loader2, Clock, Headphones } from "lucide-react";
+import { Send, Image as ImageIcon, X, Loader2, Clock, Headphones, TicketCheck, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import {
   fetchMyThread,
@@ -10,7 +10,9 @@ import {
   markUserRead,
   type SupportMessage,
 } from "@/lib/support";
+import { fetchMyTickets, type Ticket } from "@/lib/tickets";
 import { SupportImage } from "@/components/SupportImage";
+import { supabase } from "@/integrations/supabase/client";
 
 const formatTime = (iso: string) => {
   const d = new Date(iso);
@@ -20,6 +22,170 @@ const formatTime = (iso: string) => {
     ? d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
     : d.toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 };
+
+const ACTION_LABELS: Record<string, string> = {
+  cancel: "Annulation",
+  refund: "Remboursement",
+  speed_up: "Accélération",
+  other: "Autre demande",
+};
+
+const STATUS_STYLES: Record<string, string> = {
+  open: "bg-yellow-100 text-yellow-800 border-yellow-300",
+  in_progress: "bg-blue-100 text-blue-800 border-blue-300",
+  resolved: "bg-green-100 text-green-800 border-green-300",
+  closed: "bg-gray-100 text-gray-700 border-gray-300",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  open: "Ouvert",
+  in_progress: "En cours",
+  resolved: "Résolu",
+  closed: "Fermé",
+};
+
+function TicketCard({ ticket }: { ticket: Ticket }) {
+  const [open, setOpen] = useState(ticket.admin_response ? true : false);
+  const hasReply = !!ticket.admin_response;
+  const statusStyle = STATUS_STYLES[ticket.status] || STATUS_STYLES.closed;
+  const statusLabel = STATUS_LABELS[ticket.status] || ticket.status;
+
+  return (
+    <div className={`border rounded-lg overflow-hidden ${hasReply && ticket.status !== "closed" ? "ring-2 ring-primary/30" : ""}`}>
+      <button
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-card hover:bg-muted/40 transition-colors text-left"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-mono text-xs font-bold text-primary shrink-0">{ticket.short_code}</span>
+          <span
+            className={`inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${statusStyle} shrink-0`}
+          >
+            {statusLabel}
+          </span>
+          <span className="text-xs text-muted-foreground truncate">
+            {ACTION_LABELS[ticket.action_type] || ticket.action_type}
+            {ticket.order_external_id ? ` · #${ticket.order_external_id}` : ""}
+          </span>
+          {hasReply && (
+            <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/30 shrink-0">
+              Réponse
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[10px] text-muted-foreground">{formatTime(ticket.ts)}</span>
+          {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </div>
+      </button>
+
+      {open && (
+        <div className="border-t px-3 py-3 space-y-2 bg-muted/20">
+          <div className="bg-white border rounded-md p-3">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Votre message</div>
+            <p className="text-sm whitespace-pre-wrap text-foreground">{ticket.message}</p>
+          </div>
+
+          {hasReply ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+              <div className="text-[10px] text-blue-900 uppercase tracking-wide font-medium mb-1">
+                Réponse du support
+              </div>
+              <p className="text-sm whitespace-pre-wrap text-blue-900">{ticket.admin_response}</p>
+              {ticket.resolved_at && (
+                <p className="text-[10px] text-blue-600 mt-1.5">
+                  Traité le {new Date(ticket.resolved_at).toLocaleString("fr-FR")}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center py-2">
+              En attente de réponse du support — délai habituel : 24h–72h.
+            </p>
+          )}
+
+          {ticket.cancel_executed && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-md p-2 text-xs text-emerald-800">
+              ✓ Commande annulée
+              {ticket.refunded_amount_fcfa != null
+                ? ` — ${ticket.refunded_amount_fcfa.toLocaleString("fr-FR")} FCFA remboursés sur votre solde`
+                : " et remboursement effectué"}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MyTickets() {
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+
+  const refresh = async (silent = false) => {
+    try {
+      const list = await fetchMyTickets();
+      setTickets(list);
+      if (!silent) setOpen(list.length > 0);
+    } catch {
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refresh();
+    const id = setInterval(() => refresh(true), 10000);
+
+    const channel = supabase
+      .channel("user-my-tickets")
+      .on(
+        "postgres_changes" as any,
+        { event: "*", schema: "public", table: "tickets" },
+        () => { void refresh(true); },
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(id);
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+
+  if (loading) return null;
+  if (tickets.length === 0) return null;
+
+  const hasUnread = tickets.some((t) => t.admin_response && t.status !== "closed");
+
+  return (
+    <div className="mb-4">
+      <button
+        className="w-full flex items-center justify-between gap-2 py-2 text-sm font-semibold"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="flex items-center gap-2">
+          <TicketCheck size={16} className="text-primary" />
+          Mes demandes de support
+          {hasUnread && (
+            <span className="inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">
+              Réponse !
+            </span>
+          )}
+        </span>
+        {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </button>
+
+      {open && (
+        <div className="space-y-2 mt-1">
+          {tickets.map((t) => (
+            <TicketCard key={t.id} ticket={t} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const Support = () => {
   const [messages, setMessages] = useState<SupportMessage[]>([]);
@@ -35,7 +201,6 @@ const Support = () => {
     try {
       const r = await fetchMyThread();
       setMessages(r.messages);
-      // Mark as read whenever we view the conversation
       markUserRead().catch(() => {});
     } catch (e: any) {
       if (!silent) toast.error(e.message || "Erreur de chargement");
@@ -99,8 +264,9 @@ const Support = () => {
         </p>
       </div>
 
+      <MyTickets />
+
       <Card className="flex flex-col h-[70vh]">
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/20">
           {loading ? (
             <div className="flex justify-center py-10">
@@ -142,7 +308,6 @@ const Support = () => {
           <div ref={bottomRef} />
         </div>
 
-        {/* Composer */}
         <CardContent className="p-3 border-t bg-card">
           {imageData && (
             <div className="mb-2 relative inline-block">
