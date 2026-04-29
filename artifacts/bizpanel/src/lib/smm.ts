@@ -19,6 +19,7 @@ export interface SmmService {
   price_fcfa: number;
   price_is_custom: boolean;
   hidden?: boolean;
+  featured?: boolean;
 }
 
 export interface SmmQuote {
@@ -270,7 +271,7 @@ export async function fetchAdminSmmPricing(providerId: number = 1): Promise<SmmS
 // Admin: set price/hidden for a service (price in FCFA per 1000)
 export async function updateAdminSmmPricing(
   serviceId: number,
-  payload: { price_fcfa?: number; hidden?: boolean },
+  payload: { price_fcfa?: number; hidden?: boolean; featured?: boolean },
   providerId: number = 1,
 ): Promise<void> {
   const headers = { "Content-Type": "application/json", ...(await authHeaders()) };

@@ -1,0 +1,72 @@
+{
+  "4412": {
+    "price_fcfa": 40,
+    "featured": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  },
+  "6900": {
+    "price_fcfa": 10,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  },
+  "7102": {
+    "price_fcfa": 40,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  },
+  "7265": {
+    "price_fcfa": 60,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  },
+  "7330": {
+    "price_fcfa": 100,
+    "featured": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  },
+  "7705": {
+    "price_fcfa": 40,
+    "featured": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  },
+  "8038": {
+    "price_fcfa": 810,
+    "featured": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  },
+  "8407": {
+    "price_fcfa": 0,
+    "featured": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  },
+  "9160": {
+    "price_fcfa": 810,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  },
+  "10022": {
+    "price_fcfa": 10,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  },
+  "10023": {
+    "price_fcfa": 10,
+    "featured": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  },
+  "10032": {
+    "price_fcfa": 0,
+    "featured": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  },
+  "10055": {
+    "price_fcfa": 610,
+    "featured": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  },
+  "10127": {
+    "price_fcfa": 1140,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:27:02.996Z"
+  }
+}

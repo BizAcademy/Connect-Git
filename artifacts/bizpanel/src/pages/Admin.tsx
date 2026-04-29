@@ -2219,6 +2219,19 @@ const AdminServices = ({ providerId = 1 }: { providerId?: number }) => {
     }
   };
 
+  const toggleFeatured = async (s: SmmService) => {
+    setSavingId(s.service);
+    try {
+      await updateAdminSmmPricing(s.service, { featured: !s.featured, price_fcfa: s.price_fcfa }, providerId);
+      setServices((prev) => prev.map((x) => x.service === s.service ? { ...x, featured: !s.featured } : x));
+      toast.success(s.featured ? "Retiré des services rapides" : "Mis en avant comme service rapide");
+    } catch (e: any) {
+      toast.error(e.message || "Erreur");
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   const resetPrice = async (s: SmmService) => {
     if (!confirm(`Réinitialiser le prix de "${s.name.slice(0, 60)}" au prix par défaut ?`)) return;
     setSavingId(s.service);
@@ -2304,6 +2317,9 @@ const AdminServices = ({ providerId = 1 }: { providerId?: number }) => {
                         {s.price_is_custom && (
                           <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full">⭐ Personnalisé</span>
                         )}
+                        {s.featured && (
+                          <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">⚡ Rapide</span>
+                        )}
                         {s.hidden && (
                           <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">Masqué</span>
                         )}
@@ -2351,6 +2367,16 @@ const AdminServices = ({ providerId = 1 }: { providerId?: number }) => {
                               <RotateCcw size={13} />
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={`h-8 px-2 ${s.featured ? "border-amber-400 bg-amber-50" : ""}`}
+                            onClick={() => toggleFeatured(s)}
+                            disabled={savingId === s.service}
+                            title={s.featured ? "Retirer de \"Rapide\"" : "Marquer comme service rapide"}
+                          >
+                            <span className="text-[12px]">{s.featured ? "⚡" : "○"}</span>
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"

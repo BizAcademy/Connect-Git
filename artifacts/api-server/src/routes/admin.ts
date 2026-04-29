@@ -390,14 +390,14 @@ router.get("/admin/smm-pricing", requireUser, requireAdmin, async (req, res) => 
   }
 });
 
-// PUT /api/admin/smm-pricing/:serviceId?provider=N  body: { price_fcfa?: number, hidden?: boolean }
+// PUT /api/admin/smm-pricing/:serviceId?provider=N  body: { price_fcfa?: number, hidden?: boolean, featured?: boolean }
 router.put("/admin/smm-pricing/:serviceId", requireUser, requireAdmin, async (req: AuthedRequest, res) => {
   const providerId = parseProviderId(req.query["provider"]);
   const id = Number(req.params["serviceId"]);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "service invalide" });
 
-  const { price_fcfa, hidden } = req.body || {};
-  const entry: { price_fcfa: number; hidden?: boolean } = { price_fcfa: 0 };
+  const { price_fcfa, hidden, featured } = req.body || {};
+  const entry: { price_fcfa: number; hidden?: boolean; featured?: boolean } = { price_fcfa: 0 };
 
   if (price_fcfa !== undefined && price_fcfa !== null && price_fcfa !== "") {
     const p = Number(price_fcfa);
@@ -408,12 +408,13 @@ router.put("/admin/smm-pricing/:serviceId", requireUser, requireAdmin, async (re
   } else {
     const map = await loadPricing(providerId);
     const existing = map[String(id)];
-    if (!existing && hidden === undefined) {
+    if (!existing && hidden === undefined && featured === undefined) {
       return res.status(400).json({ error: "Rien à mettre à jour" });
     }
     entry.price_fcfa = existing?.price_fcfa ?? 0;
   }
   if (typeof hidden === "boolean") entry.hidden = hidden;
+  if (typeof featured === "boolean") entry.featured = featured;
 
   await setEntry(id, entry, providerId);
   invalidateServicesCache(providerId);

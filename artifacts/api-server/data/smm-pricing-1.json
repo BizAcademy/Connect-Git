@@ -1,0 +1,32 @@
+{
+  "842": {
+    "price_fcfa": 150,
+    "featured": true,
+    "updated_at": "2026-04-29T15:27:02.982Z"
+  },
+  "1982": {
+    "price_fcfa": 1480,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:27:02.981Z"
+  },
+  "1984": {
+    "price_fcfa": 40,
+    "featured": true,
+    "updated_at": "2026-04-29T15:27:02.982Z"
+  },
+  "2004": {
+    "price_fcfa": 1480,
+    "featured": true,
+    "updated_at": "2026-04-29T15:27:02.982Z"
+  },
+  "2021": {
+    "price_fcfa": 150,
+    "featured": true,
+    "updated_at": "2026-04-29T15:27:02.982Z"
+  },
+  "2079": {
+    "price_fcfa": 520,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:27:02.982Z"
+  }
+}

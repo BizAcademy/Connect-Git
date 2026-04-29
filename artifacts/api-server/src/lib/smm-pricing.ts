@@ -10,6 +10,7 @@ import { logger } from "./logger";
 export interface PricingEntry {
   price_fcfa: number;
   hidden?: boolean;
+  featured?: boolean;   // pinned to top of service list
   updated_at?: string;
 }
 export type PricingMap = Record<string, PricingEntry>;
@@ -89,6 +90,7 @@ export interface EnrichedService {
   price_fcfa: number;
   price_is_custom: boolean;
   hidden: boolean;
+  featured: boolean;
   [k: string]: unknown;
 }
 
@@ -97,7 +99,7 @@ export async function enrichServices(
   providerId: number = 1,
 ): Promise<EnrichedService[]> {
   const map = await loadPricing(providerId);
-  return services.map((s) => {
+  const enriched = services.map((s) => {
     const override = map[String(s.service)];
     const customPrice = override?.price_fcfa;
     return {
@@ -106,6 +108,13 @@ export async function enrichServices(
       price_fcfa: typeof customPrice === "number" ? customPrice : defaultPriceFcfa(s.rate),
       price_is_custom: typeof customPrice === "number",
       hidden: !!override?.hidden,
+      featured: !!override?.featured,
     } as EnrichedService;
+  });
+  // Featured services bubble to the top within each category/globally
+  return enriched.sort((a, b) => {
+    if (a.featured && !b.featured) return -1;
+    if (!a.featured && b.featured) return 1;
+    return 0;
   });
 }

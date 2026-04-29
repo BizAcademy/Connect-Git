@@ -589,8 +589,13 @@ export default function NewOrder() {
                         >
                           <div className="flex justify-between items-start gap-3 mb-2">
                             <div className="min-w-0 flex-1">
-                              <div className="font-semibold text-sm break-words">
-                                {s.name}
+                              <div className="flex items-start gap-1.5 flex-wrap">
+                                {s.featured && (
+                                  <span className="inline-flex items-center gap-0.5 shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300">
+                                    ⚡ Rapide
+                                  </span>
+                                )}
+                                <span className="font-semibold text-sm break-words">{s.name}</span>
                               </div>
                               <p className="text-xs text-muted-foreground mt-1 break-words">
                                 {s.category}
