@@ -1,72 +1,1277 @@
 {
+  "6": {
+    "price_fcfa": 3050,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "98": {
+    "price_fcfa": 20310,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "298": {
+    "price_fcfa": 1050,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "308": {
+    "price_fcfa": 530,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "341": {
+    "price_fcfa": 20310,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "618": {
+    "price_fcfa": 70,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "659": {
+    "price_fcfa": 3250,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "685": {
+    "price_fcfa": 3090,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "884": {
+    "price_fcfa": 80,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "902": {
+    "price_fcfa": 80,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "908": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "910": {
+    "price_fcfa": 540,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "915": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "982": {
+    "price_fcfa": 6460,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1047": {
+    "price_fcfa": 14420,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1080": {
+    "price_fcfa": 610,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1178": {
+    "price_fcfa": 1060,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1264": {
+    "price_fcfa": 31120,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1266": {
+    "price_fcfa": 330,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1370": {
+    "price_fcfa": 20310,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1387": {
+    "price_fcfa": 690,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1536": {
+    "price_fcfa": 990,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1768": {
+    "price_fcfa": 70,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1784": {
+    "price_fcfa": 1400,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1824": {
+    "price_fcfa": 6700,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1892": {
+    "price_fcfa": 9790,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1900": {
+    "price_fcfa": 770,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1995": {
+    "price_fcfa": 2600,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2121": {
+    "price_fcfa": 80,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2125": {
+    "price_fcfa": 90,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2126": {
+    "price_fcfa": 310,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2128": {
+    "price_fcfa": 90,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2129": {
+    "price_fcfa": 990,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2134": {
+    "price_fcfa": 150,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2144": {
+    "price_fcfa": 380,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2145": {
+    "price_fcfa": 650,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2149": {
+    "price_fcfa": 24380,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2150": {
+    "price_fcfa": 32500,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2186": {
+    "price_fcfa": 990,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2258": {
+    "price_fcfa": 30,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2922": {
+    "price_fcfa": 680,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2981": {
+    "price_fcfa": 300,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3002": {
+    "price_fcfa": 1540,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3227": {
+    "price_fcfa": 40,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3272": {
+    "price_fcfa": 2340,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3343": {
+    "price_fcfa": 230,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3470": {
+    "price_fcfa": 610,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3488": {
+    "price_fcfa": 930,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3510": {
+    "price_fcfa": 3090,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3521": {
+    "price_fcfa": 450,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3813": {
+    "price_fcfa": 1470,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3814": {
+    "price_fcfa": 980,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3815": {
+    "price_fcfa": 1470,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3819": {
+    "price_fcfa": 1320,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3824": {
+    "price_fcfa": 24380,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3825": {
+    "price_fcfa": 32500,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3826": {
+    "price_fcfa": 24380,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3827": {
+    "price_fcfa": 32500,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "3828": {
+    "price_fcfa": 48750,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "4121": {
+    "price_fcfa": 3280,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "4151": {
+    "price_fcfa": 710,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "4216": {
+    "price_fcfa": 3280,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "4219": {
+    "price_fcfa": 31200,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "4220": {
+    "price_fcfa": 31200,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "4246": {
+    "price_fcfa": 270,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "4247": {
+    "price_fcfa": 550,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "4316": {
+    "price_fcfa": 2630,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
   "4412": {
     "price_fcfa": 40,
     "featured": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
-  "6900": {
-    "price_fcfa": 10,
+  "4998": {
+    "price_fcfa": 2350,
     "hidden": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
-  "7102": {
+  "5001": {
+    "price_fcfa": 2350,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5008": {
+    "price_fcfa": 2350,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5011": {
+    "price_fcfa": 2350,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5012": {
+    "price_fcfa": 2350,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5014": {
+    "price_fcfa": 2350,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5016": {
+    "price_fcfa": 2350,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5021": {
+    "price_fcfa": 580,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5022": {
+    "price_fcfa": 2350,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5040": {
+    "price_fcfa": 280,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5041": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5042": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5043": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5044": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5045": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5046": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5047": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5048": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5049": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5050": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5051": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5052": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5765": {
+    "price_fcfa": 32500,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5766": {
+    "price_fcfa": 24380,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5767": {
+    "price_fcfa": 24380,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5768": {
+    "price_fcfa": 32500,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5779": {
+    "price_fcfa": 8040,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5865": {
+    "price_fcfa": 2440,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5866": {
+    "price_fcfa": 2440,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5867": {
+    "price_fcfa": 2440,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5870": {
+    "price_fcfa": 3090,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5922": {
+    "price_fcfa": 731250,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5950": {
+    "price_fcfa": 6460,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5951": {
+    "price_fcfa": 3400,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "5990": {
+    "price_fcfa": 890,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6071": {
+    "price_fcfa": 1890,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6114": {
     "price_fcfa": 40,
     "hidden": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
-  "7265": {
-    "price_fcfa": 60,
+  "6261": {
+    "price_fcfa": 170,
     "hidden": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
-  "7330": {
-    "price_fcfa": 100,
+  "6271": {
+    "price_fcfa": 810,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6328": {
+    "price_fcfa": 3090,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6375": {
+    "price_fcfa": 870,
     "featured": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6393": {
+    "price_fcfa": 810,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6394": {
+    "price_fcfa": 1220,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6395": {
+    "price_fcfa": 1630,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6396": {
+    "price_fcfa": 2440,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6397": {
+    "price_fcfa": 2840,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6398": {
+    "price_fcfa": 3250,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6483": {
+    "price_fcfa": 460,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6552": {
+    "price_fcfa": 9790,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6553": {
+    "price_fcfa": 19950,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6604": {
+    "price_fcfa": 800,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6682": {
+    "price_fcfa": 710,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6714": {
+    "price_fcfa": 1380,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6717": {
+    "price_fcfa": 1380,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6734": {
+    "price_fcfa": 2440,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6777": {
+    "price_fcfa": 15230,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6779": {
+    "price_fcfa": 9790,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6790": {
+    "price_fcfa": 96850,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6794": {
+    "price_fcfa": 6180,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6802": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6810": {
+    "price_fcfa": 1050,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "6864": {
+    "price_fcfa": 2440,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7016": {
+    "price_fcfa": 36560,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7017": {
+    "price_fcfa": 30060,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7159": {
+    "price_fcfa": 69060,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7160": {
+    "price_fcfa": 69060,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7161": {
+    "price_fcfa": 195000,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7166": {
+    "price_fcfa": 81250,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7167": {
+    "price_fcfa": 121880,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7168": {
+    "price_fcfa": 162500,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7169": {
+    "price_fcfa": 203130,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7170": {
+    "price_fcfa": 243750,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7171": {
+    "price_fcfa": 284380,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7174": {
+    "price_fcfa": 2110,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7221": {
+    "price_fcfa": 1800,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7222": {
+    "price_fcfa": 2270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7223": {
+    "price_fcfa": 3490,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7224": {
+    "price_fcfa": 6130,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7312": {
+    "price_fcfa": 850,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7313": {
+    "price_fcfa": 1020,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7314": {
+    "price_fcfa": 1020,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7494": {
+    "price_fcfa": 500,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7496": {
+    "price_fcfa": 6700,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7497": {
+    "price_fcfa": 18160,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7498": {
+    "price_fcfa": 18160,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7512": {
+    "price_fcfa": 520,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7524": {
+    "price_fcfa": 330,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7525": {
+    "price_fcfa": 360,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7526": {
+    "price_fcfa": 280,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7527": {
+    "price_fcfa": 550,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7535": {
+    "price_fcfa": 650,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7555": {
+    "price_fcfa": 270,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7561": {
+    "price_fcfa": 360,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7634": {
+    "price_fcfa": 7310,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7673": {
+    "price_fcfa": 7410,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
   "7705": {
     "price_fcfa": 40,
     "featured": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
-  "8038": {
+  "7731": {
+    "price_fcfa": 31200,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7739": {
+    "price_fcfa": 150,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7779": {
+    "price_fcfa": 146250,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7780": {
+    "price_fcfa": 227500,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7791": {
+    "price_fcfa": 14420,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7793": {
+    "price_fcfa": 870,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7794": {
+    "price_fcfa": 1010,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7797": {
+    "price_fcfa": 40,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7799": {
+    "price_fcfa": 160,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7861": {
+    "price_fcfa": 170,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7864": {
+    "price_fcfa": 3090,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7869": {
+    "price_fcfa": 410,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7877": {
+    "price_fcfa": 930,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7881": {
+    "price_fcfa": 520,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7892": {
+    "price_fcfa": 7690,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7951": {
+    "price_fcfa": 20,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7952": {
+    "price_fcfa": 20,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "7971": {
+    "price_fcfa": 70,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8024": {
     "price_fcfa": 810,
     "featured": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
-  "8407": {
-    "price_fcfa": 0,
-    "featured": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
-  },
-  "9160": {
-    "price_fcfa": 810,
+  "8043": {
+    "price_fcfa": 6460,
     "hidden": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
-  "10022": {
+  "8061": {
+    "price_fcfa": 90,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8063": {
+    "price_fcfa": 70,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8067": {
+    "price_fcfa": 12680,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8100": {
+    "price_fcfa": 300,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8101": {
+    "price_fcfa": 40,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8137": {
+    "price_fcfa": 150,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8138": {
+    "price_fcfa": 150,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8139": {
+    "price_fcfa": 150,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8140": {
+    "price_fcfa": 150,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8141": {
+    "price_fcfa": 150,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8149": {
+    "price_fcfa": 150,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8217": {
+    "price_fcfa": 450,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8223": {
+    "price_fcfa": 280,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8225": {
+    "price_fcfa": 4880,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8403": {
+    "price_fcfa": 710,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8404": {
+    "price_fcfa": 40,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8405": {
+    "price_fcfa": 2340,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8428": {
+    "price_fcfa": 380,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8464": {
     "price_fcfa": 10,
     "hidden": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
-  "10023": {
+  "8467": {
+    "price_fcfa": 170,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8489": {
+    "price_fcfa": 2630,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8506": {
+    "price_fcfa": 300,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8529": {
+    "price_fcfa": 1420,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8557": {
+    "price_fcfa": 21450,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8573": {
     "price_fcfa": 10,
-    "featured": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
-  "10032": {
-    "price_fcfa": 0,
+  "8612": {
+    "price_fcfa": 20,
     "featured": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
-  "10055": {
+  "8613": {
+    "price_fcfa": 20,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8781": {
+    "price_fcfa": 250,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8782": {
+    "price_fcfa": 1510,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "8783": {
+    "price_fcfa": 3780,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9135": {
+    "price_fcfa": 200,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9189": {
+    "price_fcfa": 930,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9316": {
+    "price_fcfa": 13610,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9317": {
+    "price_fcfa": 4750,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9318": {
+    "price_fcfa": 290,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9367": {
+    "price_fcfa": 4670,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9428": {
+    "price_fcfa": 30,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9538": {
+    "price_fcfa": 770,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9539": {
+    "price_fcfa": 620,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9540": {
     "price_fcfa": 610,
-    "featured": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
-  },
-  "10127": {
-    "price_fcfa": 1140,
     "hidden": true,
-    "updated_at": "2026-04-29T15:27:02.996Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9576": {
+    "price_fcfa": 730,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9577": {
+    "price_fcfa": 730,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9578": {
+    "price_fcfa": 500,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9579": {
+    "price_fcfa": 490,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9580": {
+    "price_fcfa": 450,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9581": {
+    "price_fcfa": 440,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9606": {
+    "price_fcfa": 1020,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9607": {
+    "price_fcfa": 1220,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9608": {
+    "price_fcfa": 1220,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9609": {
+    "price_fcfa": 1100,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9610": {
+    "price_fcfa": 1220,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9611": {
+    "price_fcfa": 1220,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9612": {
+    "price_fcfa": 1220,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9624": {
+    "price_fcfa": 30,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9811": {
+    "price_fcfa": 280,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9867": {
+    "price_fcfa": 4420,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "9986": {
+    "price_fcfa": 30,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10122": {
+    "price_fcfa": 70,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10214": {
+    "price_fcfa": 890,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10236": {
+    "price_fcfa": 650,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10268": {
+    "price_fcfa": 480,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10269": {
+    "price_fcfa": 480,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10270": {
+    "price_fcfa": 640,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10271": {
+    "price_fcfa": 640,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10272": {
+    "price_fcfa": 640,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10273": {
+    "price_fcfa": 640,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10274": {
+    "price_fcfa": 640,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10275": {
+    "price_fcfa": 640,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10276": {
+    "price_fcfa": 640,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10291": {
+    "price_fcfa": 640,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "10297": {
+    "price_fcfa": 4750,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
   }
 }

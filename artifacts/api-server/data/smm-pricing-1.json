@@ -1,32 +1,82 @@
 {
-  "842": {
-    "price_fcfa": 150,
+  "1228": {
+    "price_fcfa": 2070,
     "featured": true,
-    "updated_at": "2026-04-29T15:27:02.982Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1682": {
+    "price_fcfa": 3410,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1745": {
+    "price_fcfa": 1010,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1746": {
+    "price_fcfa": 2010,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1747": {
+    "price_fcfa": 3010,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1748": {
+    "price_fcfa": 3010,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1754": {
+    "price_fcfa": 6000,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1755": {
+    "price_fcfa": 3000,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "1853": {
+    "price_fcfa": 110,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
   "1982": {
     "price_fcfa": 1480,
     "hidden": true,
-    "updated_at": "2026-04-29T15:27:02.981Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
-  "1984": {
-    "price_fcfa": 40,
+  "2027": {
+    "price_fcfa": 110,
     "featured": true,
-    "updated_at": "2026-04-29T15:27:02.982Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
-  "2004": {
-    "price_fcfa": 1480,
+  "2028": {
+    "price_fcfa": 110,
     "featured": true,
-    "updated_at": "2026-04-29T15:27:02.982Z"
-  },
-  "2021": {
-    "price_fcfa": 150,
-    "featured": true,
-    "updated_at": "2026-04-29T15:27:02.982Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
   },
   "2079": {
     "price_fcfa": 520,
     "hidden": true,
-    "updated_at": "2026-04-29T15:27:02.982Z"
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2097": {
+    "price_fcfa": 950,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2098": {
+    "price_fcfa": 950,
+    "featured": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
+  },
+  "2108": {
+    "price_fcfa": 4420,
+    "hidden": true,
+    "updated_at": "2026-04-29T15:45:47.989Z"
   }
 }
