@@ -1,5 +1,6 @@
 import express, { type Express, type Request } from "express";
 import cors from "cors";
+import compression from "compression";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -25,6 +26,7 @@ app.use(
     },
   }),
 );
+app.use(compression());
 app.use(cors());
 
 // Capture the raw JSON body so webhook handlers (AfribaPay) can verify the

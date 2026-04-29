@@ -87,43 +87,82 @@ export async function fetchSmmProviders(): Promise<SmmProviderPublic[]> {
   return (data.providers || []) as SmmProviderPublic[];
 }
 
-// In-memory client cache for the services catalogue. Mirrors the 5-min
-// upstream cache on the API server so navigating back-and-forth between
-// the picker and a provider catalogue is instantaneous after the first hit.
-const SERVICES_TTL_MS = 5 * 60_000;
-const servicesCache = new Map<number, { ts: number; data: SmmService[] }>();
+// Client-side services cache — three-layer strategy:
+//   1. In-memory Map (fastest, lost on page reload)
+//   2. sessionStorage (survives navigation & soft-reload within the tab)
+//   3. HTTP fetch with If-None-Match (lets the server return 304 + gzip for new data)
+// TTL is 25 min — slightly under the server's 30 min window so the client
+// re-validates before the server evicts its own copy.
+const SERVICES_TTL_MS = 25 * 60_000;
+const SS_KEY = (pid: number) => `smm_svc_v2_${pid}`;
+
+interface SvcEntry { ts: number; etag: string; data: SmmService[] }
+const memCache = new Map<number, SvcEntry>();
 const inflight = new Map<number, Promise<SmmService[]>>();
 
-async function loadServicesUncached(providerId: number): Promise<SmmService[]> {
+function ssRead(providerId: number): SvcEntry | null {
+  try {
+    const raw = sessionStorage.getItem(SS_KEY(providerId));
+    if (!raw) return null;
+    return JSON.parse(raw) as SvcEntry;
+  } catch { return null; }
+}
+
+function ssWrite(providerId: number, entry: SvcEntry): void {
+  try { sessionStorage.setItem(SS_KEY(providerId), JSON.stringify(entry)); } catch { /* quota */ }
+}
+
+async function loadServices(providerId: number): Promise<SmmService[]> {
   const qs = withProvider(providerId, new URLSearchParams());
-  const res = await fetch(`${API_BASE}/services?${qs.toString()}`);
+  const url = `${API_BASE}/services?${qs.toString()}`;
+  const existing = memCache.get(providerId) ?? ssRead(providerId);
+  const headers: HeadersInit = {};
+  if (existing?.etag) headers["If-None-Match"] = existing.etag;
+  const res = await fetch(url, { headers });
+  if (res.status === 304 && existing) {
+    // Server says nothing changed — refresh timestamps and re-use cached data
+    const refreshed: SvcEntry = { ...existing, ts: Date.now() };
+    memCache.set(providerId, refreshed);
+    ssWrite(providerId, refreshed);
+    return existing.data;
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  if (data.error) throw new Error(data.error);
-  return (data.services || []) as SmmService[];
+  const payload = await res.json();
+  if (payload.error) throw new Error(payload.error);
+  const data = (payload.services || []) as SmmService[];
+  const etag = res.headers.get("ETag") ?? "";
+  const entry: SvcEntry = { ts: Date.now(), etag, data };
+  memCache.set(providerId, entry);
+  ssWrite(providerId, entry);
+  return data;
 }
 
 export async function fetchSmmServices(providerId: number = 1): Promise<SmmService[]> {
-  const hit = servicesCache.get(providerId);
-  if (hit && Date.now() - hit.ts < SERVICES_TTL_MS) return hit.data;
+  // 1. In-memory hit
+  const mem = memCache.get(providerId);
+  if (mem && Date.now() - mem.ts < SERVICES_TTL_MS) return mem.data;
+  // 2. sessionStorage hit
+  const ss = ssRead(providerId);
+  if (ss && Date.now() - ss.ts < SERVICES_TTL_MS) {
+    memCache.set(providerId, ss);
+    return ss.data;
+  }
+  // 3. Deduplicated network fetch
   const ongoing = inflight.get(providerId);
   if (ongoing) return ongoing;
-  const p = loadServicesUncached(providerId)
-    .then((data) => {
-      servicesCache.set(providerId, { ts: Date.now(), data });
-      return data;
-    })
-    .finally(() => inflight.delete(providerId));
+  const p = loadServices(providerId).finally(() => inflight.delete(providerId));
   inflight.set(providerId, p);
   return p;
 }
 
 // Fire-and-forget prefetch: warms the cache without surfacing errors.
-// Intended to be called from the provider picker so that by the time the
-// user clicks a provider, its services are already in memory.
+// Called on provider picker mount and hover so the catalogue is ready
+// before the user even clicks.
 export function prefetchSmmServices(providerId: number): void {
-  const hit = servicesCache.get(providerId);
-  if (hit && Date.now() - hit.ts < SERVICES_TTL_MS) return;
+  const mem = memCache.get(providerId);
+  if (mem && Date.now() - mem.ts < SERVICES_TTL_MS) return;
+  const ss = ssRead(providerId);
+  if (ss && Date.now() - ss.ts < SERVICES_TTL_MS) { memCache.set(providerId, ss); return; }
   if (inflight.has(providerId)) return;
   fetchSmmServices(providerId).catch(() => { /* silent */ });
 }

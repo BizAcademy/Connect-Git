@@ -5,7 +5,7 @@ import { purgeSensitiveSettingRows } from "./lib/settings-cleanup";
 import { startOrderStatusPoller } from "./lib/order-status-poller";
 import { startMissedRefundScanner } from "./lib/missed-refund-scanner";
 import { startPendingPaymentScanner } from "./lib/pending-payment-scanner";
-import { syncOrderInternal } from "./routes/smm";
+import { syncOrderInternal, warmServicesCache } from "./routes/smm";
 
 const rawPort = process.env["PORT"];
 
@@ -30,6 +30,8 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
   startSupportCleanup();
   void purgeSensitiveSettingRows();
+  // Pre-warm the enriched services cache so the first user request is instant
+  void warmServicesCache();
   // Background poller: pushes provider status updates onto local orders so
   // user/admin views always reflect "Terminée" without depending on someone
   // having the page open. Realtime then propagates the change to any

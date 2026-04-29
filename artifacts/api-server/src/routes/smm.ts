@@ -39,14 +39,59 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   );
 }
 
-// In-memory cache for the upstream services list (5 min) — keyed per provider
+// Cache TTL: 30 minutes (provider service lists rarely change)
+const CACHE_TTL_MS = 30 * 60_000;
+
+// Raw services cache — used by order placement and admin routes
 const svcCache: Map<number, { ts: number; data: any[] }> = new Map();
 async function getRawServices(providerId: ProviderId): Promise<any[]> {
   const hit = svcCache.get(providerId);
-  if (hit && Date.now() - hit.ts < 5 * 60_000) return hit.data;
+  if (hit && Date.now() - hit.ts < CACHE_TTL_MS) return hit.data;
   const data = await callProvider(providerId, "services");
   svcCache.set(providerId, { ts: Date.now(), data });
   return data;
+}
+
+// Enriched & filtered cache — the final public-facing list, pre-computed once.
+// Avoids re-running enrichServices + filter on every /smm/services request.
+const enrichedCache: Map<number, { ts: number; services: any[]; etag: string }> = new Map();
+const enrichedInflight: Map<number, Promise<{ services: any[]; etag: string }>> = new Map();
+
+async function getEnrichedServices(
+  providerId: ProviderId,
+): Promise<{ services: any[]; etag: string }> {
+  const hit = enrichedCache.get(providerId);
+  if (hit && Date.now() - hit.ts < CACHE_TTL_MS) return hit;
+
+  const ongoing = enrichedInflight.get(providerId);
+  if (ongoing) return ongoing;
+
+  const p = (async () => {
+    const raw = await getRawServices(providerId);
+    const enriched = await enrichServices(raw, providerId);
+    const services = enriched.filter(
+      (s) => !s.hidden && isSupportedServiceType(s.type),
+    );
+    const etag = `"${providerId}-${Date.now()}"`;
+    const entry = { ts: Date.now(), services, etag };
+    enrichedCache.set(providerId, entry);
+    return entry;
+  })().finally(() => enrichedInflight.delete(providerId));
+
+  enrichedInflight.set(providerId, p);
+  return p;
+}
+
+// Warm the cache for all providers at server startup (fire-and-forget)
+export async function warmServicesCache(): Promise<void> {
+  for (const pid of ALL_PROVIDER_IDS) {
+    try {
+      await getEnrichedServices(pid as ProviderId);
+      logger.info({ providerId: pid }, "services cache warmed");
+    } catch (err) {
+      logger.warn({ err, providerId: pid }, "services cache warm failed");
+    }
+  }
 }
 
 // --- Tiny in-memory rate limiter for /order ------------------------------
@@ -163,12 +208,16 @@ router.get("/smm/providers", async (_req, res) => {
 router.get("/smm/services", async (req, res) => {
   const providerId = parseProviderId(req.query["provider"]);
   try {
-    const raw = await getRawServices(providerId);
-    const enriched = await enrichServices(raw, providerId);
-    const visible = enriched.filter(
-      (s) => !s.hidden && isSupportedServiceType(s.type),
-    );
-    res.json({ services: visible, provider: providerId });
+    const { services, etag } = await getEnrichedServices(providerId);
+    // Let browsers & proxies cache for 5 minutes; allow stale for 30 min while revalidating
+    res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=1800");
+    res.setHeader("ETag", etag);
+    // Fast path: client already has this version
+    if (req.headers["if-none-match"] === etag) {
+      res.sendStatus(304);
+      return;
+    }
+    res.json({ services, provider: providerId });
   } catch (err) {
     logger.error({ err, providerId }, "SMM services error");
     res.status(500).json({ error: (err as Error).message });
@@ -654,12 +703,15 @@ router.post("/admin/orders/by-id/:id/refund", requireUser, requireAdmin, async (
   });
 });
 
-// Cache invalidation helper (specific provider, or all when omitted)
+// Cache invalidation helper (specific provider, or all when omitted).
+// Clears both the raw upstream cache and the enriched-response cache.
 export function invalidateServicesCache(providerId?: number): void {
   if (typeof providerId === "number") {
     svcCache.delete(providerId);
+    enrichedCache.delete(providerId);
   } else {
     svcCache.clear();
+    enrichedCache.clear();
   }
 }
 
