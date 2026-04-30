@@ -451,8 +451,8 @@ router.get("/admin/providers", requireUser, requireAdmin, async (_req, res) => {
 });
 
 // PUT /api/admin/providers/:id  body: { display_order?, enabled?, header_title?, header_text? }
-// `display_order` is constrained to 1, 2 or 3 and is globally unique across the
-// three providers. When the admin moves provider P to slot N, the provider
+// `display_order` is constrained to 1–5 and is globally unique across the
+// five providers. When the admin moves provider P to slot N, the provider
 // currently sitting in slot N is automatically swapped to P's previous slot
 // (server-side) so the UI never has to coordinate two writes.
 router.put("/admin/providers/:id", requireUser, requireAdmin, async (req: AuthedRequest, res) => {
@@ -470,8 +470,8 @@ router.put("/admin/providers/:id", requireUser, requireAdmin, async (req: Authed
   const patch: ProviderPatch = {};
   if (b["display_order"] !== undefined && b["display_order"] !== null && b["display_order"] !== "") {
     const n = Number(b["display_order"]);
-    if (!Number.isFinite(n) || (n !== 1 && n !== 2 && n !== 3 && n !== 4)) {
-      return res.status(400).json({ error: "display_order invalide (1, 2, 3 ou 4)" });
+    if (!Number.isFinite(n) || (n !== 1 && n !== 2 && n !== 3 && n !== 4 && n !== 5)) {
+      return res.status(400).json({ error: "display_order invalide (1, 2, 3, 4 ou 5)" });
     }
     patch.display_order = n;
   }

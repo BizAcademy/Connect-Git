@@ -35271,8 +35271,8 @@ router3.put("/admin/providers/:id", requireUser, requireAdmin, async (req, res) 
   const patch = {};
   if (b["display_order"] !== void 0 && b["display_order"] !== null && b["display_order"] !== "") {
     const n = Number(b["display_order"]);
-    if (!Number.isFinite(n) || n !== 1 && n !== 2 && n !== 3 && n !== 4) {
-      return res.status(400).json({ error: "display_order invalide (1, 2, 3 ou 4)" });
+    if (!Number.isFinite(n) || n !== 1 && n !== 2 && n !== 3 && n !== 4 && n !== 5) {
+      return res.status(400).json({ error: "display_order invalide (1, 2, 3, 4 ou 5)" });
     }
     patch.display_order = n;
   }
