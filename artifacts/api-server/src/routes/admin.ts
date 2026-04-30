@@ -968,6 +968,48 @@ async function fetchAuthUser(userId: string): Promise<AuthUserLite | null> {
   };
 }
 
+// GET /api/admin/users/total-balance
+// Renvoie la somme des soldes de tous les utilisateurs + leur nombre.
+// Utilisé par la carte "Solde total" dans le panneau admin (mise à jour
+// en temps réel via Supabase Realtime côté client + repli polling 15 s).
+router.get("/admin/users/total-balance", requireUser, requireAdmin, async (_req: AuthedRequest, res) => {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).json({ error: "Configuration serveur manquante" });
+  }
+  try {
+    const params = new URLSearchParams();
+    params.set("select", "balance");
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?${params.toString()}`, {
+      headers: {
+        ...serviceRoleHeaders(),
+        Range: "0-1000000",
+        "Range-Unit": "items",
+        Prefer: "count=exact",
+      },
+    });
+    if (!r.ok && r.status !== 206) {
+      const body = await r.text();
+      logger.error({ status: r.status, body: body.slice(0, 200) }, "admin/users/total-balance failed");
+      return res.status(502).json({ error: "Lecture des soldes impossible" });
+    }
+    const rows = await r.json() as Array<{ balance: number | string | null }>;
+    const total = rows.reduce((sum, row) => sum + (Number(row.balance) || 0), 0);
+    const range = r.headers.get("content-range");
+    let count = rows.length;
+    if (range && /\/(\d+)$/.test(range)) {
+      count = Number(range.match(/\/(\d+)$/)![1]);
+    }
+    res.json({
+      total_balance: Math.round(total),
+      user_count: count,
+      currency: "FCFA",
+    });
+  } catch (err) {
+    logger.error({ err }, "admin/users/total-balance error");
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // GET /api/admin/users?search=&limit=&offset=
 router.get("/admin/users", requireUser, requireAdmin, async (req: AuthedRequest, res) => {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CreditCard } from "lucide-react";
+import { formatPaymentMethod } from "@/lib/paymentMethod";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -72,7 +73,7 @@ export default function PaymentHistory() {
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-sm capitalize">{p.method}</p>
+                      <p className="font-medium text-sm">{formatPaymentMethod(p.method)}</p>
                       <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColors[p.status] || "bg-gray-100 text-gray-800"}`}>
                         {statusLabels[p.status] || p.status}
                       </span>

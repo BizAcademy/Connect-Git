@@ -39,6 +39,7 @@ import {
 } from "@/lib/smm";
 import { syncOrdersStatus } from "@/lib/orderSync";
 import { adminForceOrderRefund } from "@/lib/smm";
+import { formatPaymentMethod } from "@/lib/paymentMethod";
 import { InvoiceModal, type InvoiceData } from "@/components/dashboard/InvoiceModal";
 import { Wallet, AlertTriangle, TrendingUp, Calendar, CalendarDays, CalendarRange, ArrowDownCircle, ArrowUpCircle, Receipt, Headphones, Send, Loader2, Image as ImageIcon, LayoutDashboard, Gift, Filter, Ticket as TicketIcon, XCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
@@ -766,7 +767,7 @@ function buildAdminInvoice(r: TxRow): InvoiceData {
       amount: Number(p.amount),
       status: r.status_label,
       details: [
-        { label: "Méthode", value: String(p.method || "—").toUpperCase() },
+        { label: "Méthode", value: formatPaymentMethod(p.method) },
         { label: "Référence", value: p.reference || "—" },
         { label: "Utilisateur", value: r.user_label },
       ],
@@ -1397,6 +1398,25 @@ const AdminUsers = () => {
   const [pw, setPw] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
 
+  const [totals, setTotals] = useState<{ total_balance: number; user_count: number; updated_at: number } | null>(null);
+  const totalsSeqRef = useRef(0);
+  const totalsMountedRef = useRef(true);
+
+  const loadTotals = async () => {
+    const seq = ++totalsSeqRef.current;
+    try {
+      const data = await adminApiFetch(`/api/admin/users/total-balance`);
+      if (!totalsMountedRef.current || seq !== totalsSeqRef.current) return;
+      setTotals({
+        total_balance: Number(data.total_balance) || 0,
+        user_count: Number(data.user_count) || 0,
+        updated_at: Date.now(),
+      });
+    } catch {
+      /* silent */
+    }
+  };
+
   const load = async (q = search) => {
     setLoading(true);
     try {
@@ -1412,7 +1432,24 @@ const AdminUsers = () => {
     }
   };
 
-  useEffect(() => { load(""); }, []);
+  useEffect(() => { load(""); loadTotals(); }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-balances")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        () => loadTotals(),
+      )
+      .subscribe();
+    const interval = window.setInterval(loadTotals, 15_000);
+    return () => {
+      totalsMountedRef.current = false;
+      try { supabase.removeChannel(channel); } catch { /* ignore */ }
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1485,6 +1522,29 @@ const AdminUsers = () => {
 
   return (
     <div className="space-y-4">
+      <Card className="bg-blue-600 text-white border-blue-600">
+        <CardContent className="p-5 flex items-center gap-4 flex-wrap">
+          <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            <Wallet size={22} />
+          </div>
+          <div className="flex-1 min-w-[180px]">
+            <p className="text-xs opacity-80 uppercase tracking-wide">Solde total des utilisateurs</p>
+            <p className="text-3xl font-bold">
+              {totals ? totals.total_balance.toLocaleString("fr-FR") : "…"} FCFA
+            </p>
+            <p className="text-xs opacity-80 mt-0.5">
+              {totals ? `${totals.user_count.toLocaleString("fr-FR")} compte(s)` : "Chargement…"}
+              {totals && (
+                <span className="ml-2">· mis à jour {new Date(totals.updated_at).toLocaleTimeString("fr-FR")}</span>
+              )}
+            </p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => loadTotals()}
+            className="bg-white/20 hover:bg-white/30 text-white border-white/30">
+            <RefreshCw size={14} className="mr-1" /> Rafraîchir
+          </Button>
+        </CardContent>
+      </Card>
       <form onSubmit={onSearch} className="flex gap-2">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -1909,7 +1969,7 @@ const AdminPayments = () => {
               <CardContent className="p-4 flex items-center gap-3 flex-wrap">
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm">{Number(p.amount).toLocaleString()} FCFA</p>
-                  <p className="text-xs text-muted-foreground">{(p.profiles as any)?.username} · {p.method?.toUpperCase()}</p>
+                  <p className="text-xs text-muted-foreground">{(p.profiles as any)?.username} · {formatPaymentMethod(p.method)}</p>
                   <p className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString("fr-FR")}</p>
                   {p.reference && <p className="text-xs text-muted-foreground">Réf: {p.reference}</p>}
                 </div>
@@ -2067,7 +2127,8 @@ const AdminProvidersConfig = ({ onChanged }: { onChanged?: () => void }) => {
                     <option value="1">1 (premier)</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
-                    <option value="4">4 (dernier)</option>
+                    <option value="4">4</option>
+                    <option value="5">5 (dernier)</option>
                   </select>
                 </div>
                 <p className="text-[11px] text-muted-foreground -mt-1">
@@ -2629,11 +2690,11 @@ const AdminSettings = () => {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle className="text-sm">AfribaPay</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-sm">Mobile Money</CardTitle></CardHeader>
             <CardContent>
               <div className="rounded-md bg-muted px-4 py-3 text-sm text-muted-foreground space-y-1">
                 <p className="font-medium text-foreground">Gestion via variables d'environnement</p>
-                <p>Les identifiants AfribaPay (<code>AFRIBAPAY_API_USER</code>, <code>AFRIBAPAY_API_KEY</code>, <code>AFRIBAPAY_MERCHANT_KEY</code>) sont configurés en tant que secrets serveur et ne sont pas stockés dans la base de données. La signature du webhook utilise <code>AFRIBAPAY_API_KEY</code> (HMAC-SHA256). La Guinée et la R.D.C. sont exclues de la liste des pays.</p>
+                <p>Les identifiants du prestataire de paiement (<code>AFRIBAPAY_API_USER</code>, <code>AFRIBAPAY_API_KEY</code>, <code>AFRIBAPAY_MERCHANT_KEY</code>) sont configurés en tant que secrets serveur et ne sont pas stockés dans la base de données. La signature du webhook utilise <code>AFRIBAPAY_API_KEY</code> (HMAC-SHA256). La Guinée et la R.D.C. sont exclues de la liste des pays.</p>
               </div>
             </CardContent>
           </Card>

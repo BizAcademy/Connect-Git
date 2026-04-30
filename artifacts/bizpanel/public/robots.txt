@@ -1,0 +1,10 @@
+# BUZZ BOOST — robots.txt
+# Remplacez "votre-domaine.com" par votre domaine réel après déploiement.
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /auth
+
+Sitemap: https://votre-domaine.com/sitemap.xml

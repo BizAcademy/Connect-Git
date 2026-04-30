@@ -272,7 +272,7 @@ export default function Deposit() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold font-heading">Recharger mon solde</h2>
-          <p className="text-sm text-muted-foreground">Mobile Money via AfribaPay</p>
+          <p className="text-sm text-muted-foreground">Paiement Mobile Money sécurisé</p>
         </div>
         {canBack && (
           <Button variant="ghost" size="sm" onClick={goBack}>
@@ -281,7 +281,7 @@ export default function Deposit() {
         )}
       </div>
 
-      <Card className="bg-gradient-to-r from-primary to-accent text-white">
+      <Card className="bg-blue-600 text-white border-blue-600">
         <CardContent className="p-5 flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
             <Wallet size={22} />

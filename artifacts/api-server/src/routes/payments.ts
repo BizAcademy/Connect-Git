@@ -164,7 +164,7 @@ function handleAfribapayError(err: unknown, res: import("express").Response) {
     logger.error({ status: err.status, payload: err.payload }, "AfribaPay API error");
     // Surface the real AfribaPay message when available (e.g. "This phone number is unavailable for testing purposes")
     const realMsg = extractAfribapayMessage(err.payload);
-    const userFacingError = realMsg || err.message || "Erreur AfribaPay";
+    const userFacingError = realMsg || err.message || "Erreur de paiement";
     const httpStatus = err.status === 404 || err.status === 403 ? 400 : 502;
     return res.status(httpStatus).json({ error: userFacingError });
   }

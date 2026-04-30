@@ -1,0 +1,13 @@
+{
+  "name": "buzzboost-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "index.mjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node --enable-source-maps ./index.mjs"
+  }
+}

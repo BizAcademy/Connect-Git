@@ -19,7 +19,7 @@ export class AfribapayApiError extends Error {
   status: number;
   payload: unknown;
   constructor(status: number, payload: unknown, message?: string) {
-    super(message || `AfribaPay HTTP ${status}`);
+    super(message || `Erreur de paiement HTTP ${status}`);
     this.status = status;
     this.payload = payload;
   }
@@ -68,12 +68,12 @@ async function fetchNewToken(): Promise<TokenEntry> {
     logger.error({ status: r.status, body }, "AfribaPay token fetch failed");
     // Activate backoff so concurrent/subsequent callers don't immediately retry
     tokenBackoffUntil = Date.now() + TOKEN_BACKOFF_MS;
-    throw new AfribapayApiError(r.status, body, "Échec récupération du token AfribaPay");
+    throw new AfribapayApiError(r.status, body, "Échec récupération du jeton de paiement");
   }
   const token = body?.access_token || body?.token || body?.data?.access_token;
   const expiresIn = Number(body?.expires_in || body?.data?.expires_in || 90000);
   if (!token) {
-    throw new AfribapayApiError(500, body, "Token AfribaPay introuvable dans la réponse");
+    throw new AfribapayApiError(500, body, "Jeton de paiement introuvable dans la réponse");
   }
   // Renew 60s before actual expiry
   return { token, expiresAt: Date.now() + Math.max(30, expiresIn - 60) * 1000 };
@@ -87,7 +87,7 @@ async function getToken(): Promise<string> {
   // Back off after a recent failure — don't hammer AfribaPay
   if (Date.now() < tokenBackoffUntil) {
     const waitSec = Math.ceil((tokenBackoffUntil - Date.now()) / 1000);
-    throw new AfribapayApiError(503, null, `AfribaPay auth en attente (${waitSec}s)`);
+    throw new AfribapayApiError(503, null, `Authentification de paiement en attente (${waitSec}s)`);
   }
   // Share a single inflight request among all concurrent callers
   if (tokenInflight) return tokenInflight.then((e) => e.token);

@@ -11,6 +11,7 @@ import { syncOrdersStatusWithRefunds } from "@/lib/orderSync";
 import { fetchSmmProviders } from "@/lib/smm";
 import { toast } from "sonner";
 import { InvoiceModal, type InvoiceData } from "@/components/dashboard/InvoiceModal";
+import { formatPaymentMethod } from "@/lib/paymentMethod";
 
 type TxKind = "deposit" | "order" | "refund";
 type TxRow = {
@@ -125,7 +126,7 @@ export default function Transactions() {
         status: p.status,
         status_label: m.label,
         status_color: m.color,
-        detail: `Dépôt ${(p.method || "").toUpperCase()}`,
+        detail: `Dépôt ${formatPaymentMethod(p.method)}`,
         reference: p.reference || null,
         raw: p,
       });
@@ -203,10 +204,10 @@ export default function Transactions() {
     if (r.kind === "deposit") {
       const p = r.raw;
       const details: { label: string; value: string }[] = [
-        { label: "Méthode", value: String(p.method || "—").toUpperCase() },
+        { label: "Méthode", value: formatPaymentMethod(p.method) },
       ];
       if (p.order_id)       details.push({ label: "Réf. commande",    value: String(p.order_id) });
-      if (p.transaction_id) details.push({ label: "Réf. AfribaPay",   value: String(p.transaction_id) });
+      if (p.transaction_id) details.push({ label: "Réf. paiement",    value: String(p.transaction_id) });
       if (p.reference)      details.push({ label: "Référence interne", value: String(p.reference) });
       const bonus = Number(p.bonus_amount);
       if (bonus > 0)        details.push({ label: "Bonus crédité",    value: `+${bonus.toLocaleString("fr-FR")} FCFA` });
