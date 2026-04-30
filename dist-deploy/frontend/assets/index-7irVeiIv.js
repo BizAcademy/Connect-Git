@@ -179,7 +179,7 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 
 • Le chiffre d'affaires et le nombre de commandes seront restaurés.
 • Le gain est estimé pour les commandes anciennes à partir de la marge
-  par défaut (USD × 650 utilisateur vs USD × 600 fournisseur, ≈ 7,69 %).
+  par défaut (USD × 700 utilisateur vs USD × 600 fournisseur, ≈ 14,29 %).
 • Les commandes déjà présentes avec un gain à 0 seront recalculées.
 • Les nouvelles commandes calculent le gain exactement.
 

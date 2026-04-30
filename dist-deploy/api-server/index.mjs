@@ -33701,7 +33701,7 @@ async function deleteEntry(serviceId, providerId = 1) {
   await savePricing(map, providerId);
   return map;
 }
-var USD_TO_FCFA = 650;
+var USD_TO_FCFA = 700;
 function defaultPriceFcfa(rateUsd) {
   return Math.round(Number(rateUsd) * USD_TO_FCFA / 10) * 10;
 }
@@ -33730,7 +33730,7 @@ async function enrichServices(services, providerId = 1) {
 import { promises as fs2 } from "node:fs";
 import path2 from "node:path";
 var COST_FCFA_PER_USD = 600;
-var USER_FCFA_PER_USD = 650;
+var USER_FCFA_PER_USD = 700;
 var REVENUE_MARGIN_RATIO = (USER_FCFA_PER_USD - COST_FCFA_PER_USD) / USER_FCFA_PER_USD;
 var FILE = path2.resolve(process.cwd(), "data", "earnings.jsonl");
 var SUPABASE_URL2 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
@@ -35176,7 +35176,7 @@ router3.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req, 
       recomputed,
       skipped_already_present: skipped,
       skipped_no_external_id,
-      note: "Pour les commandes anciennes, le gain est estim\xE9 \xE0 partir du chiffre d'affaires en utilisant la marge par d\xE9faut de la plateforme (USD \xD7 650 utilisateur vs USD \xD7 600 fournisseur, soit \u2248 7,69 % de marge). Les nouvelles commandes calculent le gain exactement."
+      note: "Pour les commandes anciennes, le gain est estim\xE9 \xE0 partir du chiffre d'affaires en utilisant la marge par d\xE9faut de la plateforme (USD \xD7 700 utilisateur vs USD \xD7 600 fournisseur, soit \u2248 14,29 % de marge). Les nouvelles commandes calculent le gain exactement."
     });
   } catch (err) {
     logger.error({ err }, "earnings backfill error");
@@ -35190,11 +35190,11 @@ router3.get("/admin/smm-balance", requireUser, requireAdmin, async (req, res) =>
     const usd = Number(data?.balance);
     res.json({
       balance_usd: Number.isFinite(usd) ? usd : null,
-      // Same USD→FCFA rate (650) used everywhere user-facing for catalog
+      // Same USD→FCFA rate (700) used everywhere user-facing for catalog
       // pricing — see lib/smm-pricing.ts (USD_TO_FCFA). Keeping a single
-      // rate avoids confusing the admin: a $10 balance shown as "≈ 6 500 FCFA"
+      // rate avoids confusing the admin: a $10 balance shown as "≈ 7 000 FCFA"
       // matches the per-1000 prices the user actually pays.
-      balance_fcfa_equiv: Number.isFinite(usd) ? Math.round(usd * 650) : null,
+      balance_fcfa_equiv: Number.isFinite(usd) ? Math.round(usd * 700) : null,
       currency: data?.currency || "USD",
       provider: providerId,
       raw: data

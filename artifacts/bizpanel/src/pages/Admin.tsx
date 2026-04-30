@@ -850,7 +850,7 @@ const AdminEarningsSection = () => {
       "Importer les commandes existantes dans les statistiques ?\n\n" +
       "• Le chiffre d'affaires et le nombre de commandes seront restaurés.\n" +
       "• Le gain est estimé pour les commandes anciennes à partir de la marge\n" +
-      "  par défaut (USD × 650 utilisateur vs USD × 600 fournisseur, ≈ 7,69 %).\n" +
+      "  par défaut (USD × 700 utilisateur vs USD × 600 fournisseur, ≈ 14,29 %).\n" +
       "• Les commandes déjà présentes avec un gain à 0 seront recalculées.\n" +
       "• Les nouvelles commandes calculent le gain exactement.\n\n" +
       "Cette opération est sûre — elle peut être relancée sans créer de doublons.",

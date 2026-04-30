@@ -21,9 +21,9 @@ export interface EarningRecord {
 // FCFA per USD when paying the SMM provider
 const COST_FCFA_PER_USD = 600;
 // FCFA per USD when billing end users (kept in sync with smm-pricing.ts)
-const USER_FCFA_PER_USD = 650;
+const USER_FCFA_PER_USD = 700;
 // Per-FCFA admin margin embedded in the user price.
-// 50 / 650 ≈ 7.6923 % — applied to revenue when the historical provider
+// 100 / 700 ≈ 14.2857 % — applied to revenue when the historical provider
 // rate is unknown (legacy orders backfilled from the `orders` table that
 // does not preserve the per-service USD rate at order time).
 const REVENUE_MARGIN_RATIO = (USER_FCFA_PER_USD - COST_FCFA_PER_USD) / USER_FCFA_PER_USD;
@@ -91,10 +91,10 @@ export function computeEarning(input: {
 // Estimate gain & provider cost from the user-facing price alone, used for
 // LEGACY orders where the provider USD rate at order time is unknown. This
 // is mathematically equivalent to `computeEarning` whenever the user paid
-// the default markup (USD × 650), and is a reasonable approximation for
+// the default markup (USD × 700), and is a reasonable approximation for
 // custom-priced services too.
 //
-//   gain_fcfa          = round(user_price_fcfa × (650 − 600) / 650)
+//   gain_fcfa          = round(user_price_fcfa × (700 − 600) / 700)
 //   provider_cost_fcfa = user_price_fcfa − gain_fcfa
 export function estimateGainFromRevenue(user_price_fcfa: number): {
   provider_cost_fcfa: number;

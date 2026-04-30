@@ -198,8 +198,8 @@ router.get("/admin/earnings", requireUser, requireAdmin, async (req, res) => {
 //
 // The provider USD rate at order time is NOT stored in the `orders` table,
 // so for legacy orders we estimate the gain from the user-paid price using
-// the platform's default markup (USD × 650 user vs USD × 600 provider →
-// 50/650 ≈ 7.69 % of revenue). This is exact for default-priced services
+// the platform's default markup (USD × 700 user vs USD × 600 provider →
+// 100/700 ≈ 14.29 % of revenue). This is exact for default-priced services
 // and a close approximation for custom-priced ones.
 //
 // In addition to inserting missing rows, this endpoint also UPDATES any
@@ -346,7 +346,7 @@ router.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req: A
       recomputed,
       skipped_already_present: skipped,
       skipped_no_external_id,
-      note: "Pour les commandes anciennes, le gain est estimé à partir du chiffre d'affaires en utilisant la marge par défaut de la plateforme (USD × 650 utilisateur vs USD × 600 fournisseur, soit ≈ 7,69 % de marge). Les nouvelles commandes calculent le gain exactement.",
+      note: "Pour les commandes anciennes, le gain est estimé à partir du chiffre d'affaires en utilisant la marge par défaut de la plateforme (USD × 700 utilisateur vs USD × 600 fournisseur, soit ≈ 14,29 % de marge). Les nouvelles commandes calculent le gain exactement.",
     });
   } catch (err) {
     logger.error({ err }, "earnings backfill error");
@@ -362,11 +362,11 @@ router.get("/admin/smm-balance", requireUser, requireAdmin, async (req, res) => 
     const usd = Number(data?.balance);
     res.json({
       balance_usd: Number.isFinite(usd) ? usd : null,
-      // Same USD→FCFA rate (650) used everywhere user-facing for catalog
+      // Same USD→FCFA rate (700) used everywhere user-facing for catalog
       // pricing — see lib/smm-pricing.ts (USD_TO_FCFA). Keeping a single
-      // rate avoids confusing the admin: a $10 balance shown as "≈ 6 500 FCFA"
+      // rate avoids confusing the admin: a $10 balance shown as "≈ 7 000 FCFA"
       // matches the per-1000 prices the user actually pays.
-      balance_fcfa_equiv: Number.isFinite(usd) ? Math.round(usd * 650) : null,
+      balance_fcfa_equiv: Number.isFinite(usd) ? Math.round(usd * 700) : null,
       currency: data?.currency || "USD",
       provider: providerId,
       raw: data,

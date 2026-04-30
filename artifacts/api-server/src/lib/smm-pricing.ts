@@ -73,7 +73,7 @@ export async function deleteEntry(
 // Default user-facing pricing: convert provider USD rate to FCFA at a fixed
 // conversion rate. The platform margin is the spread between this rate and
 // the real USD/XOF exchange rate. Rounded to the nearest 10 FCFA.
-const USD_TO_FCFA = 650;
+const USD_TO_FCFA = 700;
 export function defaultPriceFcfa(rateUsd: string | number): number {
   return Math.round((Number(rateUsd) * USD_TO_FCFA) / 10) * 10;
 }
