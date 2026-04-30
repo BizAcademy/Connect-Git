@@ -137,8 +137,8 @@ export function startPendingPaymentScanner(): void {
     finally { inFlight = false; }
   };
 
-  // First scan: 30 s after boot
-  setTimeout(() => { void safeScan(); }, 30_000);
+  // First scan: 5 min after boot (avoids token rate-limit pressure right after restart)
+  setTimeout(() => { void safeScan(); }, 5 * 60_000);
   timer = setInterval(() => { void safeScan(); }, SCAN_INTERVAL_MS);
   logger.info({ interval_ms: SCAN_INTERVAL_MS }, "pending-payment-scanner: started");
 }

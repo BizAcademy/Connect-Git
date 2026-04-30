@@ -46,6 +46,11 @@ interface TokenEntry {
   expiresAt: number; // epoch ms
 }
 let cachedToken: TokenEntry | null = null;
+// Single in-flight promise shared across all concurrent callers (prevents token flood)
+let tokenInflight: Promise<TokenEntry> | null = null;
+// After a 401/auth failure, back off for this long before retrying
+let tokenBackoffUntil = 0;
+const TOKEN_BACKOFF_MS = 90_000; // 90 s cooldown after auth failure
 
 async function fetchNewToken(): Promise<TokenEntry> {
   ensureConfigured();
@@ -61,6 +66,8 @@ async function fetchNewToken(): Promise<TokenEntry> {
   try { body = await r.json(); } catch { /* ignore */ }
   if (!r.ok) {
     logger.error({ status: r.status, body }, "AfribaPay token fetch failed");
+    // Activate backoff so concurrent/subsequent callers don't immediately retry
+    tokenBackoffUntil = Date.now() + TOKEN_BACKOFF_MS;
     throw new AfribapayApiError(r.status, body, "Échec récupération du token AfribaPay");
   }
   const token = body?.access_token || body?.token || body?.data?.access_token;
@@ -73,11 +80,21 @@ async function fetchNewToken(): Promise<TokenEntry> {
 }
 
 async function getToken(): Promise<string> {
+  // Valid cached token
   if (cachedToken && cachedToken.expiresAt > Date.now()) {
     return cachedToken.token;
   }
-  cachedToken = await fetchNewToken();
-  return cachedToken.token;
+  // Back off after a recent failure — don't hammer AfribaPay
+  if (Date.now() < tokenBackoffUntil) {
+    const waitSec = Math.ceil((tokenBackoffUntil - Date.now()) / 1000);
+    throw new AfribapayApiError(503, null, `AfribaPay auth en attente (${waitSec}s)`);
+  }
+  // Share a single inflight request among all concurrent callers
+  if (tokenInflight) return tokenInflight.then((e) => e.token);
+  tokenInflight = fetchNewToken()
+    .then((entry) => { cachedToken = entry; return entry; })
+    .finally(() => { tokenInflight = null; });
+  return tokenInflight.then((e) => e.token);
 }
 
 async function authedFetch(path: string, init: RequestInit = {}): Promise<any> {
