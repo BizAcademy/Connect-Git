@@ -22,6 +22,8 @@ import {
   isFailureStatus,
   AfribapayNotConfiguredError,
   AfribapayApiError,
+  resetTokenState,
+  getTokenDiagnostics,
 } from "../lib/afribapay";
 
 const router: IRouter = Router();
@@ -441,6 +443,28 @@ router.post("/payments/webhook", async (req: Request & { rawBody?: string }, res
     logger.error({ err, orderId }, "AfribaPay webhook: unexpected error");
     return res.status(200).json({ ok: false, error: "Erreur interne" });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Admin: AfribaPay token diagnostics & reset
+// Protected by SUPABASE_SERVICE_ROLE_KEY header (server-to-server only).
+// ---------------------------------------------------------------------------
+
+function requireServiceRole(req: Request, res: any, next: any) {
+  const provided = req.headers["x-service-role-key"];
+  if (!SUPABASE_SERVICE_ROLE_KEY || provided !== SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  return next();
+}
+
+router.get("/admin/token-status", requireServiceRole, (_req, res) => {
+  res.json({ ok: true, ...getTokenDiagnostics() });
+});
+
+router.post("/admin/reset-token", requireServiceRole, (_req, res) => {
+  resetTokenState();
+  res.json({ ok: true, message: "Token state cleared — next request will fetch a fresh token" });
 });
 
 export { BONUS_THRESHOLD_FCFA, BONUS_AMOUNT_FCFA, isEligibleForBonus };

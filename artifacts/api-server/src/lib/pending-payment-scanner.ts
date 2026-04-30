@@ -19,7 +19,10 @@ const SERVICE_ROLE_KEY    = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 
 const SCAN_INTERVAL_MS    = 3 * 60_000;  // every 3 minutes
 const MIN_AGE_MS          = 2 * 60_000;  // skip payments younger than 2 min (still polling)
-const AUTO_FAIL_MS        = 35 * 60_000; // mark failed after 35 min with no response
+const AUTO_FAIL_MS        = 35 * 60_000; // mark failed after 35 min still pending on AfribaPay
+// Payments older than this are auto-failed WITHOUT any AfribaPay API call.
+// This prevents stale/sandbox-era payments from flooding the token endpoint.
+const DEFINITIVE_FAIL_MS  = 2 * 60 * 60_000; // 2 hours — definitively stale
 const PAGE_SIZE           = 50;
 
 let timer: NodeJS.Timeout | null = null;
@@ -54,6 +57,18 @@ async function fetchPendingPayments(): Promise<PendingPayment[]> {
 
 async function reconcileOne(p: PendingPayment): Promise<"credited" | "failed" | "skip" | "error"> {
   const ageMs = Date.now() - new Date(p.created_at).getTime();
+
+  // Definitively auto-fail payments older than DEFINITIVE_FAIL_MS WITHOUT calling
+  // AfribaPay at all. These are either sandbox-era or permanently lost payments.
+  // Skipping the API call prevents stale payments from flooding the token endpoint.
+  if (ageMs > DEFINITIVE_FAIL_MS) {
+    await markPaymentStatus(p.id, "failed");
+    logger.warn(
+      { paymentId: p.id, orderId: p.order_id, ageMin: Math.round(ageMs / 60000) },
+      "pending-payment-scanner: definitively auto-failed stale payment (no AfribaPay call)",
+    );
+    return "failed";
+  }
 
   // Re-fetch to make sure it's still pending (another process may have credited it)
   const current = await fetchPayment(p.id);

@@ -42,4 +42,4 @@ externalPort = 3002
 [userenv]
 
 [userenv.shared]
-AFRIBAPAY_API_BASE = "https://api-sandbox.afribapay.com/"
+AFRIBAPAY_API_BASE = "https://api.afribapay.com"

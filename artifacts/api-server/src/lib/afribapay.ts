@@ -50,7 +50,7 @@ let cachedToken: TokenEntry | null = null;
 let tokenInflight: Promise<TokenEntry> | null = null;
 // After a 401/auth failure, back off for this long before retrying
 let tokenBackoffUntil = 0;
-const TOKEN_BACKOFF_MS = 90_000; // 90 s cooldown after auth failure
+const TOKEN_BACKOFF_MS = 20_000; // 20 s cooldown after auth failure
 
 async function fetchNewToken(): Promise<TokenEntry> {
   ensureConfigured();
@@ -95,6 +95,27 @@ async function getToken(): Promise<string> {
     .then((entry) => { cachedToken = entry; return entry; })
     .finally(() => { tokenInflight = null; });
   return tokenInflight.then((e) => e.token);
+}
+
+/**
+ * Clear all cached token state and backoff.
+ * Call this after manually confirming credentials are valid to force a fresh token fetch.
+ */
+export function resetTokenState(): void {
+  cachedToken = null;
+  tokenInflight = null;
+  tokenBackoffUntil = 0;
+  logger.info("AfribaPay token state reset — next request will fetch a fresh token");
+}
+
+/** Returns current token backoff state (for diagnostics). */
+export function getTokenDiagnostics(): { hasToken: boolean; tokenExpiresAt: number | null; backoffUntil: number; backoffActive: boolean } {
+  return {
+    hasToken: cachedToken !== null && cachedToken.expiresAt > Date.now(),
+    tokenExpiresAt: cachedToken?.expiresAt ?? null,
+    backoffUntil: tokenBackoffUntil,
+    backoffActive: Date.now() < tokenBackoffUntil,
+  };
 }
 
 async function authedFetch(path: string, init: RequestInit = {}): Promise<any> {

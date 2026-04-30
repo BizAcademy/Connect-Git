@@ -171,11 +171,14 @@ migration; rows captured there can be re-imported via the admin
 
 ## Required server env vars
 
-- `AFRIBAPAY_API_USER` (publishable key `pk_…`), `AFRIBAPAY_API_KEY`
-  (secret key `sk_…`, sert aussi pour la signature HMAC du webhook),
-  `AFRIBAPAY_MERCHANT_KEY` (`mk_…`) — passerelle de paiement
-  (server-only). Optionnel : `AFRIBAPAY_API_BASE` (défaut
-  `https://api.afribapay.com`).
+- `AFRIBAPAY_API_USER` (publishable key `pk_live_…`), `AFRIBAPAY_API_KEY`
+  (secret key `sk_live_…`, sert aussi pour la signature HMAC du webhook),
+  `AFRIBAPAY_MERCHANT_KEY` (`mk_live_…`) — passerelle de paiement
+  (server-only). Optionnel : `AFRIBAPAY_API_BASE` (défaut `https://api.afribapay.com`).
+  **IMPORTANT**: `AFRIBAPAY_API_BASE` doit pointer vers `https://api.afribapay.com`
+  (production) si les clés sont de type `pk_live_`/`sk_live_`. Les clés sandbox
+  (`pk_15fb…`) utilisent `https://api-sandbox.afribapay.com`. Mélanger les deux
+  cause "Unauthorized: Subscription invalid or inactive".
 - `PUBLIC_API_URL` — URL publique du serveur d'API utilisée comme
   `notify_url` envoyée à AfribaPay. À défaut, le serveur déduit l'URL
   depuis `REPLIT_DEV_DOMAIN` en environnement Replit.
