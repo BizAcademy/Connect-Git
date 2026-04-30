@@ -38,6 +38,7 @@ Frontend SMM platform built with React + Vite + Tailwind CSS.
 - **Supabase**: Authentication (email/password), Postgres DB, RPC for roles
 - **Tables**: `profiles`, `orders`, `payments`, `user_roles`, `services`, `site_content`, `settings`
 - **Payment gateway**: AfribaPay (Mobile Money multi-pays Afrique francophone — Orange, MTN, Wave, Moov, Airtel, M-Pesa). Guinée et R.D.C. exclues.
+- **SMM Providers**: 5 fournisseurs (P1=SMMpanel, P2=GrowFollowers, P3=JustAnotherPanel, P4=Peakerr, P5=ExoSupplier). Config par env vars `SMM_PANEL_5_API_URL` + `SMM_PANEL_5_API_KEY`.
 - **Roles**: `admin` / `user`
 
 ### Key Features

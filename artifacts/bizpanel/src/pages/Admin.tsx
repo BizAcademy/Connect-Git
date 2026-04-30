@@ -2115,17 +2115,17 @@ const AdminProvidersConfig = ({ onChanged }: { onChanged?: () => void }) => {
 };
 
 const AdminServicesTab = () => {
-  const [providerId, setProviderId] = useState<1 | 2 | 3 | 4>(1);
+  const [providerId, setProviderId] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [bump, setBump] = useState(0);
   return (
     <div className="space-y-4">
       <AdminProvidersConfig onChanged={() => setBump((n) => n + 1)} />
 
       <div className="flex flex-wrap gap-2">
-        {[1, 2, 3, 4].map((id) => (
+        {[1, 2, 3, 4, 5].map((id) => (
           <button
             key={id}
-            onClick={() => setProviderId(id as 1 | 2 | 3 | 4)}
+            onClick={() => setProviderId(id as 1 | 2 | 3 | 4 | 5)}
             className={`px-3 py-1.5 rounded-md text-sm border ${
               providerId === id
                 ? "bg-primary text-primary-foreground border-primary"

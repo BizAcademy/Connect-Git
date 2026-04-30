@@ -215,7 +215,7 @@ router.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req: A
     // Composite key: two providers can legitimately return the same numeric
     // order id, so dedup must be scoped on (provider, provider_order_id).
     const seenKey = (provider: number | null | undefined, orderId: string) => {
-      const p = provider === 2 || provider === 3 || provider === 4 ? provider : 1;
+      const p = provider === 2 || provider === 3 || provider === 4 || provider === 5 ? provider : 1;
       return `${p}::${orderId}`;
     };
     const seen = new Set(existing.map((r) => seenKey(r.provider, r.provider_order_id)));
@@ -240,7 +240,7 @@ router.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req: A
         const { provider_cost_fcfa, gain_fcfa } = estimateGainFromRevenue(r.user_price_fcfa);
         if (gain_fcfa === 0) continue;
         try {
-          const recProvider = r.provider === 2 || r.provider === 3 || r.provider === 4 ? r.provider : 1;
+          const recProvider = r.provider === 2 || r.provider === 3 || r.provider === 4 || r.provider === 5 ? r.provider : 1;
           const patch = await fetch(
             `${SUPABASE_URL}/rest/v1/earnings?provider_order_id=eq.${encodeURIComponent(r.provider_order_id)}&provider=eq.${recProvider}`,
             {
@@ -317,7 +317,7 @@ router.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req: A
         // to the right SMM provider (1, 2, or 3). Legacy rows where the
         // column is NULL default to provider 1, which matches the schema
         // default applied by the SQL migration.
-        const orderProvider = (o.provider === 2 || o.provider === 3 || o.provider === 4) ? o.provider : 1;
+        const orderProvider = (o.provider === 2 || o.provider === 3 || o.provider === 4 || o.provider === 5) ? o.provider : 1;
         await appendEarning({
           ts: o.created_at,
           provider_order_id: key,

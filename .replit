@@ -43,3 +43,4 @@ externalPort = 3002
 
 [userenv.shared]
 AFRIBAPAY_API_BASE = "https://api.afribapay.com"
+SMM_PANEL_5_API_URL = "https://exosupplier.com/api/v2"

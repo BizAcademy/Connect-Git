@@ -483,7 +483,7 @@ export async function syncOrderInternal(opts: {
     return { ok: false, status: 404, error: "Commande introuvable" };
   }
   const order = rows[0]!;
-  const providerId = (order.provider === 1 || order.provider === 2 || order.provider === 3 || order.provider === 4)
+  const providerId = (order.provider === 1 || order.provider === 2 || order.provider === 3 || order.provider === 4 || order.provider === 5)
     ? (order.provider as ProviderId)
     : 1;
   const externalId = order.external_order_id || extIn || "";
@@ -593,7 +593,7 @@ export async function syncOrderInternal(opts: {
 
 function parseProviderQuery(q: unknown): ProviderId | null {
   const n = Number(q);
-  if (n === 1 || n === 2 || n === 3 || n === 4) return n as ProviderId;
+  if (n === 1 || n === 2 || n === 3 || n === 4 || n === 5) return n as ProviderId;
   return null;
 }
 
@@ -656,7 +656,7 @@ router.post("/admin/orders/:externalId/cancel", requireUser, requireAdmin, async
   const externalId = String(req.params["externalId"] || "");
   if (!externalId) return res.status(400).json({ error: "externalId requis" });
   const providerId = parseProviderQuery(req.query["provider"]);
-  if (!providerId) return res.status(400).json({ error: "provider requis (1, 2, 3 ou 4)" });
+  if (!providerId) return res.status(400).json({ error: "provider requis (1, 2, 3, 4 ou 5)" });
 
   let providerCancel: { ok: boolean; raw?: unknown; error?: string } = { ok: true };
   try {

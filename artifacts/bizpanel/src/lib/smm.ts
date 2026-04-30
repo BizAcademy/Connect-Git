@@ -58,15 +58,16 @@ function withProvider(providerId: number | undefined, qs: URLSearchParams): URLS
 // User-facing labels remain configurable via header_title in
 // smm_providers_config and are NOT overridden by these constants.
 // ---------------------------------------------------------------------------
-export const PROVIDER_ADMIN_NAMES: Record<1 | 2 | 3 | 4, string> = {
+export const PROVIDER_ADMIN_NAMES: Record<1 | 2 | 3 | 4 | 5, string> = {
   1: "SMMpanel",
   2: "GROWFOLLOWERS",
   3: "JustAnotherPannel",
   4: "Peakerr",
+  5: "ExoSupplier",
 };
 
 export function providerAdminName(id: number): string {
-  if (id === 1 || id === 2 || id === 3 || id === 4) return PROVIDER_ADMIN_NAMES[id];
+  if (id === 1 || id === 2 || id === 3 || id === 4 || id === 5) return PROVIDER_ADMIN_NAMES[id];
   return `Fournisseur #${id}`;
 }
 
@@ -74,7 +75,7 @@ export function providerAdminName(id: number): string {
 // Public: list available providers (configured + admin-enabled), in display order
 // ---------------------------------------------------------------------------
 export interface SmmProviderPublic {
-  provider_id: 1 | 2 | 3 | 4;
+  provider_id: 1 | 2 | 3 | 4 | 5;
   display_order: number;
   header_title: string;
   header_text: string;
@@ -377,7 +378,7 @@ export async function adminForceOrderRefund(localOrderId: string): Promise<Admin
 // Admin: provider config (display order, enabled, header text per provider)
 // ---------------------------------------------------------------------------
 export interface AdminProviderConfig {
-  provider_id: 1 | 2 | 3 | 4;
+  provider_id: 1 | 2 | 3 | 4 | 5;
   display_order: number;
   enabled: boolean;
   header_title: string;
@@ -397,7 +398,7 @@ export async function fetchAdminProviders(): Promise<AdminProviderConfig[]> {
 }
 
 export async function updateAdminProvider(
-  providerId: 1 | 2 | 3 | 4,
+  providerId: 1 | 2 | 3 | 4 | 5,
   patch: Partial<Pick<AdminProviderConfig, "display_order" | "enabled" | "header_title" | "header_text">>,
 ): Promise<void> {
   const headers = { "Content-Type": "application/json", ...(await authHeaders()) };

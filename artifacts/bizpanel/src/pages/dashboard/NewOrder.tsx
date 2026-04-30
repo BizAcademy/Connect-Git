@@ -170,9 +170,9 @@ export default function NewOrder() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { providerId: providerIdParam } = useParams<{ providerId?: string }>();
   const navigate = useNavigate();
-  const providerId: 1 | 2 | 3 | 4 = (() => {
+  const providerId: 1 | 2 | 3 | 4 | 5 = (() => {
     const n = Number(providerIdParam);
-    return n === 2 || n === 3 || n === 4 ? n : 1;
+    return n === 2 || n === 3 || n === 4 || n === 5 ? n : 1;
   })();
   const [providerInfo, setProviderInfo] = useState<SmmProviderPublic | null>(null);
   const [services, setServices] = useState<SmmService[]>([]);

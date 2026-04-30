@@ -1,7 +1,7 @@
 import { logger } from "./logger";
 
-export type ProviderId = 1 | 2 | 3 | 4;
-export const ALL_PROVIDER_IDS: readonly ProviderId[] = [1, 2, 3, 4] as const;
+export type ProviderId = 1 | 2 | 3 | 4 | 5;
+export const ALL_PROVIDER_IDS: readonly ProviderId[] = [1, 2, 3, 4, 5] as const;
 
 export interface ProviderRuntime {
   id: ProviderId;
@@ -35,6 +35,12 @@ const PROVIDERS: Record<ProviderId, ProviderRuntime> = {
     apiKey: process.env["SMM_PANEL_4_API_KEY"],
     configured: Boolean(process.env["SMM_PANEL_4_API_URL"] && process.env["SMM_PANEL_4_API_KEY"]),
   },
+  5: {
+    id: 5,
+    apiUrl: process.env["SMM_PANEL_5_API_URL"],
+    apiKey: process.env["SMM_PANEL_5_API_KEY"],
+    configured: Boolean(process.env["SMM_PANEL_5_API_URL"] && process.env["SMM_PANEL_5_API_KEY"]),
+  },
 };
 
 export function getProvider(id: number): ProviderRuntime | null {
@@ -43,12 +49,12 @@ export function getProvider(id: number): ProviderRuntime | null {
 
 export function isValidProviderId(v: unknown): v is ProviderId {
   const n = Number(v);
-  return n === 1 || n === 2 || n === 3 || n === 4;
+  return n === 1 || n === 2 || n === 3 || n === 4 || n === 5;
 }
 
 export function parseProviderId(v: unknown, fallback: ProviderId = 1): ProviderId {
   const n = Number(v);
-  if (n === 1 || n === 2 || n === 3 || n === 4) return n;
+  if (n === 1 || n === 2 || n === 3 || n === 4 || n === 5) return n;
   return fallback;
 }
 
@@ -98,6 +104,7 @@ const DEFAULT_CONFIG: ProviderDisplay[] = [
   { provider_id: 2, display_order: 2, enabled: true, header_title: "Fournisseur 2", header_text: "Catalogue alternatif — sélectionnez un service compatible avec votre besoin." },
   { provider_id: 3, display_order: 3, enabled: true, header_title: "Fournisseur 3", header_text: "Catalogue alternatif — sélectionnez un service compatible avec votre besoin." },
   { provider_id: 4, display_order: 4, enabled: true, header_title: "Peakerr — Livraison rapide", header_text: "Fournisseur premium à livraison instantanée — idéal pour les commandes urgentes." },
+  { provider_id: 5, display_order: 5, enabled: true, header_title: "ExoSupplier", header_text: "Fournisseur ExoSupplier — large catalogue de services SMM à tarifs compétitifs." },
 ];
 
 const SUPABASE_URL = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
@@ -143,7 +150,7 @@ export async function loadProviderConfig(): Promise<ProviderDisplay[]> {
     for (const d of DEFAULT_CONFIG) byId.set(d.provider_id, d);
     for (const row of rows) {
       const id = Number(row.provider_id);
-      if (id === 1 || id === 2 || id === 3 || id === 4) {
+      if (id === 1 || id === 2 || id === 3 || id === 4 || id === 5) {
         const def = byId.get(id)!;
         byId.set(id, {
           provider_id: id as ProviderId,
