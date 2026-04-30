@@ -58,7 +58,7 @@ const FeaturesSection = () => {
         >
           <h2 className="font-heading font-black text-lg md:text-4xl mb-2 md:mb-4 text-foreground">
             Pourquoi choisir{" "}
-            <span style={{ color: "hsl(25, 95%, 53%)" }}>BUZZ BOOST</span> ?
+            <span style={{ color: "hsl(25, 95%, 53%)" }}>BUZZ BOOSTER</span> ?
           </h2>
           <p className="text-muted-foreground text-xs md:text-lg max-w-2xl mx-auto">
             Une plateforme conçue pour vous offrir les meilleurs résultats.

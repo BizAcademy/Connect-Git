@@ -48,7 +48,7 @@ const Auth = () => {
     });
     setLoading(false);
     if (error) { toast.error(error.message); }
-    else { toast.success("Compte créé ! Bienvenue sur BUZZ BOOST 🎉"); navigate("/dashboard"); }
+    else { toast.success("Compte créé ! Bienvenue sur BUZZ BOOSTER 🎉"); navigate("/dashboard"); }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -143,7 +143,7 @@ const Auth = () => {
                 N°1 la plus rapide & la moins chère pour l'Afrique francophone
               </p>
               <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-                BUZZ BOOST est la meilleure plateforme SMM pour booster votre présence sociale.
+                BUZZ BOOSTER est la meilleure plateforme SMM pour booster votre présence sociale.
                 Obtenez des abonnés Instagram, TikTok, Facebook et YouTube — sans carte bancaire.
                 Service rapide, sécurisé et sans mot de passe.
               </p>
@@ -233,7 +233,7 @@ const Auth = () => {
                 <div className="absolute inset-0 rounded-full bg-white/60 backdrop-blur-sm border border-gray-200 shadow-xl flex items-center justify-center">
                   <div className="text-center">
                     <div className="text-5xl mb-2">🚀</div>
-                    <p className="font-bold text-gray-800 text-lg">BUZZ BOOST</p>
+                    <p className="font-bold text-gray-800 text-lg">BUZZ BOOSTER</p>
                     <p className="text-xs text-gray-500 mt-1">SMM Panel Afrique</p>
                   </div>
                 </div>
@@ -297,7 +297,7 @@ const Auth = () => {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 border border-blue-500/40 rounded-full px-4 py-1.5 mb-6 bg-blue-500/10">
               <span className="text-green-400 text-xs">✦</span>
-              <span className="text-blue-300 text-xs font-semibold tracking-wide">BUZZ BOOST — #1 en Afrique</span>
+              <span className="text-blue-300 text-xs font-semibold tracking-wide">BUZZ BOOSTER — #1 en Afrique</span>
             </div>
 
             <h2 className="text-4xl font-extrabold leading-tight mb-2">
@@ -311,7 +311,7 @@ const Auth = () => {
 
             <p className="text-gray-400 text-sm mb-3 leading-relaxed">
               Vous souhaitez développer votre présence sur les réseaux sociaux ?
-              Rejoignez BUZZ BOOST, la plateforme SMM de confiance avec plus de
+              Rejoignez BUZZ BOOSTER, la plateforme SMM de confiance avec plus de
               5 ans d'expérience. Nous boostons vos abonnés, likes et vues efficacement.
             </p>
 
@@ -399,7 +399,7 @@ const Auth = () => {
                   <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">
                     politique de confidentialité
                   </a>{" "}
-                  de BUZZ BOOST.
+                  de BUZZ BOOSTER.
                 </span>
               </label>
 

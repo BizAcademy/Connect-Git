@@ -259,7 +259,7 @@ export default function Transactions() {
         { label: "ID fournisseur", value: o.external_order_id ? `#${o.external_order_id}` : "—" },
         { label: "Motif", value: "Annulation/échec confirmé(e) chez le fournisseur" },
       ],
-      note: "Le montant a été automatiquement recrédité sur votre solde BUZZ BOOST.",
+      note: "Le montant a été automatiquement recrédité sur votre solde BUZZ BOOSTER.",
     };
   };
 

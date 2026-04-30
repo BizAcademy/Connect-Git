@@ -1,4 +1,4 @@
-# BUZZ BOOST — robots.txt
+# BUZZ BOOSTER — robots.txt
 # Remplacez "votre-domaine.com" par votre domaine réel après déploiement.
 
 User-agent: *

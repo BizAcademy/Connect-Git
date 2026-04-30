@@ -2,7 +2,7 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Contains the BUZZ BOOST app (codebase historically named "bizpanel" — package and folder names kept for stability) — a Social Media Marketing (SMM) platform for Francophone Africa.
+pnpm workspace monorepo using TypeScript. Contains the BUZZ BOOSTER app (codebase historically named "bizpanel" — package and folder names kept for stability) — a Social Media Marketing (SMM) platform for Francophone Africa.
 
 ## Stack
 
@@ -11,12 +11,12 @@ pnpm workspace monorepo using TypeScript. Contains the BUZZ BOOST app (codebase 
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM (shared backend) + Supabase (BUZZ BOOST auth & data)
+- **Database**: PostgreSQL + Drizzle ORM (shared backend) + Supabase (BUZZ BOOSTER auth & data)
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
-## BUZZ BOOST (`artifacts/bizpanel`)
+## BUZZ BOOSTER (`artifacts/bizpanel`)
 
 Frontend SMM platform built with React + Vite + Tailwind CSS.
 

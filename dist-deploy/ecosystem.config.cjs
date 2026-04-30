@@ -2,7 +2,7 @@
 module.exports = {
   apps: [
     {
-      name: "buzzboost-api",
+      name: "buzzbooster-api",
       script: "./api-server/index.mjs",
       node_args: "--enable-source-maps",
       env: {

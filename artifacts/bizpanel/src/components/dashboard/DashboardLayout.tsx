@@ -152,7 +152,7 @@ export const DashboardLayout = () => {
             <h1 className="font-heading text-base font-semibold">
               Bonjour, {profile?.username} 👋
             </h1>
-            <p className="text-xs text-muted-foreground">Bienvenue sur BUZZ BOOST</p>
+            <p className="text-xs text-muted-foreground">Bienvenue sur BUZZ BOOSTER</p>
           </div>
           <Button size="sm" className="ml-auto" onClick={() => navigate("/dashboard/deposit")}>
             <Wallet size={14} className="mr-1" /> Recharger

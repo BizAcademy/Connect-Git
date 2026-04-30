@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# BUZZ BOOST — Build script for production deployment (Cybrancy / VPS)
+# BUZZ BOOSTER — Build script for production deployment (Cybrancy / VPS)
 # ----------------------------------------------------------------------------
 # Produit deux dossiers prêts à uploader sur le serveur :
 #   1) dist-deploy/frontend/    -> contenu statique (HTML/CSS/JS) du panel
@@ -20,7 +20,7 @@ API_OUT="$OUT_DIR/api-server"
 
 echo ""
 echo "=========================================="
-echo "  BUZZ BOOST — Build production"
+echo "  BUZZ BOOSTER — Build production"
 echo "=========================================="
 echo ""
 
@@ -65,7 +65,7 @@ cp -r "$ROOT_DIR/artifacts/api-server/dist/." "$API_OUT/"
 # donc démarrer l'app sans avoir besoin de faire `npm install` ni de build.
 cat > "$API_OUT/package.json" <<'EOF'
 {
-  "name": "buzzboost-api",
+  "name": "buzzbooster-api",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -97,7 +97,7 @@ cat > "$OUT_DIR/ecosystem.config.cjs" <<'EOF'
 module.exports = {
   apps: [
     {
-      name: "buzzboost-api",
+      name: "buzzbooster-api",
       script: "./api-server/index.mjs",
       node_args: "--enable-source-maps",
       env: {
@@ -114,7 +114,7 @@ EOF
 
 # Exemple de configuration Nginx
 cat > "$OUT_DIR/nginx.example.conf" <<'EOF'
-# /etc/nginx/sites-available/buzzboost
+# /etc/nginx/sites-available/buzzbooster
 # Remplacez votre-domaine.com par votre nom de domaine.
 
 server {
@@ -148,7 +148,7 @@ server {
     }
 
     # Frontend statique
-    root /var/www/buzzboost/frontend;
+    root /var/www/buzzbooster/frontend;
     index index.html;
 
     location / {
@@ -211,14 +211,14 @@ echo "  Contenu de dist-deploy/"
 echo "=========================================="
 ls -la "$OUT_DIR"
 echo ""
-echo "  frontend/   $(du -sh "$FRONT_OUT" | cut -f1)  (à uploader dans /var/www/buzzboost/frontend)"
-echo "  api-server/ $(du -sh "$API_OUT" | cut -f1)  (à uploader dans /var/www/buzzboost/api-server)"
+echo "  frontend/   $(du -sh "$FRONT_OUT" | cut -f1)  (à uploader dans /var/www/buzzbooster/frontend)"
+echo "  api-server/ $(du -sh "$API_OUT" | cut -f1)  (à uploader dans /var/www/buzzbooster/api-server)"
 echo ""
 echo "Étapes suivantes :"
 echo "  1) Transférez le dossier dist-deploy/ sur votre serveur Cybrancy"
-echo "     scp -r dist-deploy/ user@votre-serveur:/var/www/buzzboost/"
+echo "     scp -r dist-deploy/ user@votre-serveur:/var/www/buzzbooster/"
 echo "  2) Sur le serveur, installez les dépendances runtime de l'API :"
-echo "     cd /var/www/buzzboost/api-server && npm install --omit=dev"
+echo "     cd /var/www/buzzbooster/api-server && npm install --omit=dev"
 echo "  3) Créez le fichier api-server/.env (voir .env.example)"
 echo "  4) Lancez avec PM2 : pm2 start ecosystem.config.cjs && pm2 save"
 echo "  5) Configurez Nginx avec nginx.example.conf"

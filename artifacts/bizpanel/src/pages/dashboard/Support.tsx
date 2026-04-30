@@ -291,7 +291,7 @@ const Support = () => {
                   }`}>
                     {!mine && (
                       <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5 text-primary">
-                        Support BUZZ BOOST
+                        Support BUZZ BOOSTER
                       </p>
                     )}
                     {m.image_filename && (

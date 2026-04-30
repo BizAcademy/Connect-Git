@@ -1,4 +1,4 @@
-# 🚀 Déploiement BUZZ BOOST sur Plesk
+# 🚀 Déploiement BUZZ BOOSTER sur Plesk
 
 Ce projet est **pré-buildé** : tout est déjà compilé dans le dossier
 `dist-deploy/` et committé dans Git. Sur Plesk, il suffit donc de :
@@ -38,9 +38,9 @@ Drizzle, etc. (bundlés par esbuild). **Il n'y a JAMAIS besoin de faire
 
 Dans Plesk → votre domaine → **Git** :
 
-- **Repository name** : `buzzboost`
+- **Repository name** : `buzzbooster`
 - **Remote Git** : URL de votre dépôt GitHub
-- **Server path** : `/httpdocs/buzzboost` (ou un chemin de votre choix)
+- **Server path** : `/httpdocs/buzzbooster` (ou un chemin de votre choix)
 - **Deploy mode** : **Manual** (vous cliquez "Deploy Now")
 - **Branch** : `main`
 
@@ -50,7 +50,7 @@ Dans Plesk → votre domaine → **Git** :
 
 Dans Plesk → votre domaine → **Hosting & DNS → Hosting Settings** :
 
-- **Document root** : `/httpdocs/buzzboost/dist-deploy/frontend`
+- **Document root** : `/httpdocs/buzzbooster/dist-deploy/frontend`
 
 > C'est tout. Plesk/nginx servira automatiquement les fichiers statiques.
 
@@ -61,9 +61,9 @@ Dans Plesk → votre domaine → **Node.js** :
 | Champ | Valeur |
 |---|---|
 | **Node.js version** | 20.x ou supérieur |
-| **Document root** | `/httpdocs/buzzboost/dist-deploy/frontend` |
+| **Document root** | `/httpdocs/buzzbooster/dist-deploy/frontend` |
 | **Application mode** | `production` |
-| **Application root** | `/httpdocs/buzzboost/dist-deploy/api-server` |
+| **Application root** | `/httpdocs/buzzbooster/dist-deploy/api-server` |
 | **Application URL** | `https://votre-domaine.com/api` |
 | **Application startup file** | `index.mjs` |
 

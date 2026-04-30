@@ -118,7 +118,7 @@ export function InvoiceModal({ data, onClose }: { data: InvoiceData; onClose: ()
           )}
 
           <p className="mt-10 text-center text-[10px] text-gray-500">
-            Document généré automatiquement par BUZZ BOOST — conservez-le pour vos archives.
+            Document généré automatiquement par BUZZ BOOSTER — conservez-le pour vos archives.
           </p>
         </div>
       </div>

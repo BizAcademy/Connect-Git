@@ -5,7 +5,7 @@ const FooterSection = () => {
   const { get } = useSiteContent();
 
   const whatsapp = get("footer_whatsapp", "+XXX XXX XXX");
-  const email = get("footer_email", "support@buzzboost.com");
+  const email = get("footer_email", "support@buzzbooster.com");
   const tagline = get("footer_tagline", "La plateforme leader de croissance sur les réseaux sociaux en Afrique francophone.");
   const logoImage = get("footer_logo_image");
   const waLink = whatsapp.replace(/\s+/g, "").replace("+", "");
@@ -17,7 +17,7 @@ const FooterSection = () => {
           <div className="col-span-2 md:col-span-2">
             <div className="mb-2 md:mb-4">
               {logoImage ? (
-                <img src={logoImage} alt="BUZZ BOOST" className="h-7 md:h-10 object-contain" />
+                <img src={logoImage} alt="BUZZ BOOSTER" className="h-7 md:h-10 object-contain" />
               ) : (
                 <div className="flex flex-col leading-none">
                   <span className="font-heading text-base md:text-2xl font-black tracking-widest uppercase" style={{ color: "hsl(25, 95%, 53%)" }}>
@@ -86,7 +86,7 @@ const FooterSection = () => {
           className="mt-6 md:mt-14 pt-4 md:pt-8 text-center text-[11px] md:text-sm"
           style={{ borderTop: "1px solid hsl(270,20%,20%)", color: "hsl(300,15%,45%)" }}
         >
-          © {new Date().getFullYear()} BUZZ BOOST. Tous droits réservés.
+          © {new Date().getFullYear()} BUZZ BOOSTER. Tous droits réservés.
         </div>
       </div>
 
