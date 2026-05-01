@@ -35264,8 +35264,8 @@ router3.get("/admin/providers", requireUser, requireAdmin, async (_req, res) => 
 });
 router3.put("/admin/providers/:id", requireUser, requireAdmin, async (req, res) => {
   const id = Number(req.params["id"]);
-  if (id !== 1 && id !== 2 && id !== 3 && id !== 4) {
-    return res.status(400).json({ error: "provider id invalide (1, 2, 3 ou 4)" });
+  if (id !== 1 && id !== 2 && id !== 3 && id !== 4 && id !== 5) {
+    return res.status(400).json({ error: "provider id invalide (1, 2, 3, 4 ou 5)" });
   }
   const b = req.body || {};
   const patch = {};
