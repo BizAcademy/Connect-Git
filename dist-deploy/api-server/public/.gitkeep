@@ -1,0 +1,3 @@
+Placeholder. Ne pas supprimer.
+Ce dossier doit être le Document Root sur Plesk pour que toutes les requêtes
+(y compris /api) soient transmises au serveur Node.js.

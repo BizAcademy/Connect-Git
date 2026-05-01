@@ -115,6 +115,20 @@ cat > "$API_OUT/package.json" <<'EOF'
 }
 EOF
 
+# Dossier public/ vide à utiliser comme Document Root sur Plesk.
+# Pourquoi : Plesk exige que le Document Root soit un sous-dossier de l'Application
+# Root. En pointant Document Root vers ce dossier vide, Apache/nginx ne sert
+# AUCUN fichier statique directement et transmet TOUTES les requêtes à Passenger
+# (Node.js). Le serveur Node.js sert lui-même le frontend depuis ../frontend.
+# Ainsi les appels /api/* atteignent toujours Node.js, sans risque d'être
+# interceptés par une règle SPA.
+mkdir -p "$API_OUT/public"
+cat > "$API_OUT/public/.gitkeep" <<'EOF'
+Placeholder. Ne pas supprimer.
+Ce dossier doit être le Document Root sur Plesk pour que toutes les requêtes
+(y compris /api) soient transmises au serveur Node.js.
+EOF
+
 # Script de démarrage
 cat > "$API_OUT/start.sh" <<'EOF'
 #!/usr/bin/env bash
