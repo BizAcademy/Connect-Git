@@ -33,11 +33,11 @@ externalPort = 3001
 
 [[ports]]
 localPort = 8083
-externalPort = 6800
+externalPort = 5173
 
 [[ports]]
 localPort = 8084
-externalPort = 5000
+externalPort = 6000
 
 [[ports]]
 localPort = 8765
@@ -53,11 +53,11 @@ externalPort = 3002
 
 [[ports]]
 localPort = 20627
-externalPort = 5173
+externalPort = 6800
 
 [[ports]]
 localPort = 20628
-externalPort = 6000
+externalPort = 5000
 
 [[ports]]
 localPort = 25104
