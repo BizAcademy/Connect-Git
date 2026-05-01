@@ -37406,6 +37406,7 @@ if (process.env["NODE_ENV"] === "production") {
   const scriptDir = path6.dirname(fileURLToPath(import.meta.url));
   const candidates = [
     process.env["FRONTEND_DIST"],
+    path6.resolve(scriptDir, "./public"),
     path6.resolve(scriptDir, "../frontend"),
     path6.resolve(scriptDir, "../../frontend")
   ].filter((p) => Boolean(p));

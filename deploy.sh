@@ -15,8 +15,10 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT_DIR="$ROOT_DIR/dist-deploy"
-FRONT_OUT="$OUT_DIR/frontend"
 API_OUT="$OUT_DIR/api-server"
+# Structure standard Plesk Node.js : le frontend statique vit dans api-server/public/
+# Plesk configurera Document Root = api-server/public et Application Root = api-server.
+FRONT_OUT="$API_OUT/public"
 
 echo ""
 echo "=========================================="
@@ -52,49 +54,14 @@ pnpm --filter @workspace/api-server run build
 echo ""
 echo "[4/5] Préparation du dossier dist-deploy/..."
 rm -rf "$OUT_DIR"
-mkdir -p "$FRONT_OUT" "$API_OUT"
+mkdir -p "$API_OUT"
 
-# Frontend statique
-cp -r "$ROOT_DIR/artifacts/bizpanel/dist/public/." "$FRONT_OUT/"
-
-# .htaccess pour Plesk/Apache :
-#   - Laisse passer /api/* vers le serveur Node.js (Passenger), sans réécriture.
-#   - Sert les fichiers statiques (CSS/JS/images) directement quand ils existent.
-#   - Pour toutes les autres routes (SPA React Router), renvoie index.html.
-cat > "$FRONT_OUT/.htaccess" <<'EOF'
-# Configuration Apache pour BUZZ BOOSTER (Plesk + Passenger Node.js)
-
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-
-  # 1) IMPORTANT : ne JAMAIS réécrire les appels API ; laisser passer à Node.js
-  RewriteRule ^api(/.*)?$ - [L]
-
-  # 2) Fichiers et dossiers existants : servis tels quels (CSS, JS, images, etc.)
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
-  RewriteRule ^ - [L]
-
-  # 3) Tout le reste = SPA React Router → index.html
-  RewriteRule . /index.html [L]
-</IfModule>
-
-# Cache long pour les assets fingerprintés (1 an)
-<IfModule mod_headers.c>
-  <FilesMatch "\.(js|css|woff2?|ttf|eot|svg|png|jpe?g|gif|webp|ico)$">
-    Header set Cache-Control "public, max-age=31536000, immutable"
-  </FilesMatch>
-  # Pas de cache pour index.html (sinon les déploiements ne sont pas vus)
-  <Files "index.html">
-    Header set Cache-Control "no-cache, no-store, must-revalidate"
-    Header set Pragma "no-cache"
-    Header set Expires "0"
-  </Files>
-</IfModule>
-EOF
-
-# Serveur API : code compilé + package.json minimal pour installer les deps natives
+# Serveur API : code compilé (esbuild bundle self-contained)
 cp -r "$ROOT_DIR/artifacts/api-server/dist/." "$API_OUT/"
+
+# Frontend statique : placé dans api-server/public/ (standard Plesk Node.js)
+mkdir -p "$FRONT_OUT"
+cp -r "$ROOT_DIR/artifacts/bizpanel/dist/public/." "$FRONT_OUT/"
 
 # package.json MINIMAL pour Plesk — pas de dépendances runtime à installer
 # (esbuild a déjà bundlé express/pino/cors/etc. dans index.mjs). Plesk peut
@@ -113,20 +80,6 @@ cat > "$API_OUT/package.json" <<'EOF'
     "start": "node --enable-source-maps ./index.mjs"
   }
 }
-EOF
-
-# Dossier public/ vide à utiliser comme Document Root sur Plesk.
-# Pourquoi : Plesk exige que le Document Root soit un sous-dossier de l'Application
-# Root. En pointant Document Root vers ce dossier vide, Apache/nginx ne sert
-# AUCUN fichier statique directement et transmet TOUTES les requêtes à Passenger
-# (Node.js). Le serveur Node.js sert lui-même le frontend depuis ../frontend.
-# Ainsi les appels /api/* atteignent toujours Node.js, sans risque d'être
-# interceptés par une règle SPA.
-mkdir -p "$API_OUT/public"
-cat > "$API_OUT/public/.gitkeep" <<'EOF'
-Placeholder. Ne pas supprimer.
-Ce dossier doit être le Document Root sur Plesk pour que toutes les requêtes
-(y compris /api) soient transmises au serveur Node.js.
 EOF
 
 # Script de démarrage

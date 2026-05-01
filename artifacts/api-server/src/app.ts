@@ -58,8 +58,14 @@ app.use("/api", router);
 // frontend, et le proxy de Replit route /api vers ce serveur séparément.
 if (process.env["NODE_ENV"] === "production") {
   const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+  // Ordre de recherche du frontend statique :
+  //   1) FRONTEND_DIST si défini (override pour cas particuliers)
+  //   2) ./public            -> structure standard Plesk Node.js (api-server/public/)
+  //   3) ../frontend         -> ancienne structure (frontend en dossier voisin)
+  //   4) ../../frontend      -> idem mais une couche plus haut
   const candidates = [
     process.env["FRONTEND_DIST"],
+    path.resolve(scriptDir, "./public"),
     path.resolve(scriptDir, "../frontend"),
     path.resolve(scriptDir, "../../frontend"),
   ].filter((p): p is string => Boolean(p));
