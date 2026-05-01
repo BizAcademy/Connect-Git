@@ -57,6 +57,42 @@ mkdir -p "$FRONT_OUT" "$API_OUT"
 # Frontend statique
 cp -r "$ROOT_DIR/artifacts/bizpanel/dist/public/." "$FRONT_OUT/"
 
+# .htaccess pour Plesk/Apache :
+#   - Laisse passer /api/* vers le serveur Node.js (Passenger), sans réécriture.
+#   - Sert les fichiers statiques (CSS/JS/images) directement quand ils existent.
+#   - Pour toutes les autres routes (SPA React Router), renvoie index.html.
+cat > "$FRONT_OUT/.htaccess" <<'EOF'
+# Configuration Apache pour BUZZ BOOSTER (Plesk + Passenger Node.js)
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # 1) IMPORTANT : ne JAMAIS réécrire les appels API ; laisser passer à Node.js
+  RewriteRule ^api(/.*)?$ - [L]
+
+  # 2) Fichiers et dossiers existants : servis tels quels (CSS, JS, images, etc.)
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # 3) Tout le reste = SPA React Router → index.html
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Cache long pour les assets fingerprintés (1 an)
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|woff2?|ttf|eot|svg|png|jpe?g|gif|webp|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  # Pas de cache pour index.html (sinon les déploiements ne sont pas vus)
+  <Files "index.html">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </Files>
+</IfModule>
+EOF
+
 # Serveur API : code compilé + package.json minimal pour installer les deps natives
 cp -r "$ROOT_DIR/artifacts/api-server/dist/." "$API_OUT/"
 
