@@ -85,7 +85,7 @@ export const DashboardLayout = () => {
       >
         <div className="p-4 border-b border-border flex items-center justify-between">
           <button onClick={() => navigate("/")} className="font-heading text-xl font-bold">
-            <span className="text-primary">BUZZ</span> <span className="text-accent">BOOST</span>
+            <span className="text-primary">BUZZ</span> <span className="text-accent">BOOSTER</span>
           </button>
           <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
             <X size={20} />

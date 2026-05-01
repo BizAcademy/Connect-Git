@@ -95,7 +95,7 @@ const Navbar = () => {
             ≡BUZZ
           </span>
           <span className="font-heading text-lg font-black tracking-widest uppercase" style={{ color: "hsl(215, 85%, 55%)" }}>
-            BOOST
+            BOOSTER
           </span>
         </a>
 

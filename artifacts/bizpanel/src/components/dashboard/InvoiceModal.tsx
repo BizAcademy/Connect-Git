@@ -59,7 +59,7 @@ export function InvoiceModal({ data, onClose }: { data: InvoiceData; onClose: ()
             <div>
               <p className="font-heading text-2xl font-bold">
                 <span style={{ color: "hsl(217, 91%, 50%)" }}>BUZZ</span>{" "}
-                <span style={{ color: "hsl(190, 75%, 45%)" }}>BOOST</span>
+                <span style={{ color: "hsl(190, 75%, 45%)" }}>BOOSTER</span>
               </p>
               <p className="text-xs text-gray-600 mt-1">Services SMM &amp; recharges</p>
             </div>

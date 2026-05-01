@@ -3561,7 +3561,7 @@ export default function Admin() {
           </div>
           <div>
             <p className="font-heading font-bold text-sm">
-              <span className="text-primary">BUZZ</span> <span className="text-accent">BOOST</span>
+              <span className="text-primary">BUZZ</span> <span className="text-accent">BOOSTER</span>
               <span className="ml-2 text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded">ADMIN</span>
             </p>
             <p className="text-xs text-muted-foreground">Panneau d'administration</p>

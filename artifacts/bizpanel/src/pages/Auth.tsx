@@ -68,7 +68,7 @@ const Auth = () => {
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold">
               <span className="text-orange-500">BUZZ</span>{" "}
-              <span className="text-blue-600">BOOST</span>
+              <span className="text-blue-600">BOOSTER</span>
             </h1>
             <p className="text-gray-500 text-sm mt-1">Récupération du mot de passe</p>
           </div>
@@ -112,7 +112,7 @@ const Auth = () => {
         <header className="flex items-center justify-between px-8 py-4 bg-white shadow-sm">
           <span className="text-xl font-bold tracking-tight">
             <span className="text-orange-500">BUZZ</span>{" "}
-            <span className="text-blue-600">BOOST</span>
+            <span className="text-blue-600">BOOSTER</span>
           </span>
           <div className="flex items-center gap-4">
             <button
@@ -270,7 +270,7 @@ const Auth = () => {
       <header className="flex items-center justify-between px-8 py-4 bg-[#071520]/80 backdrop-blur border-b border-white/5">
         <span className="text-xl font-bold tracking-tight">
           <span className="text-orange-500">BUZZ</span>{" "}
-          <span className="text-blue-400">BOOST</span>
+          <span className="text-blue-400">BOOSTER</span>
         </span>
         <div className="flex items-center gap-4">
           <button

@@ -24,7 +24,7 @@ const FooterSection = () => {
                     ≡BUZZ
                   </span>
                   <span className="font-heading text-base md:text-2xl font-black tracking-widest uppercase" style={{ color: "hsl(215, 85%, 55%)" }}>
-                    BOOST
+                    BOOSTER
                   </span>
                 </div>
               )}
