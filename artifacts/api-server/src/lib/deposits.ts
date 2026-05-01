@@ -289,7 +289,21 @@ export async function markPaymentStatus(
   );
   if (!r.ok) {
     const body = await r.text();
-    logger.error({ paymentId, status: r.status, body: body.slice(0, 200) }, "markPaymentStatus PATCH failed");
+    logger.error(
+      { paymentId, targetStatus: status, httpStatus: r.status, body: body.slice(0, 800) },
+      "markPaymentStatus PATCH failed",
+    );
+    // Surface a more actionable error so the caller (and admin UI) can react.
+    // 23514 = Postgres CHECK constraint violation — the most common cause is a
+    // missing status value in the payments_status_check constraint. See
+    // migrations/011_payments_status_check.sql for the fix.
+    if (body.includes("23514")) {
+      return {
+        ok: false,
+        error: "La base de données rejette ce statut (contrainte CHECK). Appliquer migrations/011_payments_status_check.sql.",
+        status: 500,
+      };
+    }
     return { ok: false, error: "Mise à jour du statut échouée", status: 502 };
   }
   const updated = (await r.json()) as PaymentRow[];
