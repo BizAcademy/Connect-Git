@@ -195,7 +195,7 @@ export default function MyOrders() {
             // matches the SQL migration's column default. Without this, the
             // status request would hit the wrong provider and return "not found".
             const orderProvider =
-              o.provider === 2 || o.provider === 3 || o.provider === 4 || o.provider === 5 ? o.provider : 1;
+              o.provider === 3 || o.provider === 4 || o.provider === 5 ? o.provider : 1;
             const d = await fetchSmmOrderStatus(o.external_order_id, orderProvider);
             if (d && !d.error) {
               next[o.id] = {

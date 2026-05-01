@@ -33996,19 +33996,13 @@ async function readEarnings() {
 }
 
 // src/lib/smm-providers.ts
-var ALL_PROVIDER_IDS = [1, 2, 3, 4, 5];
+var ALL_PROVIDER_IDS = [1, 3, 4, 5];
 var PROVIDERS = {
   1: {
     id: 1,
     apiUrl: process.env["SMM_PANEL_API_URL"],
     apiKey: process.env["SMM_PANEL_API_KEY"],
     configured: Boolean(process.env["SMM_PANEL_API_URL"] && process.env["SMM_PANEL_API_KEY"])
-  },
-  2: {
-    id: 2,
-    apiUrl: process.env["SMM_PANEL_2_API_URL"],
-    apiKey: process.env["SMM_PANEL_2_API_KEY"],
-    configured: Boolean(process.env["SMM_PANEL_2_API_URL"] && process.env["SMM_PANEL_2_API_KEY"])
   },
   3: {
     id: 3,
@@ -34034,7 +34028,7 @@ function getProvider(id) {
 }
 function parseProviderId(v, fallback = 1) {
   const n = Number(v);
-  if (n === 1 || n === 2 || n === 3 || n === 4 || n === 5) return n;
+  if (n === 1 || n === 3 || n === 4 || n === 5) return n;
   return fallback;
 }
 async function callProvider(providerId, action, extra = {}) {
@@ -34061,10 +34055,9 @@ async function callProvider(providerId, action, extra = {}) {
 }
 var DEFAULT_CONFIG = [
   { provider_id: 1, display_order: 1, enabled: true, header_title: "Fournisseur 1", header_text: "Services en temps r\xE9el \u2014 fournisseur partenaire principal." },
-  { provider_id: 2, display_order: 2, enabled: true, header_title: "Fournisseur 2", header_text: "Catalogue alternatif \u2014 s\xE9lectionnez un service compatible avec votre besoin." },
-  { provider_id: 3, display_order: 3, enabled: true, header_title: "Fournisseur 3", header_text: "Catalogue alternatif \u2014 s\xE9lectionnez un service compatible avec votre besoin." },
-  { provider_id: 4, display_order: 4, enabled: true, header_title: "Peakerr \u2014 Livraison rapide", header_text: "Fournisseur premium \xE0 livraison instantan\xE9e \u2014 id\xE9al pour les commandes urgentes." },
-  { provider_id: 5, display_order: 5, enabled: true, header_title: "ExoSupplier", header_text: "Fournisseur ExoSupplier \u2014 large catalogue de services SMM \xE0 tarifs comp\xE9titifs." }
+  { provider_id: 3, display_order: 2, enabled: true, header_title: "Fournisseur 3", header_text: "Catalogue alternatif \u2014 s\xE9lectionnez un service compatible avec votre besoin." },
+  { provider_id: 4, display_order: 3, enabled: true, header_title: "Peakerr \u2014 Livraison rapide", header_text: "Fournisseur premium \xE0 livraison instantan\xE9e \u2014 id\xE9al pour les commandes urgentes." },
+  { provider_id: 5, display_order: 4, enabled: true, header_title: "ExoSupplier", header_text: "Fournisseur ExoSupplier \u2014 large catalogue de services SMM \xE0 tarifs comp\xE9titifs." }
 ];
 var SUPABASE_URL3 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
 var SUPABASE_SERVICE_ROLE_KEY2 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
@@ -34105,7 +34098,7 @@ async function loadProviderConfig() {
     for (const d of DEFAULT_CONFIG) byId.set(d.provider_id, d);
     for (const row of rows) {
       const id = Number(row.provider_id);
-      if (id === 1 || id === 2 || id === 3 || id === 4 || id === 5) {
+      if (id === 1 || id === 3 || id === 4 || id === 5) {
         const def = byId.get(id);
         byId.set(id, {
           provider_id: id,
@@ -34521,7 +34514,7 @@ async function syncOrderInternal(opts) {
     return { ok: false, status: 404, error: "Commande introuvable" };
   }
   const order = rows[0];
-  const providerId = order.provider === 1 || order.provider === 2 || order.provider === 3 || order.provider === 4 || order.provider === 5 ? order.provider : 1;
+  const providerId = order.provider === 3 || order.provider === 4 || order.provider === 5 ? order.provider : 1;
   const externalId = order.external_order_id || extIn || "";
   if (!externalId) {
     return { ok: false, status: 404, error: "Commande sans identifiant fournisseur" };
@@ -34609,14 +34602,14 @@ async function syncOrderInternal(opts) {
 }
 function parseProviderQuery(q) {
   const n = Number(q);
-  if (n === 1 || n === 2 || n === 3 || n === 4 || n === 5) return n;
+  if (n === 1 || n === 3 || n === 4 || n === 5) return n;
   return null;
 }
 router2.post("/smm/orders/:externalId/sync", requireUser, async (req, res) => {
   const externalId = String(req.params["externalId"] || "");
   if (!externalId) return res.status(400).json({ error: "externalId requis" });
   const providerId = parseProviderQuery(req.query["provider"]);
-  if (!providerId) return res.status(400).json({ error: "provider requis (1, 2 ou 3)" });
+  if (!providerId) return res.status(400).json({ error: "provider requis (1, 3, 4 ou 5)" });
   const result = await syncOrderInternal({ externalId, providerId, expectedUserId: req.userId });
   if (!result.ok) return res.status(result.status).json({ error: result.error });
   return res.json({
@@ -34631,7 +34624,7 @@ router2.post("/admin/orders/:externalId/sync", requireUser, requireAdmin, async 
   const externalId = String(req.params["externalId"] || "");
   if (!externalId) return res.status(400).json({ error: "externalId requis" });
   const providerId = parseProviderQuery(req.query["provider"]);
-  if (!providerId) return res.status(400).json({ error: "provider requis (1, 2 ou 3)" });
+  if (!providerId) return res.status(400).json({ error: "provider requis (1, 3, 4 ou 5)" });
   const result = await syncOrderInternal({ externalId, providerId });
   if (!result.ok) return res.status(result.status).json({ error: result.error });
   return res.json({
@@ -34647,7 +34640,7 @@ router2.post("/admin/orders/:externalId/refund", requireUser, requireAdmin, asyn
   const externalId = String(req.params["externalId"] || "");
   if (!externalId) return res.status(400).json({ error: "externalId requis" });
   const providerId = parseProviderQuery(req.query["provider"]);
-  if (!providerId) return res.status(400).json({ error: "provider requis (1, 2 ou 3)" });
+  if (!providerId) return res.status(400).json({ error: "provider requis (1, 3, 4 ou 5)" });
   const result = await syncOrderInternal({ externalId, providerId, forceRefund: true });
   if (!result.ok) return res.status(result.status).json({ error: result.error });
   return res.json({
@@ -34663,7 +34656,7 @@ router2.post("/admin/orders/:externalId/cancel", requireUser, requireAdmin, asyn
   const externalId = String(req.params["externalId"] || "");
   if (!externalId) return res.status(400).json({ error: "externalId requis" });
   const providerId = parseProviderQuery(req.query["provider"]);
-  if (!providerId) return res.status(400).json({ error: "provider requis (1, 2, 3, 4 ou 5)" });
+  if (!providerId) return res.status(400).json({ error: "provider requis (1, 3, 4 ou 5)" });
   let providerCancel = { ok: true };
   try {
     const raw = await callProvider(providerId, "cancel", { orders: externalId });
@@ -35068,7 +35061,7 @@ router3.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req, 
   try {
     const existing = await readEarnings();
     const seenKey = (provider, orderId) => {
-      const p = provider === 2 || provider === 3 || provider === 4 || provider === 5 ? provider : 1;
+      const p = provider === 3 || provider === 4 || provider === 5 ? provider : 1;
       return `${p}::${orderId}`;
     };
     const seen = new Set(existing.map((r) => seenKey(r.provider, r.provider_order_id)));
@@ -35086,7 +35079,7 @@ router3.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req, 
         const { provider_cost_fcfa, gain_fcfa } = estimateGainFromRevenue(r.user_price_fcfa);
         if (gain_fcfa === 0) continue;
         try {
-          const recProvider = r.provider === 2 || r.provider === 3 || r.provider === 4 || r.provider === 5 ? r.provider : 1;
+          const recProvider = r.provider === 3 || r.provider === 4 || r.provider === 5 ? r.provider : 1;
           const patch = await fetch(
             `${SUPABASE_URL6}/rest/v1/earnings?provider_order_id=eq.${encodeURIComponent(r.provider_order_id)}&provider=eq.${recProvider}`,
             {
@@ -35148,7 +35141,7 @@ router3.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req, 
       const userPrice = Number(o.price) || 0;
       const { provider_cost_fcfa, gain_fcfa } = estimateGainFromRevenue(userPrice);
       try {
-        const orderProvider = o.provider === 2 || o.provider === 3 || o.provider === 4 || o.provider === 5 ? o.provider : 1;
+        const orderProvider = o.provider === 3 || o.provider === 4 || o.provider === 5 ? o.provider : 1;
         await appendEarning({
           ts: o.created_at,
           provider_order_id: key,
@@ -35264,15 +35257,15 @@ router3.get("/admin/providers", requireUser, requireAdmin, async (_req, res) => 
 });
 router3.put("/admin/providers/:id", requireUser, requireAdmin, async (req, res) => {
   const id = Number(req.params["id"]);
-  if (id !== 1 && id !== 2 && id !== 3 && id !== 4 && id !== 5) {
-    return res.status(400).json({ error: "provider id invalide (1, 2, 3, 4 ou 5)" });
+  if (id !== 1 && id !== 3 && id !== 4 && id !== 5) {
+    return res.status(400).json({ error: "provider id invalide (1, 3, 4 ou 5)" });
   }
   const b = req.body || {};
   const patch = {};
   if (b["display_order"] !== void 0 && b["display_order"] !== null && b["display_order"] !== "") {
     const n = Number(b["display_order"]);
-    if (!Number.isFinite(n) || n !== 1 && n !== 2 && n !== 3 && n !== 4 && n !== 5) {
-      return res.status(400).json({ error: "display_order invalide (1, 2, 3, 4 ou 5)" });
+    if (!Number.isFinite(n) || n !== 1 && n !== 2 && n !== 3 && n !== 4) {
+      return res.status(400).json({ error: "display_order invalide (1, 2, 3 ou 4)" });
     }
     patch.display_order = n;
   }
@@ -37526,7 +37519,7 @@ async function tickOnce(syncFn) {
   }
   const byProvider = /* @__PURE__ */ new Map();
   for (const o of orders) {
-    const pid = o.provider === 2 || o.provider === 3 || o.provider === 4 || o.provider === 5 ? o.provider : 1;
+    const pid = o.provider === 3 || o.provider === 4 || o.provider === 5 ? o.provider : 1;
     const list = byProvider.get(pid) ?? [];
     list.push(o);
     byProvider.set(pid, list);

@@ -2021,8 +2021,7 @@ const AdminProvidersConfig = ({ onChanged }: { onChanged?: () => void }) => {
     try {
       const list = await fetchAdminProviders();
       // Sort by display_order so the admin sees rows in the same order they
-      // appear to users on the picker — moving "GROWFOLLOWERS" to position 1
-      // makes it the first row here too.
+      // appear to users on the picker.
       setRows(
         list.sort(
           (a, b) =>
@@ -2176,17 +2175,17 @@ const AdminProvidersConfig = ({ onChanged }: { onChanged?: () => void }) => {
 };
 
 const AdminServicesTab = () => {
-  const [providerId, setProviderId] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [providerId, setProviderId] = useState<1 | 3 | 4 | 5>(1);
   const [bump, setBump] = useState(0);
   return (
     <div className="space-y-4">
       <AdminProvidersConfig onChanged={() => setBump((n) => n + 1)} />
 
       <div className="flex flex-wrap gap-2">
-        {[1, 2, 3, 4, 5].map((id) => (
+        {[1, 3, 4, 5].map((id) => (
           <button
             key={id}
-            onClick={() => setProviderId(id as 1 | 2 | 3 | 4 | 5)}
+            onClick={() => setProviderId(id as 1 | 3 | 4 | 5)}
             className={`px-3 py-1.5 rounded-md text-sm border ${
               providerId === id
                 ? "bg-primary text-primary-foreground border-primary"

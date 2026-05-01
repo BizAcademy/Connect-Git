@@ -87,7 +87,7 @@ export async function syncOrdersStatusWithRefunds<
       slice.map(async (o) => {
         try {
           const ext = String(o.external_order_id);
-          const p = o.provider === 2 || o.provider === 3 || o.provider === 4 || o.provider === 5 ? o.provider : 1;
+          const p = o.provider === 3 || o.provider === 4 || o.provider === 5 ? o.provider : 1;
           const res = await fetch(
             `${basePath}/${encodeURIComponent(ext)}/sync?provider=${p}`,
             { method: "POST", headers },

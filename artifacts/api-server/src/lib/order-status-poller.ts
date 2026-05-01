@@ -135,7 +135,7 @@ async function tickOnce(syncFn: PollerSyncFn) {
   const byProvider = new Map<PollerProviderId, OrderRow[]>();
   for (const o of orders) {
     const pid: PollerProviderId =
-      o.provider === 2 || o.provider === 3 || o.provider === 4 || o.provider === 5
+      o.provider === 3 || o.provider === 4 || o.provider === 5
         ? (o.provider as PollerProviderId)
         : 1;
     const list = byProvider.get(pid) ?? [];

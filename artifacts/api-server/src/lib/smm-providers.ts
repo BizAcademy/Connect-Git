@@ -1,7 +1,11 @@
 import { logger } from "./logger";
 
-export type ProviderId = 1 | 2 | 3 | 4 | 5;
-export const ALL_PROVIDER_IDS: readonly ProviderId[] = [1, 2, 3, 4, 5] as const;
+// Note: Provider ID 2 (GROWFOLLOWERS) was retired. IDs are kept non-contiguous
+// (1, 3, 4, 5) on purpose so existing rows in `orders.provider` and
+// `earnings.provider` that reference id=2 remain semantically meaningful
+// instead of being silently re-routed to a different panel.
+export type ProviderId = 1 | 3 | 4 | 5;
+export const ALL_PROVIDER_IDS: readonly ProviderId[] = [1, 3, 4, 5] as const;
 
 export interface ProviderRuntime {
   id: ProviderId;
@@ -16,12 +20,6 @@ const PROVIDERS: Record<ProviderId, ProviderRuntime> = {
     apiUrl: process.env["SMM_PANEL_API_URL"],
     apiKey: process.env["SMM_PANEL_API_KEY"],
     configured: Boolean(process.env["SMM_PANEL_API_URL"] && process.env["SMM_PANEL_API_KEY"]),
-  },
-  2: {
-    id: 2,
-    apiUrl: process.env["SMM_PANEL_2_API_URL"],
-    apiKey: process.env["SMM_PANEL_2_API_KEY"],
-    configured: Boolean(process.env["SMM_PANEL_2_API_URL"] && process.env["SMM_PANEL_2_API_KEY"]),
   },
   3: {
     id: 3,
@@ -49,12 +47,12 @@ export function getProvider(id: number): ProviderRuntime | null {
 
 export function isValidProviderId(v: unknown): v is ProviderId {
   const n = Number(v);
-  return n === 1 || n === 2 || n === 3 || n === 4 || n === 5;
+  return n === 1 || n === 3 || n === 4 || n === 5;
 }
 
 export function parseProviderId(v: unknown, fallback: ProviderId = 1): ProviderId {
   const n = Number(v);
-  if (n === 1 || n === 2 || n === 3 || n === 4 || n === 5) return n;
+  if (n === 1 || n === 3 || n === 4 || n === 5) return n;
   return fallback;
 }
 
@@ -101,10 +99,9 @@ export interface ProviderDisplay {
 
 const DEFAULT_CONFIG: ProviderDisplay[] = [
   { provider_id: 1, display_order: 1, enabled: true, header_title: "Fournisseur 1", header_text: "Services en temps réel — fournisseur partenaire principal." },
-  { provider_id: 2, display_order: 2, enabled: true, header_title: "Fournisseur 2", header_text: "Catalogue alternatif — sélectionnez un service compatible avec votre besoin." },
-  { provider_id: 3, display_order: 3, enabled: true, header_title: "Fournisseur 3", header_text: "Catalogue alternatif — sélectionnez un service compatible avec votre besoin." },
-  { provider_id: 4, display_order: 4, enabled: true, header_title: "Peakerr — Livraison rapide", header_text: "Fournisseur premium à livraison instantanée — idéal pour les commandes urgentes." },
-  { provider_id: 5, display_order: 5, enabled: true, header_title: "ExoSupplier", header_text: "Fournisseur ExoSupplier — large catalogue de services SMM à tarifs compétitifs." },
+  { provider_id: 3, display_order: 2, enabled: true, header_title: "Fournisseur 3", header_text: "Catalogue alternatif — sélectionnez un service compatible avec votre besoin." },
+  { provider_id: 4, display_order: 3, enabled: true, header_title: "Peakerr — Livraison rapide", header_text: "Fournisseur premium à livraison instantanée — idéal pour les commandes urgentes." },
+  { provider_id: 5, display_order: 4, enabled: true, header_title: "ExoSupplier", header_text: "Fournisseur ExoSupplier — large catalogue de services SMM à tarifs compétitifs." },
 ];
 
 const SUPABASE_URL = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
@@ -150,10 +147,10 @@ export async function loadProviderConfig(): Promise<ProviderDisplay[]> {
     for (const d of DEFAULT_CONFIG) byId.set(d.provider_id, d);
     for (const row of rows) {
       const id = Number(row.provider_id);
-      if (id === 1 || id === 2 || id === 3 || id === 4 || id === 5) {
+      if (id === 1 || id === 3 || id === 4 || id === 5) {
         const def = byId.get(id)!;
         byId.set(id, {
-          provider_id: id as ProviderId,
+          provider_id: id,
           display_order: typeof row.display_order === "number" ? row.display_order : def.display_order,
           enabled: typeof row.enabled === "boolean" ? row.enabled : def.enabled,
           header_title: typeof row.header_title === "string" ? row.header_title : def.header_title,
