@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Eye, EyeOff, User, Lock, Mail, CheckCircle2, Zap, Shield, Clock } from "lucide-react";
+import logoImg from "@/assets/logo-buzzbooster.png";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -66,11 +67,8 @@ const Auth = () => {
       <div className="min-h-screen bg-[#f0f0f0] flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold">
-              <span className="text-orange-500">BUZZ</span>{" "}
-              <span className="text-blue-600">BOOSTER</span>
-            </h1>
-            <p className="text-gray-500 text-sm mt-1">Récupération du mot de passe</p>
+            <img src={logoImg} alt="BUZZ BOOSTER" className="h-12 w-auto mx-auto rounded-md" />
+            <p className="text-gray-500 text-sm mt-3">Récupération du mot de passe</p>
           </div>
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <div className="relative">
@@ -109,21 +107,20 @@ const Auth = () => {
     return (
       <div className="min-h-screen bg-[#ebebeb] flex flex-col">
         {/* Topbar */}
-        <header className="flex items-center justify-between px-8 py-4 bg-white shadow-sm">
-          <span className="text-xl font-bold tracking-tight">
-            <span className="text-orange-500">BUZZ</span>{" "}
-            <span className="text-blue-600">BOOSTER</span>
-          </span>
-          <div className="flex items-center gap-4">
+        <header className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4 bg-white shadow-sm">
+          <button onClick={() => navigate("/")} aria-label="BUZZ BOOSTER" className="flex items-center">
+            <img src={logoImg} alt="BUZZ BOOSTER" className="h-9 sm:h-11 w-auto rounded-md" />
+          </button>
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => setTab("login")}
-              className="text-sm font-semibold text-gray-800 border-b-2 border-orange-500 pb-0.5"
+              className="text-xs sm:text-sm font-semibold text-gray-800 border-b-2 border-orange-500 pb-0.5"
             >
               Se connecter
             </button>
             <button
               onClick={() => setTab("signup")}
-              className="text-sm font-semibold text-gray-400 hover:text-gray-700 transition"
+              className="text-xs sm:text-sm font-semibold text-gray-400 hover:text-gray-700 transition"
             >
               S'inscrire
             </button>
@@ -229,12 +226,11 @@ const Auth = () => {
             {/* Right — Illustration */}
             <div className="hidden lg:flex items-center justify-center">
               <div className="relative w-80 h-80">
-                {/* Central circle */}
-                <div className="absolute inset-0 rounded-full bg-white/60 backdrop-blur-sm border border-gray-200 shadow-xl flex items-center justify-center">
+                {/* Central circle with logo */}
+                <div className="absolute inset-0 rounded-full bg-white/80 backdrop-blur-sm border border-gray-200 shadow-xl flex items-center justify-center p-6">
                   <div className="text-center">
-                    <div className="text-5xl mb-2">🚀</div>
-                    <p className="font-bold text-gray-800 text-lg">BUZZ BOOSTER</p>
-                    <p className="text-xs text-gray-500 mt-1">SMM Panel Afrique</p>
+                    <img src={logoImg} alt="BUZZ BOOSTER" className="w-48 h-auto mx-auto rounded-lg shadow-md" />
+                    <p className="text-xs text-gray-500 mt-3">SMM Panel Afrique</p>
                   </div>
                 </div>
                 {/* Floating social icons */}
@@ -267,21 +263,20 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-[#ebebeb] flex flex-col">
       {/* Topbar */}
-      <header className="flex items-center justify-between px-8 py-4 bg-white shadow-sm">
-        <span className="text-xl font-bold tracking-tight">
-          <span className="text-orange-500">BUZZ</span>{" "}
-          <span className="text-blue-600">BOOSTER</span>
-        </span>
-        <div className="flex items-center gap-4">
+      <header className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4 bg-white shadow-sm">
+        <button onClick={() => navigate("/")} aria-label="BUZZ BOOSTER" className="flex items-center">
+          <img src={logoImg} alt="BUZZ BOOSTER" className="h-9 sm:h-11 w-auto rounded-md" />
+        </button>
+        <div className="flex items-center gap-3 sm:gap-4">
           <button
             onClick={() => setTab("login")}
-            className="text-sm font-semibold text-gray-400 hover:text-gray-700 transition"
+            className="text-xs sm:text-sm font-semibold text-gray-400 hover:text-gray-700 transition"
           >
             Se connecter
           </button>
           <button
             onClick={() => setTab("signup")}
-            className="text-sm font-semibold text-gray-800 border-b-2 border-orange-500 pb-0.5"
+            className="text-xs sm:text-sm font-semibold text-gray-800 border-b-2 border-orange-500 pb-0.5"
           >
             S'inscrire
           </button>

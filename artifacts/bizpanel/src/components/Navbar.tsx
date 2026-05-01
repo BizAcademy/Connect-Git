@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { fetchSmmServices, type SmmService } from "@/lib/smm";
 import { Menu, X, ChevronDown, Instagram, Youtube, Facebook, MessageCircle, Music2, Send, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import logoImg from "@/assets/logo-buzzbooster.png";
 
 const TikTokIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -89,14 +90,9 @@ const Navbar = () => {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/30">
-      <div className="container mx-auto flex items-center justify-between h-16 px-6">
-        <a href="#hero" className="flex flex-col leading-none select-none">
-          <span className="font-heading text-lg font-black tracking-widest uppercase" style={{ color: "hsl(25, 95%, 53%)" }}>
-            ≡BUZZ
-          </span>
-          <span className="font-heading text-lg font-black tracking-widest uppercase" style={{ color: "hsl(215, 85%, 55%)" }}>
-            BOOSTER
-          </span>
+      <div className="container mx-auto flex items-center justify-between h-16 px-4 sm:px-6">
+        <a href="#hero" aria-label="BUZZ BOOSTER" className="flex items-center select-none">
+          <img src={logoImg} alt="BUZZ BOOSTER" className="h-10 sm:h-11 w-auto rounded-md" />
         </a>
 
         <div className="hidden md:flex items-center gap-8">

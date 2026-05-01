@@ -1,5 +1,6 @@
 import { Printer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logoImg from "@/assets/logo-buzzbooster.png";
 
 export interface InvoiceData {
   number: string;             // e.g. "BP-2026-000123"
@@ -57,11 +58,8 @@ export function InvoiceModal({ data, onClose }: { data: InvoiceData; onClose: ()
         <div id="invoice-printable" className="p-6 md:p-10 text-sm text-black">
           <div className="flex items-start justify-between mb-8">
             <div>
-              <p className="font-heading text-2xl font-bold">
-                <span style={{ color: "hsl(217, 91%, 50%)" }}>BUZZ</span>{" "}
-                <span style={{ color: "hsl(190, 75%, 45%)" }}>BOOSTER</span>
-              </p>
-              <p className="text-xs text-gray-600 mt-1">Services SMM &amp; recharges</p>
+              <img src={logoImg} alt="BUZZ BOOSTER" className="h-12 w-auto rounded-md" />
+              <p className="text-xs text-gray-600 mt-2">Services SMM &amp; recharges</p>
             </div>
             <div className="text-right">
               <p className="font-bold text-lg">{typeLabel[data.type]}</p>

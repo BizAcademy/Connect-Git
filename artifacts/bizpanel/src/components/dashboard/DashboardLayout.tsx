@@ -8,6 +8,7 @@ import {
   LayoutDashboard, ShoppingCart, Clock, Wallet, CreditCard, Receipt,
   LogOut, Menu, X, ChevronRight, Headphones, MessageCircle
 } from "lucide-react";
+import logoImg from "@/assets/logo-buzzbooster.png";
 
 const menuItems = [
   { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard, key: "home" },
@@ -84,8 +85,8 @@ export const DashboardLayout = () => {
         } lg:translate-x-0 lg:static lg:z-auto`}
       >
         <div className="p-4 border-b border-border flex items-center justify-between">
-          <button onClick={() => navigate("/")} className="font-heading text-xl font-bold">
-            <span className="text-primary">BUZZ</span> <span className="text-accent">BOOSTER</span>
+          <button onClick={() => navigate("/")} aria-label="BUZZ BOOSTER" className="flex items-center">
+            <img src={logoImg} alt="BUZZ BOOSTER" className="h-9 w-auto rounded-md" />
           </button>
           <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
             <X size={20} />
