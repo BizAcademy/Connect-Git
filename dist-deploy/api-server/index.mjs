@@ -37875,15 +37875,28 @@ function startPendingPaymentScanner() {
 }
 
 // src/index.ts
+process.on("uncaughtException", (err) => {
+  console.error("[FATAL] uncaughtException:", err);
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[FATAL] unhandledRejection:", reason);
+  process.exit(1);
+});
 var rawPort = process.env["PORT"];
-if (!rawPort) {
+var port;
+if (rawPort && rawPort.trim() !== "") {
+  const parsed = Number(rawPort);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    throw new Error(`Invalid PORT value: "${rawPort}"`);
+  }
+  port = parsed;
+} else if (process.env["NODE_ENV"] === "production") {
+  port = 0;
+} else {
   throw new Error(
     "PORT environment variable is required but was not provided."
   );
-}
-var port = Number(rawPort);
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 app_default.listen(port, (err) => {
   if (err) {
