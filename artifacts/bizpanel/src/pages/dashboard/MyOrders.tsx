@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -85,6 +85,8 @@ function canCancelOrder(status: string | undefined | null): boolean {
 // Compute a 0-100 progress percentage from the live provider data.
 // - delivered = quantity - remains (when remains is known)
 // - completed orders force 100; canceled/refunded/failed clamp to 0.
+// - "pending" => 2% (sliver pour signaler "reçu") ; "processing" sans data => 5%
+//   (jamais 0% pour ne pas faire reculer la jauge visuellement).
 function computeProgress(
   status: string | undefined | null,
   quantity: number,
@@ -96,10 +98,17 @@ function computeProgress(
     return { pct: 0, delivered: null };
   }
   if (!quantity || quantity <= 0 || remains === undefined || !Number.isFinite(remains)) {
-    return { pct: s === "pending" ? 0 : 5, delivered: null };
+    // Sliver minimal pour signaler que la commande est prise en compte sans
+    // donner une fausse impression de progression — et SURTOUT, ne jamais
+    // remonter au-dessus du sliver tant qu'on n'a pas de vraie donnée.
+    return { pct: s === "pending" ? 2 : 5, delivered: null };
   }
   const delivered = Math.max(0, Math.min(quantity, quantity - remains));
-  const pct = Math.max(0, Math.min(100, Math.round((delivered / quantity) * 100)));
+  let pct = Math.max(0, Math.min(100, Math.round((delivered / quantity) * 100)));
+  // Garde-fou : si la commande est "processing" et qu'on a une vraie donnée
+  // qui dit 0% livré, on garde le sliver visuel (5%) plutôt que de revenir
+  // à zéro — ça évite que la jauge "saute" entre tick et tick.
+  if (pct === 0 && s !== "pending") pct = 5;
   return { pct, delivered };
 }
 
@@ -108,7 +117,7 @@ function ProgressBar({ pct }: { pct: number }) {
     <div className="w-full">
       <div className="h-2 w-full bg-emerald-100 rounded-full overflow-hidden border border-emerald-200">
         <div
-          className="h-full bg-emerald-500 transition-all"
+          className="h-full bg-emerald-500 transition-[width] duration-700 ease-out"
           style={{ width: `${pct}%` }}
           role="progressbar"
           aria-valuenow={pct}
@@ -152,6 +161,13 @@ export default function MyOrders() {
   const [details, setDetails] = useState<Record<string, { start_count?: number; remains?: number; charge?: string; currency?: string }>>({});
   const { toast } = useToast();
 
+  // Évite les race conditions : seul le dernier loadDetails déclenché est pris
+  // en compte. Les anciens fetchs en vol sont ignorés à leur retour, ce qui
+  // empêche la jauge de "reculer" quand un fetch lent finit après un récent.
+  const loadDetailsSeqRef = useRef(0);
+  const detailsRef = useRef<typeof details>({});
+  useEffect(() => { detailsRef.current = details; }, [details]);
+
   const notifyRefunds = (events: SyncRefundEvent[]) => {
     if (!events || events.length === 0) return;
     for (const ev of events) {
@@ -181,54 +197,92 @@ export default function MyOrders() {
     void loadDetails(synced);
   };
 
-  const loadDetails = async (list: any[]) => {
-    // Fetch start_count / remains / charge for each order with an external id (in small batches)
-    const targets = list.filter((o) => o.external_order_id);
+  const loadDetails = useCallback(async (list: any[]) => {
+    // Ne fetcher QUE les commandes non finales : les terminées/annulées ne
+    // changent plus de remains, ça évite des appels API inutiles et le risque
+    // que le provider renvoie "not found" pour des ids anciens.
+    const targets = list.filter(
+      (o) => o.external_order_id && !FINAL_STATUSES.has(String(o.status || "").toLowerCase()),
+    );
+    if (targets.length === 0) return;
+
+    // Race-condition guard : on incrémente la séquence à chaque appel et on
+    // jette tout résultat dont la séquence n'est plus la dernière.
+    const mySeq = ++loadDetailsSeqRef.current;
+
     const BATCH = 6;
-    const next: Record<string, any> = {};
+    const collected: Record<string, { start_count?: number; remains?: number; charge?: string; currency?: string }> = {};
     for (let i = 0; i < targets.length; i += BATCH) {
+      if (mySeq !== loadDetailsSeqRef.current) return; // un load plus récent a démarré
       const slice = targets.slice(i, i + BATCH);
       await Promise.all(
         slice.map(async (o) => {
           try {
-            // Default legacy orders (provider column NULL) to provider 1, which
-            // matches the SQL migration's column default. Without this, the
-            // status request would hit the wrong provider and return "not found".
             const orderProvider =
               o.provider === 3 || o.provider === 4 || o.provider === 5 ? o.provider : 1;
             const d = await fetchSmmOrderStatus(o.external_order_id, orderProvider);
             if (d && !d.error) {
-              next[o.id] = {
-                start_count: d.start_count !== undefined ? Number(d.start_count) : undefined,
-                remains: d.remains !== undefined ? Number(d.remains) : undefined,
-                charge: d.charge,
-                currency: d.currency,
+              const prev = detailsRef.current[o.id] || {};
+              // Merge intelligent : on ne remplace JAMAIS une valeur connue
+              // par `undefined` — sinon la jauge "régresse" quand le provider
+              // omet un champ entre deux ticks. On ne garde aussi pas une
+              // valeur de remains qui REMONTE (le restant ne peut que baisser
+              // ou rester égal).
+              const incomingRemains = d.remains !== undefined ? Number(d.remains) : undefined;
+              const stableRemains =
+                incomingRemains !== undefined && Number.isFinite(incomingRemains)
+                  ? (prev.remains !== undefined && incomingRemains > prev.remains
+                      ? prev.remains
+                      : incomingRemains)
+                  : prev.remains;
+              collected[o.id] = {
+                start_count:
+                  d.start_count !== undefined ? Number(d.start_count) : prev.start_count,
+                remains: stableRemains,
+                charge: d.charge ?? prev.charge,
+                currency: d.currency ?? prev.currency,
               };
             }
-          } catch {}
+          } catch {
+            // erreur silencieuse : on garde l'ancienne valeur (déjà dans prev)
+          }
         }),
       );
-      setDetails((prev) => ({ ...prev, ...next }));
     }
-  };
+    if (mySeq !== loadDetailsSeqRef.current) return;
+    // Un seul setDetails à la fin -> évite les re-renders intermédiaires.
+    setDetails((prev) => ({ ...prev, ...collected }));
+  }, []);
 
   useEffect(() => { load(); }, [user]);
 
-  // Re-sync toutes les 20s tant qu'il y a des commandes non finales
+  // Re-sync périodique tant qu'il y a des commandes non finales.
+  // - 45s suffisent : le serveur poller tourne en arrière-plan toutes les 60s
+  //   et Supabase Realtime pousse déjà les changements de statut quasi en
+  //   temps réel. Inutile de marteler le provider depuis chaque onglet ouvert.
+  // - Mutex `running` : empêche deux ticks de se chevaucher si le précédent
+  //   prend plus de 45s (réseau lent), ce qui évitait de la jauge instable.
   useEffect(() => {
     if (!user || orders.length === 0) return;
     const hasPending = orders.some(
       (o) => o.external_order_id && !FINAL_STATUSES.has((o.status || "").toLowerCase()),
     );
     if (!hasPending) return;
+    let running = false;
     const id = setInterval(async () => {
-      const { orders: synced, refunds } = await syncOrdersStatusWithRefunds(orders);
-      setOrders(synced);
-      notifyRefunds(refunds);
-      void loadDetails(synced);
-    }, 20000);
+      if (running) return;
+      running = true;
+      try {
+        const { orders: synced, refunds } = await syncOrdersStatusWithRefunds(orders);
+        setOrders(synced);
+        notifyRefunds(refunds);
+        void loadDetails(synced);
+      } finally {
+        running = false;
+      }
+    }, 45000);
     return () => clearInterval(id);
-  }, [orders, user]);
+  }, [orders, user, loadDetails]);
 
   // Realtime: when the server poller updates an `orders` row in Supabase,
   // patch the local list immediately — no manual refresh, no waiting for
