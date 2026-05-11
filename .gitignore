@@ -47,3 +47,10 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Git credential helper (lecture du token depuis l'env Replit, ne pas pousser)
+.git-credential-helper.sh
+
+# IMPORTANT : dist-deploy/ EST committé dans git pour Plesk.
+# Le serveur Plesk fait juste `git pull` puis "Restart" — pas de build sur place.
+# Voir DEPLOY-PLESK.md pour la procédure complète.
