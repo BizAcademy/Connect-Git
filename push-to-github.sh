@@ -1,7 +1,8 @@
 #!/bin/bash
 # ============================================================
-# Script de push vers GitHub — BUZZ BOOSTER
-# Utilisation : bash push-to-github.sh "Message de commit"
+# Push vers GitHub — BUZZ BOOSTER
+# Exécutez ce script depuis l'onglet Shell de Replit :
+#   bash push-to-github.sh "votre message de commit"
 # ============================================================
 
 set -e
@@ -9,34 +10,37 @@ set -e
 MSG="${1:-"chore: mise à jour"}"
 
 if [ -z "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
-  echo "❌ Erreur : secret GITHUB_PERSONAL_ACCESS_TOKEN manquant."
+  echo "❌ Secret GITHUB_PERSONAL_ACCESS_TOKEN manquant."
+  echo "   Vérifiez l'onglet Secrets dans Replit."
   exit 1
 fi
 
 REPO_URL="https://x-token:${GITHUB_PERSONAL_ACCESS_TOKEN}@github.com/BizAcademy/Connect-Git.git"
 
-cd "$(dirname "$0")"
+# Configurer l'identité git (nécessaire pour git commit)
+git config user.email "replit@buzzbooster.app"
+git config user.name "BizAcademy"
+
+# S'assurer que le remote origin pointe vers GitHub
+git remote set-url origin "$REPO_URL" 2>/dev/null \
+  || git remote add origin "$REPO_URL"
 
 BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
-echo "📌 Branche : $BRANCH"
+echo "📌 Branche locale : $BRANCH"
 
-# Ajouter tous les changements
+# Ajouter tous les fichiers modifiés
 git add -A
 
 # Vérifier s'il y a des changements à commiter
 if git diff --cached --quiet; then
   echo "ℹ️  Aucun changement à commiter."
 else
-  # Utiliser les variables d'env pour éviter d'écrire dans .git/config
-  GIT_AUTHOR_NAME="BizAcademy" \
-  GIT_AUTHOR_EMAIL="replit@buzzbooster.app" \
-  GIT_COMMITTER_NAME="BizAcademy" \
-  GIT_COMMITTER_EMAIL="replit@buzzbooster.app" \
   git commit -m "$MSG"
-  echo "✅ Commit créé : $MSG"
+  echo "✅ Commit : $MSG"
 fi
 
-# Push vers GitHub avec le token dans l'URL
-echo "🚀 Push vers GitHub..."
-git push "$REPO_URL" "$BRANCH:main"
-echo "✅ Push réussi vers https://github.com/BizAcademy/Connect-Git.git"
+# Push en forçant la branche distante à suivre la locale
+echo "🚀 Push vers GitHub (branche main)..."
+git push origin "$BRANCH:main"
+
+echo "✅ Push réussi → https://github.com/BizAcademy/Connect-Git"
