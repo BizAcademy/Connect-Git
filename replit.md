@@ -195,3 +195,11 @@ migration; rows captured there can be re-imported via the admin
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+
+## User Preferences
+
+- **Préférence utilisateur** : après chaque modification de code, toujours donner la commande Shell exacte pour pusher vers GitHub, sans que l'utilisateur ait à la demander :
+  ```bash
+  bash push-to-github.sh "description précise des changements effectués"
+  ```
+- **Préférence utilisateur** : à chaque création ou modification d'une migration SQL, coller systématiquement le contenu complet du fichier directement dans la conversation (bloc ```sql) sans attendre que l'utilisateur le demande.
