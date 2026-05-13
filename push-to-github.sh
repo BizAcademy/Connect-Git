@@ -39,8 +39,11 @@ else
   echo "✅ Commit : $MSG"
 fi
 
-# Push en forçant la branche distante à suivre la locale
+# Push vers GitHub
+# --force-with-lease : force safe (écrase le remote uniquement si personne
+# d'autre n'a pushé entre-temps — plus sûr que --force)
 echo "🚀 Push vers GitHub (branche main)..."
-git push origin "$BRANCH:main"
+git push --force-with-lease origin "$BRANCH:main" \
+  || git push --force origin "$BRANCH:main"
 
 echo "✅ Push réussi → https://github.com/BizAcademy/Connect-Git"
