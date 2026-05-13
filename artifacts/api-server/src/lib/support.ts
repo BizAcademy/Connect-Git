@@ -163,7 +163,7 @@ const MAX_GLOBAL_UPLOADS_BYTES = 500 * 1024 * 1024; // 500 MB global cap for all
 // For backward compatibility, the GET route also falls back to the local
 // disk for legacy files written before this migration.
 
-const SUPABASE_URL = process.env["SUPABASE_URL"];
+const SUPABASE_URL = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
 const SUPABASE_SERVICE_ROLE_KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 const STORAGE_BUCKET = "support-uploads";
 
