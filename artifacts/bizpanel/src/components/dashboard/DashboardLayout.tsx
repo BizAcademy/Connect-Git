@@ -104,13 +104,6 @@ export const DashboardLayout = () => {
               {Number(profile?.balance || 0).toLocaleString()} FCFA
             </p>
           </div>
-          <Button
-            size="sm"
-            className="w-full justify-center gap-2 mt-3 bg-green-600 hover:bg-green-700 text-white"
-            onClick={signOut}
-          >
-            <LogOut size={16} /> Déconnexion
-          </Button>
         </div>
 
         {/* Navigation */}
@@ -137,6 +130,13 @@ export const DashboardLayout = () => {
               )}
             </button>
           ))}
+          <Button
+            size="sm"
+            className="w-full justify-center gap-2 mt-2 bg-green-600 hover:bg-green-700 text-white"
+            onClick={signOut}
+          >
+            <LogOut size={16} /> Déconnexion
+          </Button>
         </nav>
 
       </aside>
