@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { logger } from "../lib/logger";
 import { requireUser, type AuthedRequest } from "../lib/auth";
 import crypto from "node:crypto";
+import { COUNTRY_CURRENCY } from "../lib/currency";
 
 const router: IRouter = Router();
 
@@ -143,6 +144,44 @@ router.delete("/profile/avatar", requireUser, async (req: AuthedRequest, res) =>
     res.json({ ok: true });
   } catch (err) {
     logger.error({ err }, "avatar delete error");
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// POST /api/profile/country — set or update the user's country
+router.post("/profile/country", requireUser, async (req: AuthedRequest, res) => {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).json({ error: "Service non configuré" });
+  }
+
+  const country = String(req.body?.country || "").toUpperCase().trim();
+  if (!country || !/^[A-Z]{2}$/.test(country)) {
+    return res.status(400).json({ error: "Code pays invalide (ISO2 attendu)" });
+  }
+
+  const info = COUNTRY_CURRENCY[country];
+  if (!info) {
+    return res.status(400).json({ error: "Pays non supporté" });
+  }
+
+  const userId = req.userId!;
+  try {
+    const patchRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${userId}`,
+      {
+        method: "PATCH",
+        headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ country, currency: info.currency }),
+      },
+    );
+    if (!patchRes.ok) {
+      const detail = await patchRes.text().catch(() => "");
+      logger.error({ status: patchRes.status, detail }, "country update failed");
+      return res.status(502).json({ error: "Impossible de mettre à jour le pays" });
+    }
+    res.json({ ok: true, country, currency: info.currency });
+  } catch (err) {
+    logger.error({ err }, "country update error");
     res.status(500).json({ error: (err as Error).message });
   }
 });

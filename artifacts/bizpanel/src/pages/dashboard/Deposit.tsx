@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getAuthHeaders, authedFetch } from "@/lib/authFetch";
+import { formatBalance, getCurrencyInfo } from "@/lib/currency";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -299,7 +300,7 @@ export default function Deposit() {
           </div>
           <div>
             <p className="text-sm opacity-80">Solde actuel</p>
-            <p className="text-3xl font-bold">{Number(profile?.balance || 0).toLocaleString()} FCFA</p>
+            <p className="text-3xl font-bold">{formatBalance(Number(profile?.balance || 0), profile?.country)}</p>
           </div>
         </CardContent>
       </Card>
@@ -506,22 +507,19 @@ export default function Deposit() {
             <div className="flex justify-between"><span className="text-muted-foreground">Pays</span><span className="font-medium">{country.name}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Opérateur</span><span className="font-medium">{operator.name}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Téléphone</span><span className="font-medium">{phone}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Montant</span><span className="font-bold">{finalAmount.toLocaleString()} FCFA</span></div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Bonus</span>
-              <span className={isEligible ? "font-bold text-amber-600" : "text-xs text-muted-foreground"}>
-                {isEligible ? `+${bonus.toLocaleString()} FCFA` : `dès ${BONUS_THRESHOLD.toLocaleString()} FCFA`}
-              </span>
+              <span className="text-muted-foreground">Montant</span>
+              <span className="font-bold">{finalAmount.toLocaleString()} {getCurrencyInfo(profile?.country).symbol}</span>
             </div>
-            <div className="border-t pt-3 flex justify-between">
-              <span className="font-medium">Nouveau solde estimé</span>
-              <span className="font-bold text-primary">
-                {(Number(profile?.balance || 0) + finalAmount + bonus).toLocaleString()} FCFA
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Bonus crédité</span>
+              <span className={isEligible ? "font-bold text-amber-600" : "text-xs text-muted-foreground"}>
+                {isEligible ? `+${bonus.toLocaleString()} F CFA` : `dès ${BONUS_THRESHOLD.toLocaleString()} F CFA`}
               </span>
             </div>
             <Button className="w-full h-12" onClick={initiate} disabled={submitting}>
               <Smartphone size={16} className="mr-2" />
-              {submitting ? "Envoi..." : `Confirmer ${finalAmount.toLocaleString()} FCFA`}
+              {submitting ? "Envoi..." : `Confirmer ${finalAmount.toLocaleString()} ${getCurrencyInfo(profile?.country).symbol}`}
             </Button>
             <div className="flex items-center gap-4 justify-center text-xs text-muted-foreground">
               <span className="flex items-center gap-1"><Shield size={12} /> Sécurisé</span>

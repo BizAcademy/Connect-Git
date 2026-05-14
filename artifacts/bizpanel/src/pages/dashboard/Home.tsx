@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { formatBalance } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -80,7 +81,7 @@ export default function DashboardHome() {
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] md:text-xs text-muted-foreground leading-tight">Solde</p>
-                <p className="text-xs md:text-base font-bold text-primary truncate">{Number(profile?.balance || 0).toLocaleString()} F</p>
+                <p className="text-xs md:text-base font-bold text-primary truncate">{formatBalance(Number(profile?.balance || 0), profile?.country)}</p>
               </div>
             </div>
           </CardContent>

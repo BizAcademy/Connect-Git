@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Eye, EyeOff, User, Lock, Mail, CheckCircle2, Zap, Shield, Clock } from "lucide-react";
+import { Eye, EyeOff, User, Lock, Mail, CheckCircle2, Zap, Shield, Clock, Globe, ChevronDown } from "lucide-react";
 import logoImg from "@/assets/logo-buzzbooster.png";
 import defaultCommunityImg from "@assets/6044021293859933661_1778088768929.jpg";
 import { useSiteContent } from "@/hooks/useSiteContent";
+import { SIGNUP_COUNTRIES } from "@/lib/currency";
+import { authedFetch } from "@/lib/authFetch";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -27,6 +29,7 @@ const Auth = () => {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [signupCountry, setSignupCountry] = useState("");
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
 
   const [forgotEmail, setForgotEmail] = useState("");
@@ -49,15 +52,27 @@ const Auth = () => {
     if (signupPassword !== confirmPassword) { toast.error("Les mots de passe ne correspondent pas"); return; }
     if (signupPassword.length < 6) { toast.error("Le mot de passe doit contenir au moins 6 caractères"); return; }
     if (!username.trim()) { toast.error("Le nom d'utilisateur est requis"); return; }
+    if (!signupCountry) { toast.error("Veuillez sélectionner votre pays"); return; }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: signupEmail,
       password: signupPassword,
       options: { emailRedirectTo: window.location.origin, data: { username } },
     });
+    if (error) { setLoading(false); toast.error(error.message); return; }
+    // Save country via API (profile row created by Supabase trigger)
+    if (data.session) {
+      try {
+        await authedFetch("/api/profile/country", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ country: signupCountry }),
+        });
+      } catch { /* non-blocking */ }
+    }
     setLoading(false);
-    if (error) { toast.error(error.message); }
-    else { toast.success("Compte créé ! Bienvenue sur BUZZ BOOSTER 🎉"); navigate("/dashboard"); }
+    toast.success("Compte créé ! Bienvenue sur BUZZ BOOSTER 🎉");
+    navigate("/dashboard");
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -375,6 +390,23 @@ const Auth = () => {
                     className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm shadow-sm"
                   />
                 </div>
+              </div>
+
+              {/* Pays */}
+              <div className="relative">
+                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={15} />
+                <select
+                  value={signupCountry}
+                  onChange={e => setSignupCountry(e.target.value)}
+                  required
+                  className="w-full appearance-none pl-9 pr-10 py-3 rounded-xl border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm shadow-sm cursor-pointer"
+                >
+                  <option value="">— Votre pays —</option>
+                  {SIGNUP_COUNTRIES.map(c => (
+                    <option key={c.code} value={c.code}>{c.name} ({c.currency})</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={15} />
               </div>
 
               <div className="grid sm:grid-cols-2 gap-3">

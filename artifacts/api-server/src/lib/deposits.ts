@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { toFcfa } from "./currency";
 
 const SUPABASE_URL = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
 const SUPABASE_ANON_KEY = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
@@ -134,6 +135,22 @@ export type CreditOutcome =
  *  - The AfribaPay webhook (no user token; requires SUPABASE_SERVICE_ROLE_KEY).
  *  - Admin manual status changes (uses the admin's userToken via RLS).
  */
+/** Fetch the country stored on a user's profile (needed for currency conversion). */
+async function fetchUserCountry(userId: string): Promise<string | null> {
+  if (!SUPABASE_URL) return null;
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=country`,
+      { headers: readHeaders() },
+    );
+    if (!r.ok) return null;
+    const rows = (await r.json()) as { country: string | null }[];
+    return rows[0]?.country ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function creditDeposit(
   paymentId: string,
   opts?: { userToken?: string; forceBonusCredit?: boolean },
@@ -144,7 +161,18 @@ export async function creditDeposit(
   const payment = await fetchPayment(paymentId, userToken);
   if (!payment) return { ok: false, error: "Paiement introuvable", status: 404 };
 
-  const amount = Number(payment.amount);
+  // The amount stored in the payment row is in local currency (as sent to AfribaPay).
+  // We must convert to FCFA before crediting the balance.
+  const localAmount = Number(payment.amount);
+  const userCountry = await fetchUserCountry(payment.user_id);
+  const amount = toFcfa(localAmount, userCountry);
+  if (amount !== localAmount) {
+    logger.info(
+      { paymentId, userId: payment.user_id, localAmount, fcfaAmount: amount, country: userCountry },
+      "currency conversion applied for deposit",
+    );
+  }
+
   const eligible = isEligibleForBonus(amount);
   const bonus = eligible ? BONUS_AMOUNT_FCFA : 0;
 

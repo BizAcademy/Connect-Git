@@ -11,6 +11,8 @@ import {
 import logoImg from "@/assets/logo-buzzbooster.png";
 import { LogoLoader } from "@/components/ui/LogoLoader";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
+import { CountrySelectModal } from "@/components/ui/CountrySelectModal";
+import { formatBalance } from "@/lib/currency";
 
 const menuItems = [
   { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard, key: "home" },
@@ -24,18 +26,26 @@ const menuItems = [
 ];
 
 export const DashboardLayout = () => {
-  const { user, profile, loading, isAdmin, signOut } = useAuth();
+  const { user, profile, loading, isAdmin, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadSupport, setUnreadSupport] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [showCountryModal, setShowCountryModal] = useState(false);
 
   // Sync avatar when profile loads or changes
   useEffect(() => {
     setAvatarUrl(profile?.avatar_url ?? null);
   }, [profile?.avatar_url]);
+
+  // Show country selection modal when profile loaded but no country set
+  useEffect(() => {
+    if (!loading && profile && !profile.country) {
+      setShowCountryModal(true);
+    }
+  }, [loading, profile]);
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Loader de transition sur chaque changement de page
@@ -85,6 +95,16 @@ export const DashboardLayout = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
+      {/* Modale sélection pays (existants sans pays) */}
+      {showCountryModal && (
+        <CountrySelectModal
+          onSelected={(_country, _currency) => {
+            setShowCountryModal(false);
+            if (refreshProfile) refreshProfile().catch(() => undefined);
+          }}
+        />
+      )}
+
       {/* Overlay mobile */}
       {sidebarOpen && (
         <div
@@ -115,7 +135,7 @@ export const DashboardLayout = () => {
           <div className="mt-2 bg-primary/10 rounded-md px-3 py-1.5">
             <span className="text-xs text-muted-foreground">Solde</span>
             <p className="font-bold text-primary text-sm">
-              {Number(profile?.balance || 0).toLocaleString()} FCFA
+              {formatBalance(Number(profile?.balance || 0), profile?.country)}
             </p>
           </div>
         </div>

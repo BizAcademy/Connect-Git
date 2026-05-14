@@ -34900,6 +34900,45 @@ init_logger();
 
 // src/lib/deposits.ts
 init_logger();
+
+// src/lib/currency.ts
+var COUNTRY_CURRENCY = {
+  // XOF zone (BCEAO) — 1:1 with FCFA
+  BJ: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
+  BF: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
+  CI: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
+  GW: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
+  // Guinée-Bissau
+  ML: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
+  NE: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
+  SN: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
+  TG: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
+  // XAF zone (BEAC) — 1:1 with FCFA
+  CM: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
+  CF: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
+  TD: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
+  CG: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
+  GQ: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
+  GA: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
+  // Non-CFA countries — need conversion
+  CD: { currency: "CDF", fcfaPerUnit: 0.27, symbol: "CDF" },
+  // RDC: 1 CDF = 0.27 FCFA
+  GN: { currency: "GNF", fcfaPerUnit: 0.0625, symbol: "GNF" },
+  // Guinée Conakry: 1 FCFA = 16 GNF
+  GM: { currency: "GMD", fcfaPerUnit: 6.6667, symbol: "GMD" }
+  // Gambie: 1 FCFA = 0.15 GMD
+};
+var DEFAULT_CURRENCY = { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" };
+function getCurrencyInfo(country) {
+  if (!country) return DEFAULT_CURRENCY;
+  return COUNTRY_CURRENCY[country.toUpperCase()] ?? DEFAULT_CURRENCY;
+}
+function toFcfa(localAmount, country) {
+  const info = getCurrencyInfo(country);
+  return Math.round(localAmount * info.fcfaPerUnit);
+}
+
+// src/lib/deposits.ts
 var SUPABASE_URL5 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
 var SUPABASE_ANON_KEY3 = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
 var SUPABASE_SERVICE_ROLE_KEY4 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
@@ -34974,12 +35013,34 @@ async function creditBalance(userId, amount, userToken) {
   logger.error({ userId }, "creditBalance: exhausted CAS retries");
   return null;
 }
+async function fetchUserCountry(userId) {
+  if (!SUPABASE_URL5) return null;
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL5}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=country`,
+      { headers: readHeaders() }
+    );
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return rows[0]?.country ?? null;
+  } catch {
+    return null;
+  }
+}
 async function creditDeposit(paymentId, opts) {
   if (!SUPABASE_URL5) return { ok: false, error: "Supabase non configur\xE9", status: 503 };
   const userToken = opts?.userToken;
   const payment = await fetchPayment(paymentId, userToken);
   if (!payment) return { ok: false, error: "Paiement introuvable", status: 404 };
-  const amount = Number(payment.amount);
+  const localAmount = Number(payment.amount);
+  const userCountry = await fetchUserCountry(payment.user_id);
+  const amount = toFcfa(localAmount, userCountry);
+  if (amount !== localAmount) {
+    logger.info(
+      { paymentId, userId: payment.user_id, localAmount, fcfaAmount: amount, country: userCountry },
+      "currency conversion applied for deposit"
+    );
+  }
   const eligible = isEligibleForBonus(amount);
   const bonus = eligible ? BONUS_AMOUNT_FCFA : 0;
   if (opts?.forceBonusCredit && payment.status === "completed" && eligible && payment.bonus_status !== "credited") {
@@ -37907,6 +37968,39 @@ router7.delete("/profile/avatar", requireUser, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     logger.error({ err }, "avatar delete error");
+    res.status(500).json({ error: err.message });
+  }
+});
+router7.post("/profile/country", requireUser, async (req, res) => {
+  if (!SUPABASE_URL11 || !SUPABASE_SERVICE_ROLE_KEY10) {
+    return res.status(503).json({ error: "Service non configur\xE9" });
+  }
+  const country = String(req.body?.country || "").toUpperCase().trim();
+  if (!country || !/^[A-Z]{2}$/.test(country)) {
+    return res.status(400).json({ error: "Code pays invalide (ISO2 attendu)" });
+  }
+  const info = COUNTRY_CURRENCY[country];
+  if (!info) {
+    return res.status(400).json({ error: "Pays non support\xE9" });
+  }
+  const userId = req.userId;
+  try {
+    const patchRes = await fetch(
+      `${SUPABASE_URL11}/rest/v1/profiles?user_id=eq.${userId}`,
+      {
+        method: "PATCH",
+        headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ country, currency: info.currency })
+      }
+    );
+    if (!patchRes.ok) {
+      const detail = await patchRes.text().catch(() => "");
+      logger.error({ status: patchRes.status, detail }, "country update failed");
+      return res.status(502).json({ error: "Impossible de mettre \xE0 jour le pays" });
+    }
+    res.json({ ok: true, country, currency: info.currency });
+  } catch (err) {
+    logger.error({ err }, "country update error");
     res.status(500).json({ error: err.message });
   }
 });
