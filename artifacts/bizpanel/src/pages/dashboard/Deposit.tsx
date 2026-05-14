@@ -316,7 +316,7 @@ export default function Deposit() {
         </div>
         <div className="text-sm">
           <p className="font-bold text-amber-900 dark:text-amber-100">
-            Bonus : +{BONUS_AMOUNT.toLocaleString()} F CFA offerts dès {thresholdLocal.toLocaleString()} {currSymbol} déposés !
+            Bonus : +{BONUS_AMOUNT.toLocaleString()} {currSymbol} offerts dès {thresholdLocal.toLocaleString()} {currSymbol} déposés !
           </p>
           <p className="text-amber-800 dark:text-amber-200/90 mt-0.5">
             Crédité automatiquement avec votre dépôt confirmé.
@@ -486,7 +486,7 @@ export default function Deposit() {
                 Bonus dépôt
               </span>
               {isEligible ? (
-                <span className="font-bold text-amber-600">+{bonus.toLocaleString()} F CFA</span>
+                <span className="font-bold text-amber-600">+{bonus.toLocaleString()} {currSymbol}</span>
               ) : (
                 <span className="text-xs text-muted-foreground">
                   dès {thresholdLocal.toLocaleString()} {currSymbol}
@@ -519,7 +519,7 @@ export default function Deposit() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Bonus crédité</span>
               <span className={isEligible ? "font-bold text-amber-600" : "text-xs text-muted-foreground"}>
-                {isEligible ? `+${bonus.toLocaleString()} F CFA` : `dès ${thresholdLocal.toLocaleString()} ${currSymbol}`}
+                {isEligible ? `+${bonus.toLocaleString()} ${currSymbol}` : `dès ${thresholdLocal.toLocaleString()} ${currSymbol}`}
               </span>
             </div>
             <Button className="w-full h-12" onClick={initiate} disabled={submitting}>

@@ -34904,36 +34904,36 @@ init_logger();
 // src/lib/currency.ts
 var COUNTRY_CURRENCY = {
   // XOF zone (BCEAO) — 1:1 with FCFA
-  BJ: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  BF: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  CI: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  GW: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
+  BJ: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  BF: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  CI: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  GW: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
   // Guinée-Bissau
-  ML: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  NE: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  SN: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  TG: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
+  ML: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  NE: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  SN: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  TG: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
   // XAF zone (BEAC) — 1:1 with FCFA
-  CM: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  CF: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  TD: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  CG: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  GQ: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  GA: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
+  CM: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  CF: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  TD: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  CG: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  GQ: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  GA: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
   // Non-CFA countries — configurable via admin "Devises" tab
   CD: { currency: "CDF", fcfaPerUnit: 0.27, symbol: "CDF" },
   // RDC: 1 CDF = 0.27 FCFA
   GN: { currency: "GNF", fcfaPerUnit: 0.0625, symbol: "GNF" },
   // Guinée Conakry: 1 FCFA = 16 GNF
   GM: { currency: "GMD", fcfaPerUnit: 6.6667, symbol: "GMD" }
-  // Gambie: 1 FCFA = 0.15 GMD
+  // Gambie: 1 GMD ≈ 6.6667 FCFA (1 FCFA ≈ 0.15 GMD)
 };
 var NON_CFA_COUNTRIES_INFO = [
   { code: "CD", name: "Congo RDC", currency: "CDF", symbol: "CDF", defaultFcfaPerUnit: 0.27 },
   { code: "GN", name: "Guin\xE9e Conakry", currency: "GNF", symbol: "GNF", defaultFcfaPerUnit: 0.0625 },
   { code: "GM", name: "Gambie", currency: "GMD", symbol: "GMD", defaultFcfaPerUnit: 6.6667 }
 ];
-var DEFAULT_CURRENCY = { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" };
+var DEFAULT_CURRENCY = { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" };
 var _rateOverrides = null;
 var _rateCacheExpiry = 0;
 var RATE_CACHE_TTL_MS = 5 * 60 * 1e3;

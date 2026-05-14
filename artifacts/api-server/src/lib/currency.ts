@@ -23,34 +23,34 @@ export interface CurrencyInfo {
    *  XOF/XAF: 1:1             → fcfaPerUnit = 1
    */
   fcfaPerUnit: number;
-  /** Display symbol used in the UI */
+  /** Display symbol used in the UI (ISO 4217 code) */
   symbol: string;
 }
 
 /** AfribaPay-supported countries with their default currency mapping. */
 export const COUNTRY_CURRENCY: Record<string, CurrencyInfo> = {
   // XOF zone (BCEAO) — 1:1 with FCFA
-  BJ: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  BF: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  CI: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  GW: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" }, // Guinée-Bissau
-  ML: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  NE: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  SN: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  TG: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
+  BJ: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  BF: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  CI: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  GW: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" }, // Guinée-Bissau
+  ML: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  NE: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  SN: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  TG: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
 
   // XAF zone (BEAC) — 1:1 with FCFA
-  CM: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  CF: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  TD: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  CG: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  GQ: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  GA: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
+  CM: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  CF: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  TD: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  CG: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  GQ: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  GA: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
 
   // Non-CFA countries — configurable via admin "Devises" tab
   CD: { currency: "CDF", fcfaPerUnit: 0.27,   symbol: "CDF" }, // RDC: 1 CDF = 0.27 FCFA
   GN: { currency: "GNF", fcfaPerUnit: 0.0625, symbol: "GNF" }, // Guinée Conakry: 1 FCFA = 16 GNF
-  GM: { currency: "GMD", fcfaPerUnit: 6.6667, symbol: "GMD" }, // Gambie: 1 FCFA = 0.15 GMD
+  GM: { currency: "GMD", fcfaPerUnit: 6.6667, symbol: "GMD" }, // Gambie: 1 GMD ≈ 6.6667 FCFA (1 FCFA ≈ 0.15 GMD)
 };
 
 /** Non-CFA countries whose rates can be changed from the admin panel. */
@@ -66,7 +66,7 @@ export const NON_CFA_COUNTRIES_INFO: ReadonlyArray<{
   { code: "GM", name: "Gambie",         currency: "GMD", symbol: "GMD",  defaultFcfaPerUnit: 6.6667 },
 ];
 
-const DEFAULT_CURRENCY: CurrencyInfo = { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" };
+const DEFAULT_CURRENCY: CurrencyInfo = { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" };
 
 // ---------------------------------------------------------------------------
 // In-memory rate cache — populated by the admin API and by the deposit flow.

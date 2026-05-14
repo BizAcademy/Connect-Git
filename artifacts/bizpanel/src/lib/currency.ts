@@ -11,28 +11,28 @@ export interface CurrencyInfo {
 
 export const COUNTRY_CURRENCY: Record<string, CurrencyInfo> = {
   // XOF zone (1:1)
-  BJ: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  BF: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  CI: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  GW: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  ML: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  NE: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  SN: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
-  TG: { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" },
+  BJ: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  BF: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  CI: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  GW: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  ML: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  NE: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  SN: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  TG: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
   // XAF zone (1:1)
-  CM: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  CF: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  TD: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  CG: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  GQ: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  GA: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
+  CM: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  CF: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  TD: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  CG: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  GQ: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  GA: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
   // Non-CFA
   CD: { currency: "CDF", fcfaPerUnit: 0.27,   symbol: "CDF" },
   GN: { currency: "GNF", fcfaPerUnit: 0.0625, symbol: "GNF" },
   GM: { currency: "GMD", fcfaPerUnit: 6.6667, symbol: "GMD" },
 };
 
-const DEFAULT: CurrencyInfo = { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" };
+const DEFAULT: CurrencyInfo = { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" };
 
 export function getCurrencyInfo(country: string | null | undefined): CurrencyInfo {
   if (!country) return DEFAULT;
