@@ -18,6 +18,8 @@ export interface AdminDeposit {
   credited_at: string | null;
   user_username?: string | null;
   user_email?: string | null;
+  country?: string | null;
+  currency?: string | null;
 }
 
 export interface AdminDepositsResponse {

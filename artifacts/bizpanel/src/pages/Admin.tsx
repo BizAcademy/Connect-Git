@@ -78,6 +78,78 @@ import {
 
 const fmt = (n: number) => `${Math.round(n).toLocaleString()} FCFA`;
 
+const COUNTRY_CURRENCY_MAP: Record<string, { currency: string; symbol: string }> = {
+  BJ: { currency: "XOF", symbol: "F CFA" },
+  BF: { currency: "XOF", symbol: "F CFA" },
+  CI: { currency: "XOF", symbol: "F CFA" },
+  GW: { currency: "XOF", symbol: "F CFA" },
+  ML: { currency: "XOF", symbol: "F CFA" },
+  NE: { currency: "XOF", symbol: "F CFA" },
+  SN: { currency: "XOF", symbol: "F CFA" },
+  TG: { currency: "XOF", symbol: "F CFA" },
+  CM: { currency: "XAF", symbol: "F CFA" },
+  CF: { currency: "XAF", symbol: "F CFA" },
+  TD: { currency: "XAF", symbol: "F CFA" },
+  CG: { currency: "XAF", symbol: "F CFA" },
+  GQ: { currency: "XAF", symbol: "F CFA" },
+  GA: { currency: "XAF", symbol: "F CFA" },
+  CD: { currency: "CDF", symbol: "CDF" },
+  GN: { currency: "GNF", symbol: "GNF" },
+  GM: { currency: "GMD", symbol: "GMD" },
+};
+
+const KNOWN_COUNTRIES: { code: string; name: string }[] = [
+  { code: "BJ", name: "Bénin" },
+  { code: "BF", name: "Burkina Faso" },
+  { code: "CM", name: "Cameroun" },
+  { code: "CF", name: "Centrafrique" },
+  { code: "TD", name: "Tchad" },
+  { code: "CG", name: "Congo-Brazzaville" },
+  { code: "CD", name: "Congo RDC" },
+  { code: "CI", name: "Côte d'Ivoire" },
+  { code: "GQ", name: "Guinée Équatoriale" },
+  { code: "GA", name: "Gabon" },
+  { code: "GM", name: "Gambie" },
+  { code: "GN", name: "Guinée Conakry" },
+  { code: "GW", name: "Guinée-Bissau" },
+  { code: "ML", name: "Mali" },
+  { code: "NE", name: "Niger" },
+  { code: "SN", name: "Sénégal" },
+  { code: "TG", name: "Togo" },
+];
+
+function getCurrencyInfo(country: string | null | undefined): { currency: string; symbol: string } | null {
+  if (!country) return null;
+  return COUNTRY_CURRENCY_MAP[country.toUpperCase()] ?? null;
+}
+
+/** Default conversion rates (fallback only — admin-configurable rates take precedence). */
+const DEFAULT_FCFA_PER_UNIT: Record<string, number> = { CDF: 0.27, GNF: 0.0625, GMD: 6.6667 };
+
+/**
+ * Format a deposit amount with its real currency.
+ * For CFA currencies (XOF/XAF) the amount is already in FCFA so we display it directly.
+ * For non-CFA currencies we show "X [cur] → Y FCFA" using the admin-configured rate
+ * (rateOverrides) when available, falling back to the default hardcoded rate.
+ * @param rateOverrides - map of country code → fcfaPerUnit from /api/admin/currencies
+ */
+function fmtDepositAmount(
+  amount: number,
+  currency: string | null | undefined,
+  country: string | null | undefined,
+  rateOverrides?: Record<string, number>,
+): string {
+  const cur = (currency || (country ? COUNTRY_CURRENCY_MAP[country?.toUpperCase() ?? ""]?.currency : null) || "").toUpperCase();
+  if (!cur || cur === "XOF" || cur === "XAF") return fmt(amount);
+  const upper = country?.toUpperCase() ?? "";
+  const fcfaPerUnit = (rateOverrides && upper && rateOverrides[upper] !== undefined)
+    ? rateOverrides[upper]
+    : DEFAULT_FCFA_PER_UNIT[cur] ?? null;
+  if (fcfaPerUnit === null) return `${Math.round(amount).toLocaleString()} ${cur}`;
+  const fcfa = Math.round(amount * fcfaPerUnit);
+  return `${Math.round(amount).toLocaleString()} ${cur} → ${fcfa.toLocaleString()} FCFA`;
+}
+
 const fmtTime = (iso: string) => {
   const d = new Date(iso);
   const today = new Date();
@@ -1612,11 +1684,24 @@ const AdminUsers = () => {
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{u.email || "—"}</p>
-                    {(u.phone || u.country) && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        {u.phone || "—"}{u.country ? ` · ${u.country}` : ""}
-                      </p>
+                    {u.phone && (
+                      <p className="text-xs text-muted-foreground truncate">{u.phone}</p>
                     )}
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      {u.country ? (
+                        <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                          🌍 {u.country.toUpperCase()}
+                          {(() => { const n = KNOWN_COUNTRIES.find(c => c.code === u.country?.toUpperCase()); return n ? ` · ${n.name}` : ""; })()}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Pays inconnu</span>
+                      )}
+                      {u.country && getCurrencyInfo(u.country) && (
+                        <span className="inline-flex items-center text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                          {getCurrencyInfo(u.country)!.currency}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm font-bold text-primary whitespace-nowrap">{Number(u.balance).toLocaleString()} FCFA</p>
                   <div className="flex gap-1">
@@ -1665,7 +1750,23 @@ const AdminUsers = () => {
             </div>
             <div>
               <Label className="text-xs">Pays</Label>
-              <Input value={form.country ?? ""} onChange={e => setForm({ ...form, country: e.target.value })} className="h-10 mt-1" />
+              <select
+                value={form.country ?? ""}
+                onChange={e => setForm({ ...form, country: e.target.value })}
+                className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">— Non renseigné —</option>
+                {KNOWN_COUNTRIES.map(c => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} — {c.name} {COUNTRY_CURRENCY_MAP[c.code] ? `(${COUNTRY_CURRENCY_MAP[c.code].currency})` : ""}
+                  </option>
+                ))}
+              </select>
+              {form.country && getCurrencyInfo(form.country) && (
+                <p className="text-xs text-amber-700 mt-1">
+                  Devise : <strong>{getCurrencyInfo(form.country)!.currency}</strong> ({getCurrencyInfo(form.country)!.symbol})
+                </p>
+              )}
             </div>
             <div>
               <Label className="text-xs">Solde (FCFA)</Label>
@@ -3056,6 +3157,7 @@ const AdminBonus = () => {
   const [data, setData] = useState<AdminDepositsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [rateOverrides, setRateOverrides] = useState<Record<string, number>>({});
 
   // Filtres combinables
   const [statusF, setStatusF] = useState<"all" | StatusValue>("all");
@@ -3074,6 +3176,17 @@ const AdminBonus = () => {
   >(null);
   // Confirmation pour crédit bonus manuel
   const [pendingBonus, setPendingBonus] = useState<AdminDeposit | null>(null);
+
+  useEffect(() => {
+    authedFetch("/api/admin/currencies")
+      .then(r => r.json())
+      .then((json: { rates?: Array<{ country: string; fcfaPerUnit: number }> }) => {
+        const map: Record<string, number> = {};
+        for (const r of json.rates ?? []) map[r.country.toUpperCase()] = r.fcfaPerUnit;
+        setRateOverrides(map);
+      })
+      .catch(() => { /* silent — falls back to defaults */ });
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -3303,8 +3416,20 @@ const AdminBonus = () => {
                       <td className="p-2 text-xs">
                         <div className="font-medium">{d.user_username || "—"}</div>
                         <div className="text-[11px] text-muted-foreground">{d.user_email || d.user_id.slice(0, 8) + "…"}</div>
+                        {d.country && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-[11px] px-1 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                              {d.country.toUpperCase()}
+                            </span>
+                            {d.currency && (
+                              <span className="text-[11px] px-1 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                                {d.currency.toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </td>
-                      <td className="p-2 text-right font-semibold">{fmt(Number(d.amount))}</td>
+                      <td className="p-2 text-right font-semibold whitespace-nowrap">{fmtDepositAmount(Number(d.amount), d.currency, d.country, rateOverrides)}</td>
                       <td className="p-2 text-center">
                         <span className={`inline-block px-2 py-0.5 rounded text-[11px] ${ps.color}`}>{ps.label}</span>
                       </td>

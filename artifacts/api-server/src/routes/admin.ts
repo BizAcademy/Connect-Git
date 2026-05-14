@@ -581,6 +581,7 @@ interface PaymentApi {
   method: string; reference: string | null; created_at: string;
   bonus_amount: number | null; bonus_status: string | null;
   bonus_credited_at: string | null; credited_at: string | null;
+  country: string | null; currency: string | null;
 }
 
 interface ProfileLite { user_id: string; username: string | null; email: string | null; }
@@ -807,7 +808,7 @@ router.get("/admin/deposits", requireUser, requireAdmin, async (req: AuthedReque
 
   // Build PostgREST query string
   const params = new URLSearchParams();
-  params.set("select", "id,user_id,amount,status,method,reference,created_at,bonus_amount,bonus_status,bonus_credited_at,credited_at");
+  params.set("select", "id,user_id,amount,status,method,reference,created_at,bonus_amount,bonus_status,bonus_credited_at,credited_at,country,currency");
   params.set("order", "created_at.desc");
   params.set("limit", String(limit));
 
