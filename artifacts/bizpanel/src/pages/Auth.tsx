@@ -62,8 +62,16 @@ const Auth = () => {
     });
     if (error) { setLoading(false); toast.error(error.message); return; }
 
-    // Always attempt to save country — retry up to 3 times to handle
-    // the brief delay between signUp and profile row creation by trigger.
+    // Always store country in localStorage as a guaranteed fallback.
+    // This covers the email-confirmation flow where data.session is null
+    // (the user must confirm before logging in). DashboardLayout reads
+    // this key on first authenticated load and saves it via API if the
+    // profile still has no country set.
+    localStorage.setItem("bb_pending_country", signupCountry);
+
+    // When session is available (email confirmation disabled), also save
+    // immediately via API — retry up to 3× to handle the brief lag
+    // between signUp and profile-row creation by the Supabase trigger.
     const session = data.session;
     if (session) {
       let saved = false;
@@ -75,7 +83,7 @@ const Auth = () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ country: signupCountry }),
           });
-          if (res.ok) saved = true;
+          if (res.ok) { saved = true; localStorage.removeItem("bb_pending_country"); }
         } catch { /* retry */ }
       }
     }

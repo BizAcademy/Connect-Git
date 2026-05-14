@@ -13,6 +13,7 @@ import { LogoLoader } from "@/components/ui/LogoLoader";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 import { CountrySelectModal } from "@/components/ui/CountrySelectModal";
 import { formatBalance } from "@/lib/currency";
+import { authedFetch } from "@/lib/authFetch";
 
 const menuItems = [
   { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard, key: "home" },
@@ -40,9 +41,29 @@ export const DashboardLayout = () => {
     setAvatarUrl(profile?.avatar_url ?? null);
   }, [profile?.avatar_url]);
 
-  // Show country selection modal when profile loaded but no country set
+  // When profile is loaded without a country, check for a pending country
+  // saved at signup (covers email-confirmation flow where session is null
+  // at registration time). Auto-save it via API and clear localStorage.
+  // Falls through to modal if localStorage is also empty.
   useEffect(() => {
-    if (!loading && profile && !profile.country) {
+    if (loading || !profile || profile.country) return;
+    const pending = localStorage.getItem("bb_pending_country");
+    if (pending) {
+      authedFetch("/api/profile/country", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ country: pending }),
+      })
+        .then((res) => {
+          if (res.ok) {
+            localStorage.removeItem("bb_pending_country");
+            refreshProfile();
+          } else {
+            setShowCountryModal(true);
+          }
+        })
+        .catch(() => setShowCountryModal(true));
+    } else {
       setShowCountryModal(true);
     }
   }, [loading, profile]);

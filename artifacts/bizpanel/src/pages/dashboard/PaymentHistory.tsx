@@ -83,6 +83,7 @@ export default function PaymentHistory() {
                     )}
                   </div>
                   <div className="text-right shrink-0">
+                    {/* amount is stored in the user's local currency at the time of payment */}
                     <p className="font-bold text-primary text-sm">+{p.amount.toLocaleString()} {p.currency || "FCFA"}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {new Date(p.created_at).toLocaleDateString("fr-FR")} {new Date(p.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
