@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import logoImg from "@/assets/logo-buzzbooster.png";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { AvatarUpload } from "@/components/ui/AvatarUpload";
 
 const menuItems = [
   { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard, key: "home" },
@@ -29,6 +30,12 @@ export const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadSupport, setUnreadSupport] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // Sync avatar when profile loads or changes
+  useEffect(() => {
+    setAvatarUrl(profile?.avatar_url ?? null);
+  }, [profile?.avatar_url]);
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Loader de transition sur chaque changement de page
@@ -154,6 +161,16 @@ export const DashboardLayout = () => {
           <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu size={24} />
           </button>
+
+          {/* Avatar cliquable */}
+          <AvatarUpload
+            avatarUrl={avatarUrl}
+            username={profile?.username}
+            email={user?.email}
+            size={42}
+            onUpdated={(url) => setAvatarUrl(url)}
+          />
+
           <div>
             <h1 className="font-heading text-base font-semibold">
               Bonjour, {profile?.username} 👋

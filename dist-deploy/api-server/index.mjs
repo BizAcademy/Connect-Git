@@ -18772,14 +18772,14 @@ var require_etag = __commonJS({
   "../../node_modules/.pnpm/etag@1.8.1/node_modules/etag/index.js"(exports, module) {
     "use strict";
     module.exports = etag;
-    var crypto4 = __require("crypto");
+    var crypto5 = __require("crypto");
     var Stats = __require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash = crypto4.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash = crypto5.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash + '"';
     }
@@ -20502,27 +20502,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router8;
+    module.exports = Router9;
     module.exports.Route = Route;
-    function Router8(options) {
-      if (!(this instanceof Router8)) {
-        return new Router8(options);
+    function Router9(options) {
+      if (!(this instanceof Router9)) {
+        return new Router9(options);
       }
       const opts = options || {};
-      function router8(req, res, next) {
-        router8.handle(req, res, next);
+      function router9(req, res, next) {
+        router9.handle(req, res, next);
       }
-      Object.setPrototypeOf(router8, this);
-      router8.caseSensitive = opts.caseSensitive;
-      router8.mergeParams = opts.mergeParams;
-      router8.params = {};
-      router8.strict = opts.strict;
-      router8.stack = [];
-      return router8;
+      Object.setPrototypeOf(router9, this);
+      router9.caseSensitive = opts.caseSensitive;
+      router9.mergeParams = opts.mergeParams;
+      router9.params = {};
+      router9.strict = opts.strict;
+      router9.stack = [];
+      return router9;
     }
-    Router8.prototype = function() {
+    Router9.prototype = function() {
     };
-    Router8.prototype.param = function param(name, fn) {
+    Router9.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20542,7 +20542,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router8.prototype.handle = function handle(req, res, callback) {
+    Router9.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20669,7 +20669,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router8.prototype.use = function use(handler) {
+    Router9.prototype.use = function use(handler) {
       let offset = 0;
       let path7 = "/";
       if (typeof handler !== "function") {
@@ -20702,7 +20702,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router8.prototype.route = function route(path7) {
+    Router9.prototype.route = function route(path7) {
       const route2 = new Route(path7);
       const layer = new Layer(path7, {
         sensitive: this.caseSensitive,
@@ -20717,7 +20717,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router8.prototype[method] = function(path7) {
+      Router9.prototype[method] = function(path7) {
         const route = this.route(path7);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -20900,13 +20900,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router8 = require_router();
+    var Router9 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router8 = null;
+      var router9 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -20915,13 +20915,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router8 === null) {
-            router8 = new Router8({
+          if (router9 === null) {
+            router9 = new Router9({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router8;
+          return router9;
         }
       });
     };
@@ -20992,15 +20992,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router8 = this.router;
+      var router9 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router8.use(path7, fn2);
+          return router9.use(path7, fn2);
         }
         debug(".use app under %s", path7);
         fn2.mountpath = path7;
         fn2.parent = this;
-        router8.use(path7, function mounted_app(req, res, next) {
+        router9.use(path7, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -22208,17 +22208,17 @@ var require_content_disposition = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js"(exports) {
-    var crypto4 = __require("crypto");
+    var crypto5 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto4.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto5.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto4.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto5.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -23527,7 +23527,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router8 = require_router();
+    var Router9 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23549,8 +23549,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router8.Route;
-    exports.Router = Router8;
+    exports.Route = Router9.Route;
+    exports.Router = Router9;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -29870,7 +29870,7 @@ var init_operator_health = __esm({
 });
 
 // src/app.ts
-var import_express8 = __toESM(require_express2(), 1);
+var import_express9 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_compression = __toESM(require_compression(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
@@ -29879,7 +29879,7 @@ import fs6 from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // src/routes/index.ts
-var import_express7 = __toESM(require_express2(), 1);
+var import_express8 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -36828,12 +36828,12 @@ router4.get("/support/uploads/:filename", requireUser, async (req, res) => {
   if (!fp) return res.status(400).end();
   if (!isOwnedBy(fname, req.userId)) {
     try {
-      const SUPABASE_URL15 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+      const SUPABASE_URL16 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
       const SUPABASE_ANON_KEY6 = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
-      if (!SUPABASE_URL15 || !SUPABASE_ANON_KEY6) {
+      if (!SUPABASE_URL16 || !SUPABASE_ANON_KEY6) {
         throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY environment variables must be set");
       }
-      const r = await fetch(`${SUPABASE_URL15}/rest/v1/rpc/has_role`, {
+      const r = await fetch(`${SUPABASE_URL16}/rest/v1/rpc/has_role`, {
         method: "POST",
         headers: {
           apikey: SUPABASE_ANON_KEY6,
@@ -37785,19 +37785,147 @@ router6.post(
 );
 var tickets_default = router6;
 
-// src/routes/index.ts
+// src/routes/profile.ts
+var import_express7 = __toESM(require_express2(), 1);
+init_logger();
+import crypto4 from "node:crypto";
 var router7 = (0, import_express7.Router)();
-router7.use(health_default);
-router7.use(smm_default);
-router7.use(admin_default);
-router7.use(support_default);
-router7.use(payments_default);
-router7.use(tickets_default);
-var routes_default = router7;
+var SUPABASE_URL11 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY10 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var BUCKET = "avatars";
+var MAX_BYTES2 = 2 * 1024 * 1024;
+var ALLOWED = /* @__PURE__ */ new Set(["jpg", "jpeg", "png", "webp"]);
+function serviceHeaders() {
+  return {
+    apikey: SUPABASE_SERVICE_ROLE_KEY10,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY10}`
+  };
+}
+function hasStorage2() {
+  return !!(SUPABASE_URL11 && SUPABASE_SERVICE_ROLE_KEY10);
+}
+router7.post("/profile/avatar", requireUser, async (req, res) => {
+  if (!hasStorage2()) {
+    return res.status(503).json({ error: "Stockage non configur\xE9" });
+  }
+  const dataUrl = req.body?.image;
+  if (!dataUrl) return res.status(400).json({ error: "Image manquante" });
+  const m = /^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/i.exec(dataUrl);
+  if (!m) return res.status(400).json({ error: "Format d'image invalide" });
+  let ext = m[1].toLowerCase();
+  if (ext === "jpeg") ext = "jpg";
+  if (!ALLOWED.has(ext)) return res.status(400).json({ error: "Type non support\xE9" });
+  const buf = Buffer.from(m[2], "base64");
+  if (buf.byteLength > MAX_BYTES2) {
+    return res.status(413).json({ error: "Image trop volumineuse (max 2 MB)" });
+  }
+  const contentType = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+  const userId = req.userId;
+  const safe = userId.replace(/[^a-zA-Z0-9]/g, "");
+  const filename = `${safe}-${crypto4.randomBytes(6).toString("hex")}.${ext}`;
+  try {
+    const oldRes = await fetch(
+      `${SUPABASE_URL11}/rest/v1/profiles?user_id=eq.${userId}&select=avatar_url`,
+      { headers: { ...serviceHeaders(), Accept: "application/json" } }
+    );
+    if (oldRes.ok) {
+      const rows = await oldRes.json().catch(() => []);
+      const oldUrl = Array.isArray(rows) && rows[0]?.avatar_url ? rows[0].avatar_url : null;
+      if (oldUrl) {
+        const oldName = oldUrl.split(`/${BUCKET}/`)[1];
+        if (oldName) {
+          await fetch(`${SUPABASE_URL11}/storage/v1/object/${BUCKET}/${encodeURIComponent(oldName)}`, {
+            method: "DELETE",
+            headers: serviceHeaders()
+          }).catch(() => {
+          });
+        }
+      }
+    }
+    const uploadRes = await fetch(
+      `${SUPABASE_URL11}/storage/v1/object/${BUCKET}/${encodeURIComponent(filename)}`,
+      {
+        method: "POST",
+        headers: { ...serviceHeaders(), "Content-Type": contentType, "x-upsert": "false" },
+        body: new Uint8Array(buf)
+      }
+    );
+    if (!uploadRes.ok) {
+      const detail = await uploadRes.text().catch(() => "");
+      logger.error({ status: uploadRes.status, detail }, "avatar upload failed");
+      return res.status(502).json({ error: "\xC9chec de l'upload" });
+    }
+    const avatarUrl = `${SUPABASE_URL11}/storage/v1/object/public/${BUCKET}/${encodeURIComponent(filename)}`;
+    const patchRes = await fetch(
+      `${SUPABASE_URL11}/rest/v1/profiles?user_id=eq.${userId}`,
+      {
+        method: "PATCH",
+        headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ avatar_url: avatarUrl })
+      }
+    );
+    if (!patchRes.ok) {
+      logger.error({ status: patchRes.status }, "avatar profile patch failed");
+      return res.status(502).json({ error: "Impossible de mettre \xE0 jour le profil" });
+    }
+    res.json({ avatar_url: avatarUrl });
+  } catch (err) {
+    logger.error({ err }, "avatar upload error");
+    res.status(500).json({ error: err.message });
+  }
+});
+router7.delete("/profile/avatar", requireUser, async (req, res) => {
+  if (!hasStorage2()) return res.status(503).json({ error: "Stockage non configur\xE9" });
+  const userId = req.userId;
+  try {
+    const oldRes = await fetch(
+      `${SUPABASE_URL11}/rest/v1/profiles?user_id=eq.${userId}&select=avatar_url`,
+      { headers: { ...serviceHeaders(), Accept: "application/json" } }
+    );
+    if (oldRes.ok) {
+      const rows = await oldRes.json().catch(() => []);
+      const oldUrl = Array.isArray(rows) && rows[0]?.avatar_url ? rows[0].avatar_url : null;
+      if (oldUrl) {
+        const oldName = oldUrl.split(`/${BUCKET}/`)[1];
+        if (oldName) {
+          await fetch(`${SUPABASE_URL11}/storage/v1/object/${BUCKET}/${encodeURIComponent(oldName)}`, {
+            method: "DELETE",
+            headers: serviceHeaders()
+          }).catch(() => {
+          });
+        }
+      }
+    }
+    await fetch(
+      `${SUPABASE_URL11}/rest/v1/profiles?user_id=eq.${userId}`,
+      {
+        method: "PATCH",
+        headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ avatar_url: null })
+      }
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err }, "avatar delete error");
+    res.status(500).json({ error: err.message });
+  }
+});
+var profile_default = router7;
+
+// src/routes/index.ts
+var router8 = (0, import_express8.Router)();
+router8.use(health_default);
+router8.use(smm_default);
+router8.use(admin_default);
+router8.use(support_default);
+router8.use(payments_default);
+router8.use(tickets_default);
+router8.use(profile_default);
+var routes_default = router8;
 
 // src/app.ts
 init_logger();
-var app = (0, import_express8.default)();
+var app = (0, import_express9.default)();
 app.use(
   (0, import_pino_http.default)({
     logger,
@@ -37824,8 +37952,8 @@ function captureRawBody(req, _res, buf) {
     req.rawBody = buf.toString("utf8");
   }
 }
-app.use(import_express8.default.json({ limit: "8mb", verify: captureRawBody }));
-app.use(import_express8.default.urlencoded({ extended: true, limit: "8mb" }));
+app.use(import_express9.default.json({ limit: "8mb", verify: captureRawBody }));
+app.use(import_express9.default.urlencoded({ extended: true, limit: "8mb" }));
 app.use("/api", routes_default);
 if (process.env["NODE_ENV"] === "production") {
   const scriptDir = path6.dirname(fileURLToPath(import.meta.url));
@@ -37841,7 +37969,7 @@ if (process.env["NODE_ENV"] === "production") {
   if (frontendDist) {
     logger.info({ frontendDist }, "serving frontend static files");
     app.use(
-      import_express8.default.static(frontendDist, {
+      import_express9.default.static(frontendDist, {
         index: false,
         maxAge: "1y",
         setHeaders: (res, filePath) => {
@@ -37871,15 +37999,15 @@ init_logger();
 
 // src/lib/settings-cleanup.ts
 init_logger();
-var SUPABASE_URL11 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY10 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL12 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY11 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SENSITIVE_SETTING_KEYS = [
   "soleaspay_api_key",
   "soleaspay_merchant_id",
   "soleaspay_callback_url"
 ];
 async function purgeSensitiveSettingRows() {
-  if (!SUPABASE_URL11 || !SUPABASE_SERVICE_ROLE_KEY10) {
+  if (!SUPABASE_URL12 || !SUPABASE_SERVICE_ROLE_KEY11) {
     logger.warn(
       "SUPABASE_SERVICE_ROLE_KEY not set \u2014 cannot purge sensitive setting rows. Apply the SQL migration in migrations/001_settings_rls.sql manually."
     );
@@ -37888,12 +38016,12 @@ async function purgeSensitiveSettingRows() {
   try {
     const keysFilter = SENSITIVE_SETTING_KEYS.map((k) => `key.eq.${k}`).join(",");
     const r = await fetch(
-      `${SUPABASE_URL11}/rest/v1/settings?or=(${encodeURIComponent(keysFilter)})`,
+      `${SUPABASE_URL12}/rest/v1/settings?or=(${encodeURIComponent(keysFilter)})`,
       {
         method: "DELETE",
         headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY10,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY10}`,
+          apikey: SUPABASE_SERVICE_ROLE_KEY11,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY11}`,
           Prefer: "return=minimal"
         }
       }
@@ -37911,8 +38039,8 @@ async function purgeSensitiveSettingRows() {
 
 // src/lib/order-status-poller.ts
 init_logger();
-var SUPABASE_URL12 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY11 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL13 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY12 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SMM_API_KEY = process.env["SMM_PANEL_API_KEY"];
 var SMM_API_URL = process.env["SMM_PANEL_API_URL"];
 var POLL_INTERVAL_MS = 6e4;
@@ -37934,11 +38062,11 @@ var tickInFlight = false;
 async function fetchPendingOrders() {
   const since = new Date(Date.now() - WINDOW_DAYS * 864e5).toISOString();
   const notIn = `(${FINAL_STATUSES.map((s) => `"${s}"`).join(",")})`;
-  const url = `${SUPABASE_URL12}/rest/v1/orders?select=id,external_order_id,status,user_id,provider&external_order_id=not.is.null&status=not.in.${encodeURIComponent(notIn)}&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${BATCH_LIMIT}`;
+  const url = `${SUPABASE_URL13}/rest/v1/orders?select=id,external_order_id,status,user_id,provider&external_order_id=not.is.null&status=not.in.${encodeURIComponent(notIn)}&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${BATCH_LIMIT}`;
   const r = await fetch(url, {
     headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY11,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY11}`
+      apikey: SUPABASE_SERVICE_ROLE_KEY12,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY12}`
     }
   });
   if (!r.ok) {
@@ -38047,7 +38175,7 @@ async function tickOnce(syncFn) {
 }
 function startOrderStatusPoller(syncFn) {
   if (started) return;
-  if (!SUPABASE_URL12 || !SUPABASE_SERVICE_ROLE_KEY11) {
+  if (!SUPABASE_URL13 || !SUPABASE_SERVICE_ROLE_KEY12) {
     logger.warn("order-poller: SUPABASE_URL/SERVICE_ROLE_KEY missing \u2014 poller disabled");
     return;
   }
@@ -38083,8 +38211,8 @@ function startOrderStatusPoller(syncFn) {
 
 // src/lib/missed-refund-scanner.ts
 init_logger();
-var SUPABASE_URL13 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY12 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL14 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY13 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SCAN_INTERVAL_MS = 5 * 6e4;
 var WINDOW_DAYS2 = 90;
 var PAGE_SIZE = 200;
@@ -38092,7 +38220,7 @@ var timer2 = null;
 var scanInFlight = false;
 var started2 = false;
 function serviceRoleHeaders4() {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY12;
+  const key2 = SUPABASE_SERVICE_ROLE_KEY13;
   return {
     apikey: key2,
     Authorization: `Bearer ${key2}`,
@@ -38100,10 +38228,10 @@ function serviceRoleHeaders4() {
   };
 }
 async function fetchUnrefundedOrders() {
-  if (!SUPABASE_URL13 || !SUPABASE_SERVICE_ROLE_KEY12) return [];
+  if (!SUPABASE_URL14 || !SUPABASE_SERVICE_ROLE_KEY13) return [];
   const since = new Date(Date.now() - WINDOW_DAYS2 * 864e5).toISOString();
   const finalNegative = encodeURIComponent('("canceled","cancelled","failed","refunded")');
-  const url = `${SUPABASE_URL13}/rest/v1/orders?select=id,user_id,price,status,external_order_id&status=in.${finalNegative}&refunded_at=is.null&price=gt.0&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${PAGE_SIZE}`;
+  const url = `${SUPABASE_URL14}/rest/v1/orders?select=id,user_id,price,status,external_order_id&status=in.${finalNegative}&refunded_at=is.null&price=gt.0&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${PAGE_SIZE}`;
   try {
     const r = await fetch(url, { headers: serviceRoleHeaders4() });
     if (!r.ok) {
@@ -38121,7 +38249,7 @@ async function applyRefund(order) {
   const amount = Math.round(Number(order.price));
   if (amount <= 0) return false;
   try {
-    const rpcRes = await fetch(`${SUPABASE_URL13}/rest/v1/rpc/smm_refund_order`, {
+    const rpcRes = await fetch(`${SUPABASE_URL14}/rest/v1/rpc/smm_refund_order`, {
       method: "POST",
       headers: serviceRoleHeaders4(),
       body: JSON.stringify({ p_order_id: order.id, p_amount: amount })
@@ -38167,7 +38295,7 @@ async function scanOnce() {
 }
 function startMissedRefundScanner() {
   if (started2) return;
-  if (!SUPABASE_URL13 || !SUPABASE_SERVICE_ROLE_KEY12) {
+  if (!SUPABASE_URL14 || !SUPABASE_SERVICE_ROLE_KEY13) {
     logger.warn("missed-refund-scanner: Supabase secrets missing \u2014 scanner disabled");
     return;
   }
@@ -38194,7 +38322,7 @@ function startMissedRefundScanner() {
 
 // src/lib/pending-payment-scanner.ts
 init_logger();
-var SUPABASE_URL14 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_URL15 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
 var SERVICE_ROLE_KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SCAN_INTERVAL_MS2 = 3 * 6e4;
 var MIN_AGE_MS = 2 * 6e4;
@@ -38209,9 +38337,9 @@ function svcHeaders() {
   return { apikey: key2, Authorization: `Bearer ${key2}`, "Content-Type": "application/json" };
 }
 async function fetchPendingPayments() {
-  if (!SUPABASE_URL14 || !SERVICE_ROLE_KEY) return [];
+  if (!SUPABASE_URL15 || !SERVICE_ROLE_KEY) return [];
   const cutoff = new Date(Date.now() - MIN_AGE_MS).toISOString();
-  const url = `${SUPABASE_URL14}/rest/v1/payments?select=id,user_id,order_id,created_at,amount&status=eq.pending&credited_at=is.null&order_id=not.is.null&created_at=lt.${encodeURIComponent(cutoff)}&order=created_at.asc&limit=${PAGE_SIZE2}`;
+  const url = `${SUPABASE_URL15}/rest/v1/payments?select=id,user_id,order_id,created_at,amount&status=eq.pending&credited_at=is.null&order_id=not.is.null&created_at=lt.${encodeURIComponent(cutoff)}&order=created_at.asc&limit=${PAGE_SIZE2}`;
   try {
     const r = await fetch(url, { headers: svcHeaders() });
     if (!r.ok) return [];
@@ -38281,7 +38409,7 @@ async function scanOnce2() {
 }
 function startPendingPaymentScanner() {
   if (started3) return;
-  if (!SUPABASE_URL14 || !SERVICE_ROLE_KEY) {
+  if (!SUPABASE_URL15 || !SERVICE_ROLE_KEY) {
     logger.warn("pending-payment-scanner: Supabase secrets missing \u2014 scanner disabled");
     return;
   }
