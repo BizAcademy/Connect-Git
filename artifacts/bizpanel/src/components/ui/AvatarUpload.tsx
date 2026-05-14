@@ -86,7 +86,6 @@ export function AvatarUpload({ avatarUrl, username, email, size = 40, onUpdated 
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => !uploading && inputRef.current?.click()}
-      title="Changer la photo de profil"
     >
       {/* Avatar ou initiales */}
       {avatarUrl ? (
@@ -113,6 +112,26 @@ export function AvatarUpload({ avatarUrl, username, email, size = 40, onUpdated 
           ) : (
             <Camera size={size * 0.4} className="text-white" />
           )}
+        </div>
+      )}
+
+      {/* Point de notification (pas de photo) */}
+      {!avatarUrl && !uploading && (
+        <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500" />
+        </span>
+      )}
+
+      {/* Bulle d'aide au survol (pas de photo) */}
+      {hovered && !avatarUrl && !uploading && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 whitespace-nowrap rounded-md bg-gray-900 text-white text-[11px] px-2.5 py-1.5 shadow-lg pointer-events-none"
+          style={{ maxWidth: 200, whiteSpace: "normal", textAlign: "center" }}
+        >
+          Veuillez configurer votre photo de profil
+          {/* Petite flèche vers le haut */}
+          <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent border-b-gray-900" />
         </div>
       )}
 
