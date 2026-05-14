@@ -214,7 +214,7 @@ export const DashboardLayout = () => {
             avatarUrl={avatarUrl}
             username={profile?.username}
             email={user?.email}
-            size={42}
+            size={84}
             onUpdated={(url) => setAvatarUrl(url)}
           />
 
