@@ -1,5 +1,5 @@
 import { logger } from "./logger";
-import { toFcfa } from "./currency";
+import { toFcfa, setRateOverrides, isRateCacheValid } from "./currency";
 
 const SUPABASE_URL = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
 const SUPABASE_ANON_KEY = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
@@ -135,6 +135,42 @@ export type CreditOutcome =
  *  - The AfribaPay webhook (no user token; requires SUPABASE_SERVICE_ROLE_KEY).
  *  - Admin manual status changes (uses the admin's userToken via RLS).
  */
+/**
+ * Load non-CFA conversion rates from the settings table and populate the
+ * in-memory cache in currency.ts.  Called lazily in creditDeposit() so
+ * deposit webhooks always use the latest admin-configured rates even after
+ * a server restart (when the cache is empty).
+ *
+ * If the cache is still valid this is a no-op (no Supabase call made).
+ * Failures are logged and silently ignored — the hardcoded defaults remain.
+ */
+async function ensureRatesLoaded(): Promise<void> {
+  if (isRateCacheValid()) return;
+  if (!SUPABASE_URL) return;
+  try {
+    const key = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY!;
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/settings?key=like.currency_rate_%25&select=key,value`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } },
+    );
+    if (!r.ok) return;
+    const rows = (await r.json()) as { key: string; value: string }[];
+    const overrides: Record<string, number> = {};
+    for (const row of rows) {
+      const m = /^currency_rate_([A-Z]{2})$/i.exec(row.key);
+      if (m && m[1]) {
+        const parsed = parseFloat(row.value);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          overrides[m[1].toUpperCase()] = parsed;
+        }
+      }
+    }
+    setRateOverrides(overrides);
+  } catch (err) {
+    logger.warn({ err }, "ensureRatesLoaded: could not load currency rates from settings — using defaults");
+  }
+}
+
 /** Fetch the country stored on a user's profile (needed for currency conversion). */
 async function fetchUserCountry(userId: string): Promise<string | null> {
   if (!SUPABASE_URL) return null;
@@ -160,6 +196,10 @@ export async function creditDeposit(
   const userToken = opts?.userToken;
   const payment = await fetchPayment(paymentId, userToken);
   if (!payment) return { ok: false, error: "Paiement introuvable", status: 404 };
+
+  // Ensure we have the latest admin-configured conversion rates before
+  // converting the local-currency amount to FCFA.
+  await ensureRatesLoaded();
 
   // The amount stored in the payment row is in local currency (as sent to AfribaPay).
   // We must convert to FCFA before crediting the balance.

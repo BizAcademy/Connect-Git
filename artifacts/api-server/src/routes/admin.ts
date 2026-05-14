@@ -25,6 +25,10 @@ import {
   COOLDOWN_MS,
 } from "../lib/operator-health";
 import { bustCountriesCache } from "../lib/afribapay";
+import {
+  NON_CFA_COUNTRIES_INFO,
+  setRateOverrides,
+} from "../lib/currency";
 
 const router: IRouter = Router();
 
@@ -1227,6 +1231,140 @@ router.post("/admin/operators/health/clear", requireUser, requireAdmin, (req: Au
   // Vider aussi le cache de la liste pour que la réapparition soit instantanée
   bustCountriesCache();
   res.json({ ok: true, cleared });
+});
+
+// ---------------------------------------------------------------------------
+// Taux de conversion des devises non-CFA (configurable par l'admin)
+// ---------------------------------------------------------------------------
+
+/** Load currency rate rows from the settings table. */
+async function fetchCurrencyRateSettings(): Promise<Record<string, number>> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return {};
+  try {
+    const keys = NON_CFA_COUNTRIES_INFO.map(c => `currency_rate_${c.code}`);
+    const filter = keys.map(k => `key=eq.${encodeURIComponent(k)}`).join(",");
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/settings?or=(${filter})&select=key,value`,
+      { headers: serviceRoleHeaders() },
+    );
+    if (!r.ok) return {};
+    const rows = (await r.json()) as { key: string; value: string }[];
+    const overrides: Record<string, number> = {};
+    for (const row of rows) {
+      const m = /^currency_rate_([A-Z]{2})$/i.exec(row.key);
+      if (m && m[1]) {
+        const parsed = parseFloat(row.value);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          overrides[m[1].toUpperCase()] = parsed;
+        }
+      }
+    }
+    return overrides;
+  } catch (err) {
+    logger.error({ err }, "fetchCurrencyRateSettings failed");
+    return {};
+  }
+}
+
+// GET /api/admin/currencies — liste des taux de conversion non-CFA
+router.get("/admin/currencies", requireUser, requireAdmin, async (_req, res) => {
+  const overrides = await fetchCurrencyRateSettings();
+  // Populate the in-memory cache so subsequent deposit conversions pick up
+  // the admin-configured rates without hitting Supabase again.
+  setRateOverrides(overrides);
+
+  const rates = NON_CFA_COUNTRIES_INFO.map(c => ({
+    country: c.code,
+    name: c.name,
+    currency: c.currency,
+    symbol: c.symbol,
+    fcfaPerUnit: overrides[c.code] ?? c.defaultFcfaPerUnit,
+    default: c.defaultFcfaPerUnit,
+  }));
+
+  res.set("Cache-Control", "no-store");
+  res.json({ rates });
+});
+
+// PUT /api/admin/currencies — modifier le taux d'un pays
+//   body: { country: "CD", fcfaPerUnit: 0.28 }
+router.put("/admin/currencies", requireUser, requireAdmin, async (req: AuthedRequest, res) => {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).json({ error: "Configuration serveur manquante" });
+  }
+
+  const country = req.body?.country;
+  const fcfaPerUnit = req.body?.fcfaPerUnit;
+
+  if (typeof country !== "string" || !/^[A-Z]{2}$/.test(country.toUpperCase())) {
+    return res.status(400).json({ error: "Paramètre country invalide (code ISO 2 lettres requis)" });
+  }
+  const upperCountry = country.toUpperCase();
+
+  const allowed = NON_CFA_COUNTRIES_INFO.map(c => c.code);
+  if (!allowed.includes(upperCountry)) {
+    return res.status(400).json({ error: `Pays non modifiable : ${upperCountry}. Seuls ${allowed.join(", ")} sont configurables.` });
+  }
+
+  const rate = typeof fcfaPerUnit === "number" ? fcfaPerUnit : parseFloat(String(fcfaPerUnit));
+  if (!Number.isFinite(rate) || rate <= 0 || rate > 1_000_000) {
+    return res.status(400).json({ error: "Taux invalide (doit être un nombre positif)" });
+  }
+
+  const settingKey = `currency_rate_${upperCountry}`;
+
+  // Upsert the rate into the settings table.
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/settings`,
+    {
+      method: "POST",
+      headers: { ...serviceRoleHeaders(), Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify({ key: settingKey, value: String(rate) }),
+    },
+  );
+  if (!r.ok) {
+    const body = await r.text();
+    logger.error({ status: r.status, body: body.slice(0, 300) }, "admin/currencies upsert failed");
+    return res.status(502).json({ error: "Impossible de sauvegarder le taux" });
+  }
+
+  // Refresh the in-memory cache with the latest values from DB.
+  const latest = await fetchCurrencyRateSettings();
+  setRateOverrides(latest);
+  logger.info({ country: upperCountry, fcfaPerUnit: rate }, "admin: currency rate updated");
+
+  res.json({ ok: true, country: upperCountry, fcfaPerUnit: rate });
+});
+
+// DELETE /api/admin/currencies/:country — remettre le taux par défaut
+router.delete("/admin/currencies/:country", requireUser, requireAdmin, async (req: AuthedRequest, res) => {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).json({ error: "Configuration serveur manquante" });
+  }
+
+  const upperCountry = String(req.params["country"] ?? "").toUpperCase();
+  const allowed = NON_CFA_COUNTRIES_INFO.map(c => c.code);
+  if (!allowed.includes(upperCountry)) {
+    return res.status(400).json({ error: `Pays non modifiable : ${upperCountry}` });
+  }
+
+  const settingKey = `currency_rate_${upperCountry}`;
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/settings?key=eq.${encodeURIComponent(settingKey)}`,
+    { method: "DELETE", headers: serviceRoleHeaders() },
+  );
+  if (!r.ok) {
+    return res.status(502).json({ error: "Suppression impossible" });
+  }
+
+  // Refresh cache with the remaining overrides — the deleted key is gone from
+  // the DB so it won't appear in `latest`, and subsequent getCurrencyInfo()
+  // calls will correctly fall back to the hardcoded default for that country.
+  const latest = await fetchCurrencyRateSettings();
+  setRateOverrides(latest);
+
+  logger.info({ country: upperCountry }, "admin: currency rate reset to default");
+  res.json({ ok: true });
 });
 
 export default router;

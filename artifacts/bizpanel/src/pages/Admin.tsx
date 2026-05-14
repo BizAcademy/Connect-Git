@@ -2775,6 +2775,199 @@ const AdminContent = () => {
   );
 };
 
+// =====================================================================
+// ADMIN — Section "Devises" : taux de conversion configurables
+// =====================================================================
+
+interface CurrencyRate {
+  country: string;
+  name: string;
+  currency: string;
+  symbol: string;
+  fcfaPerUnit: number;
+  default: number;
+}
+
+const AdminCurrencies = () => {
+  const [rates, setRates] = useState<CurrencyRate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editValues, setEditValues] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await authedFetch("/api/admin/currencies");
+      const json = await data.json();
+      const rs: CurrencyRate[] = json.rates ?? [];
+      setRates(rs);
+      const vals: Record<string, string> = {};
+      for (const r of rs) vals[r.country] = String(r.fcfaPerUnit);
+      setEditValues(vals);
+    } catch {
+      toast.error("Impossible de charger les taux");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const save = async (country: string) => {
+    const raw = editValues[country] ?? "";
+    const val = parseFloat(raw.replace(",", "."));
+    if (!Number.isFinite(val) || val <= 0) {
+      toast.error("Taux invalide — entrez un nombre positif");
+      return;
+    }
+    setSaving(country);
+    try {
+      const r = await authedFetch("/api/admin/currencies", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ country, fcfaPerUnit: val }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        toast.error(j.error ?? "Sauvegarde impossible");
+        return;
+      }
+      setRates(prev => prev.map(rt => rt.country === country ? { ...rt, fcfaPerUnit: val } : rt));
+      setSaved(country);
+      setTimeout(() => setSaved(null), 2000);
+      toast.success(`Taux ${country} mis à jour`);
+    } catch {
+      toast.error("Erreur réseau");
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const reset = async (country: string, defaultRate: number) => {
+    setSaving(country);
+    try {
+      const r = await authedFetch(`/api/admin/currencies/${country}`, { method: "DELETE" });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        toast.error(j.error ?? "Réinitialisation impossible");
+        return;
+      }
+      setRates(prev => prev.map(rt => rt.country === country ? { ...rt, fcfaPerUnit: defaultRate } : rt));
+      setEditValues(prev => ({ ...prev, [country]: String(defaultRate) }));
+      setSaved(country);
+      setTimeout(() => setSaved(null), 2000);
+      toast.success(`Taux ${country} réinitialisé`);
+    } catch {
+      toast.error("Erreur réseau");
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const isModified = (r: CurrencyRate) => {
+    const v = parseFloat((editValues[r.country] ?? "").replace(",", "."));
+    return Number.isFinite(v) && Math.abs(v - r.fcfaPerUnit) > 1e-9;
+  };
+
+  const isCustom = (r: CurrencyRate) => Math.abs(r.fcfaPerUnit - r.default) > 1e-9;
+
+  return (
+    <div className="space-y-4 max-w-2xl">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            Taux de conversion non-CFA
+            <Button size="sm" variant="ghost" onClick={load} className="h-7 px-2 ml-auto">
+              <RefreshCw size={13} />
+            </Button>
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Seules les devises hors zone CFA nécessitent un taux de conversion. Les modifications sont
+            appliquées immédiatement aux prochains dépôts, sans redéploiement.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <LogoLoader />
+          ) : (
+            <div className="space-y-4">
+              {rates.map(r => (
+                <div key={r.country} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-medium text-sm">{r.name}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{r.currency}</span>
+                      {isCustom(r) && (
+                        <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium px-1.5 py-0.5">
+                          Personnalisé
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">Défaut : {r.default}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    1 {r.symbol} = <strong>{r.fcfaPerUnit}</strong> FCFA&nbsp;
+                    (équivalent : 1 FCFA = {r.fcfaPerUnit > 0 ? (1 / r.fcfaPerUnit).toFixed(4) : "—"} {r.symbol})
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <div className="flex-1">
+                      <Label className="text-xs">Nouveau taux (1 {r.symbol} = X FCFA)</Label>
+                      <Input
+                        type="number"
+                        min="0.000001"
+                        step="0.0001"
+                        value={editValues[r.country] ?? ""}
+                        onChange={e => setEditValues(prev => ({ ...prev, [r.country]: e.target.value }))}
+                        className="mt-1 h-8 text-sm"
+                        placeholder={String(r.default)}
+                      />
+                    </div>
+                    <div className="flex gap-1 self-end">
+                      <Button
+                        size="sm"
+                        className="h-8 px-3"
+                        onClick={() => save(r.country)}
+                        disabled={saving === r.country || !isModified(r)}
+                      >
+                        {saved === r.country ? (
+                          <CheckCircle2 size={13} className="text-green-300" />
+                        ) : saving === r.country ? (
+                          <RefreshCw size={13} className="animate-spin" />
+                        ) : (
+                          <Save size={13} />
+                        )}
+                      </Button>
+                      {isCustom(r) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2"
+                          title="Remettre le taux par défaut"
+                          onClick={() => reset(r.country, r.default)}
+                          disabled={saving === r.country}
+                        >
+                          <RotateCcw size={13} />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <div className="rounded-md bg-muted px-4 py-3 text-xs text-muted-foreground space-y-1">
+        <p className="font-medium text-foreground">Comment fonctionne la conversion</p>
+        <p>Le solde est toujours stocké en FCFA. Lorsqu'un dépôt est reçu d'un pays non-CFA (ex : Congo RDC en CDF),
+        le montant est converti en FCFA selon le taux configuré ici avant d'être crédité au compte de l'utilisateur.</p>
+        <p>Les pays XOF/XAF (zone CFA) ont un taux fixe de 1:1 et ne sont pas modifiables.</p>
+      </div>
+    </div>
+  );
+};
+
 const AdminSettings = () => {
   const [settings, setSettings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -3709,7 +3902,7 @@ export default function Admin() {
 
       <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
         <Tabs defaultValue="dashboard">
-          <TabsList className="grid grid-cols-3 md:grid-cols-11 mb-6 h-auto gap-1">
+          <TabsList className="grid grid-cols-3 md:grid-cols-12 mb-6 h-auto gap-1">
             <TabsTrigger value="dashboard" className="flex flex-col gap-1 py-2 text-xs"><LayoutDashboard size={15} />Tableau de bord</TabsTrigger>
             <TabsTrigger value="users" className="flex flex-col gap-1 py-2 text-xs"><Users size={15} />Utilisateurs</TabsTrigger>
             <TabsTrigger value="orders" className="flex flex-col gap-1 py-2 text-xs"><ShoppingCart size={15} />Commandes</TabsTrigger>
@@ -3734,6 +3927,7 @@ export default function Admin() {
             </TabsTrigger>
             <TabsTrigger value="services" className="flex flex-col gap-1 py-2 text-xs"><Layers size={15} />Tarifs</TabsTrigger>
             <TabsTrigger value="content" className="flex flex-col gap-1 py-2 text-xs"><FileText size={15} />Contenu</TabsTrigger>
+            <TabsTrigger value="currencies" className="flex flex-col gap-1 py-2 text-xs"><Wallet size={15} />Devises</TabsTrigger>
             <TabsTrigger value="settings" className="flex flex-col gap-1 py-2 text-xs"><Settings size={15} />Paramètres</TabsTrigger>
           </TabsList>
 
@@ -3750,6 +3944,7 @@ export default function Admin() {
           <TabsContent value="tickets"><AdminTickets onChanged={() => fetchAdminTicketsUnread().then(setTicketsUnread).catch(() => {})} /></TabsContent>
           <TabsContent value="services"><AdminServicesTab /></TabsContent>
           <TabsContent value="content"><AdminContent /></TabsContent>
+          <TabsContent value="currencies"><AdminCurrencies /></TabsContent>
           <TabsContent value="settings"><AdminSettings /></TabsContent>
         </Tabs>
       </div>
