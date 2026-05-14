@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,16 @@ export const DashboardLayout = () => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadSupport, setUnreadSupport] = useState(0);
+  const [transitioning, setTransitioning] = useState(false);
+  const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Loader de transition sur chaque changement de page
+  useEffect(() => {
+    setTransitioning(true);
+    if (transitionTimer.current) clearTimeout(transitionTimer.current);
+    transitionTimer.current = setTimeout(() => setTransitioning(false), 500);
+    return () => { if (transitionTimer.current) clearTimeout(transitionTimer.current); };
+  }, [location.pathname]);
 
   // Admins should not access the user dashboard — redirect to admin panel
   useEffect(() => {
@@ -156,7 +166,7 @@ export const DashboardLayout = () => {
         </header>
 
         <div className="flex-1 p-4 md:p-6 overflow-auto">
-          <Outlet />
+          {transitioning ? <LogoLoader /> : <Outlet />}
         </div>
       </main>
 
