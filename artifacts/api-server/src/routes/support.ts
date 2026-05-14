@@ -134,7 +134,7 @@ router.get("/support/uploads/:filename", requireUser, async (req: AuthedRequest,
     const obj = await downloadFromStorage(fname);
     if (obj) {
       res.setHeader("Content-Type", obj.contentType);
-      res.setHeader("Cache-Control", "private, max-age=3600");
+      res.setHeader("Cache-Control", "private, max-age=604800"); // 7 jours
       return res.end(obj.buffer);
     }
   } catch (err) {

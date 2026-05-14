@@ -102,14 +102,22 @@ export async function fileToCompressedDataUrl(file: File, maxDim = 1600, quality
   return canvas.toDataURL(isPng ? "image/png" : "image/jpeg", isPng ? undefined : quality);
 }
 
+// Module-level cache : les blob URLs survivent aux remontages de composants
+// dans la même session (navigation aller-retour sans "Image expirée").
+const imageUrlCache = new Map<string, string>();
+
 // Authenticated fetch of a support image as a blob URL — required because the
 // endpoint requires an Authorization header.
 export async function fetchSupportImageUrl(filename: string): Promise<string> {
+  const cached = imageUrlCache.get(filename);
+  if (cached) return cached;
   const headers = await getAuthHeaders();
   const r = await fetch(`/api/support/uploads/${encodeURIComponent(filename)}`, {
     headers,
   });
   if (!r.ok) throw new Error("Image introuvable");
   const blob = await r.blob();
-  return URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+  imageUrlCache.set(filename, url);
+  return url;
 }

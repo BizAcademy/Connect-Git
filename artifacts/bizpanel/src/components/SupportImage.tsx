@@ -7,15 +7,13 @@ export const SupportImage = ({ filename }: { filename: string }) => {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    let revoked = false;
-    let objectUrl: string | null = null;
+    let cancelled = false;
+    // Ne pas révoquer la blob URL — elle est mise en cache dans lib/support.ts
+    // pour survivre aux remontages de composants (navigation aller-retour).
     fetchSupportImageUrl(filename)
-      .then((u) => { if (!revoked) { objectUrl = u; setUrl(u); } })
-      .catch(() => { if (!revoked) setError(true); });
-    return () => {
-      revoked = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
+      .then((u) => { if (!cancelled) setUrl(u); })
+      .catch(() => { if (!cancelled) setError(true); });
+    return () => { cancelled = true; };
   }, [filename]);
 
   if (error) {
