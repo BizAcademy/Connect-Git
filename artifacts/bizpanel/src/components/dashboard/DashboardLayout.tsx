@@ -27,7 +27,7 @@ const menuItems = [
 ];
 
 export const DashboardLayout = () => {
-  const { user, profile, loading, isAdmin, signOut, refreshProfile } = useAuth();
+  const { user, profile, loading, isAdmin, signOut, refreshProfile, patchProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -54,10 +54,12 @@ export const DashboardLayout = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ country: pending }),
       })
-        .then((res) => {
+        .then(async (res) => {
           if (res.ok) {
             localStorage.removeItem("bb_pending_country");
-            refreshProfile();
+            const data = await res.json().catch(() => ({}));
+            if (data.country) patchProfile({ country: data.country, currency: data.currency });
+            refreshProfile().catch(() => undefined);
           } else {
             setShowCountryModal(true);
           }
@@ -119,9 +121,13 @@ export const DashboardLayout = () => {
       {/* Modale sélection pays (existants sans pays) */}
       {showCountryModal && (
         <CountrySelectModal
-          onSelected={(_country, _currency) => {
+          onSelected={(country, currency) => {
+            // Immediately update the profile in context so the balance
+            // re-renders in the correct local currency right away,
+            // without waiting for the server round-trip.
+            patchProfile({ country, currency });
             setShowCountryModal(false);
-            if (refreshProfile) refreshProfile().catch(() => undefined);
+            refreshProfile().catch(() => undefined);
           }}
         />
       )}

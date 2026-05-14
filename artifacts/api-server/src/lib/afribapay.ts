@@ -241,7 +241,12 @@ export async function listCountries(forceRefresh = false): Promise<CountryEntry[
     countriesCache = { value, expiresAt: Date.now() + COUNTRIES_TTL_MS };
     return value;
   })();
-  countriesInflight = run.finally(() => { countriesInflight = null; });
+  // Keep the inflight reference on the original promise so concurrent callers
+  // receive the same promise and can catch rejections themselves.
+  // The .finally() cleanup runs on its own chain; .catch(() => {}) prevents
+  // an unhandledRejection when AfribaPay is not configured.
+  countriesInflight = run;
+  run.finally(() => { countriesInflight = null; }).catch(() => {});
   return run;
 }
 

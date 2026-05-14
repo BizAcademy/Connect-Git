@@ -35443,8 +35443,10 @@ async function listCountries(forceRefresh = false) {
     countriesCache = { value, expiresAt: Date.now() + COUNTRIES_TTL_MS };
     return value;
   })();
-  countriesInflight = run.finally(() => {
+  countriesInflight = run;
+  run.finally(() => {
     countriesInflight = null;
+  }).catch(() => {
   });
   return run;
 }

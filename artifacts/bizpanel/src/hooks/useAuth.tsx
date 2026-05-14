@@ -10,6 +10,8 @@ interface AuthContextType {
   isAdmin: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  /** Optimistically patch one or more profile fields without a server round-trip. */
+  patchProfile: (patch: Record<string, unknown>) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,6 +22,7 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   signOut: async () => {},
   refreshProfile: async () => {},
+  patchProfile: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -48,6 +51,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshProfile = async () => {
     if (user) await fetchProfile(user.id);
+  };
+
+  const patchProfile = (patch: Record<string, unknown>) => {
+    setProfile((prev: any) => (prev ? { ...prev, ...patch } : prev));
   };
 
   useEffect(() => {
@@ -118,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, profile, isAdmin, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, loading, profile, isAdmin, signOut, refreshProfile, patchProfile }}>
       {children}
     </AuthContext.Provider>
   );
