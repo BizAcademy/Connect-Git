@@ -34920,7 +34920,7 @@ var COUNTRY_CURRENCY = {
   CG: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
   GQ: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
   GA: { currency: "XAF", fcfaPerUnit: 1, symbol: "F CFA" },
-  // Non-CFA countries — need conversion
+  // Non-CFA countries — configurable via admin "Devises" tab
   CD: { currency: "CDF", fcfaPerUnit: 0.27, symbol: "CDF" },
   // RDC: 1 CDF = 0.27 FCFA
   GN: { currency: "GNF", fcfaPerUnit: 0.0625, symbol: "GNF" },
@@ -34928,10 +34928,57 @@ var COUNTRY_CURRENCY = {
   GM: { currency: "GMD", fcfaPerUnit: 6.6667, symbol: "GMD" }
   // Gambie: 1 FCFA = 0.15 GMD
 };
+var NON_CFA_COUNTRIES_INFO = [
+  { code: "CD", name: "Congo RDC", currency: "CDF", symbol: "CDF", defaultFcfaPerUnit: 0.27 },
+  { code: "GN", name: "Guin\xE9e Conakry", currency: "GNF", symbol: "GNF", defaultFcfaPerUnit: 0.0625 },
+  { code: "GM", name: "Gambie", currency: "GMD", symbol: "GMD", defaultFcfaPerUnit: 6.6667 }
+];
 var DEFAULT_CURRENCY = { currency: "XOF", fcfaPerUnit: 1, symbol: "F CFA" };
+var _rateOverrides = null;
+var _rateCacheExpiry = 0;
+var RATE_CACHE_TTL_MS = 5 * 60 * 1e3;
+function setRateOverrides(overrides, ttlMs = RATE_CACHE_TTL_MS) {
+  _rateOverrides = { ...overrides };
+  _rateCacheExpiry = Date.now() + ttlMs;
+}
+function isRateCacheValid() {
+  return _rateOverrides !== null && Date.now() < _rateCacheExpiry;
+}
 function getCurrencyInfo(country) {
   if (!country) return DEFAULT_CURRENCY;
-  return COUNTRY_CURRENCY[country.toUpperCase()] ?? DEFAULT_CURRENCY;
+  const upper = country.toUpperCase();
+  const base = COUNTRY_CURRENCY[upper] ?? DEFAULT_CURRENCY;
+  if (_rateOverrides !== null && Date.now() < _rateCacheExpiry && _rateOverrides[upper] !== void 0) {
+    return { ...base, fcfaPerUnit: _rateOverrides[upper] };
+  }
+  return base;
+}
+var CURRENCY_DEFAULT_RATE = {
+  XOF: 1,
+  XAF: 1,
+  CDF: 0.27,
+  // Congo RDC : 1 CDF = 0.27 FCFA
+  GNF: 0.0625,
+  // Guinée Conakry : 1 GNF = 0.0625 FCFA (1 FCFA = 16 GNF)
+  GMD: 6.6667
+  // Gambie : 1 GMD ≈ 6.6667 FCFA (1 FCFA ≈ 0.15 GMD)
+};
+var COUNTRY_TO_CURRENCY = {
+  CD: "CDF",
+  GN: "GNF",
+  GM: "GMD"
+};
+function toFcfaByCurrency(localAmount, currencyCode) {
+  if (!currencyCode) return localAmount;
+  const upper = currencyCode.toUpperCase();
+  if (_rateOverrides !== null && Date.now() < _rateCacheExpiry) {
+    const countryForCurrency = Object.entries(COUNTRY_TO_CURRENCY).find(([, c]) => c === upper)?.[0];
+    if (countryForCurrency && _rateOverrides[countryForCurrency] !== void 0) {
+      return Math.round(localAmount * _rateOverrides[countryForCurrency]);
+    }
+  }
+  const rate = CURRENCY_DEFAULT_RATE[upper] ?? 1;
+  return Math.round(localAmount * rate);
 }
 function toFcfa(localAmount, country) {
   const info = getCurrencyInfo(country);
@@ -35013,6 +35060,32 @@ async function creditBalance(userId, amount, userToken) {
   logger.error({ userId }, "creditBalance: exhausted CAS retries");
   return null;
 }
+async function ensureRatesLoaded() {
+  if (isRateCacheValid()) return;
+  if (!SUPABASE_URL5) return;
+  try {
+    const key2 = SUPABASE_SERVICE_ROLE_KEY4 || SUPABASE_ANON_KEY3;
+    const r = await fetch(
+      `${SUPABASE_URL5}/rest/v1/settings?key=like.currency_rate_%25&select=key,value`,
+      { headers: { apikey: key2, Authorization: `Bearer ${key2}` } }
+    );
+    if (!r.ok) return;
+    const rows = await r.json();
+    const overrides = {};
+    for (const row of rows) {
+      const m = /^currency_rate_([A-Z]{2})$/i.exec(row.key);
+      if (m && m[1]) {
+        const parsed = parseFloat(row.value);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          overrides[m[1].toUpperCase()] = parsed;
+        }
+      }
+    }
+    setRateOverrides(overrides);
+  } catch (err) {
+    logger.warn({ err }, "ensureRatesLoaded: could not load currency rates from settings \u2014 using defaults");
+  }
+}
 async function fetchUserCountry(userId) {
   if (!SUPABASE_URL5) return null;
   try {
@@ -35032,13 +35105,31 @@ async function creditDeposit(paymentId, opts) {
   const userToken = opts?.userToken;
   const payment = await fetchPayment(paymentId, userToken);
   if (!payment) return { ok: false, error: "Paiement introuvable", status: 404 };
+  await ensureRatesLoaded();
   const localAmount = Number(payment.amount);
-  const userCountry = await fetchUserCountry(payment.user_id);
-  const amount = toFcfa(localAmount, userCountry);
+  let amount;
+  if (payment.currency) {
+    amount = toFcfaByCurrency(localAmount, payment.currency);
+  } else {
+    const userCountry = await fetchUserCountry(payment.user_id);
+    amount = toFcfa(localAmount, userCountry);
+  }
   if (amount !== localAmount) {
     logger.info(
-      { paymentId, userId: payment.user_id, localAmount, fcfaAmount: amount, country: userCountry },
+      {
+        paymentId,
+        userId: payment.user_id,
+        localAmount,
+        fcfaAmount: amount,
+        currency: payment.currency,
+        country: payment.country
+      },
       "currency conversion applied for deposit"
+    );
+  } else {
+    logger.info(
+      { paymentId, userId: payment.user_id, amount, currency: payment.currency ?? "unknown" },
+      "deposit amount in FCFA (no conversion needed)"
     );
   }
   const eligible = isEligibleForBonus(amount);
@@ -36153,7 +36244,7 @@ router3.get("/admin/deposits", requireUser, requireAdmin, async (req, res) => {
     }
   }
   const params = new URLSearchParams();
-  params.set("select", "id,user_id,amount,status,method,reference,created_at,bonus_amount,bonus_status,bonus_credited_at,credited_at");
+  params.set("select", "id,user_id,amount,status,method,reference,created_at,bonus_amount,bonus_status,bonus_credited_at,credited_at,country,currency");
   params.set("order", "created_at.desc");
   params.set("limit", String(limit));
   if (q.status && q.status !== "all") params.append("status", `eq.${q.status}`);
@@ -36494,6 +36585,106 @@ router3.post("/admin/operators/health/clear", requireUser, requireAdmin, (req, r
   const cleared = clearOperatorHealth(country, operator);
   bustCountriesCache();
   res.json({ ok: true, cleared });
+});
+async function fetchCurrencyRateSettings() {
+  if (!SUPABASE_URL6 || !SUPABASE_SERVICE_ROLE_KEY5) return {};
+  try {
+    const keys = NON_CFA_COUNTRIES_INFO.map((c) => `currency_rate_${c.code}`);
+    const filter = keys.map((k) => `key=eq.${encodeURIComponent(k)}`).join(",");
+    const r = await fetch(
+      `${SUPABASE_URL6}/rest/v1/settings?or=(${filter})&select=key,value`,
+      { headers: serviceRoleHeaders2() }
+    );
+    if (!r.ok) return {};
+    const rows = await r.json();
+    const overrides = {};
+    for (const row of rows) {
+      const m = /^currency_rate_([A-Z]{2})$/i.exec(row.key);
+      if (m && m[1]) {
+        const parsed = parseFloat(row.value);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          overrides[m[1].toUpperCase()] = parsed;
+        }
+      }
+    }
+    return overrides;
+  } catch (err) {
+    logger.error({ err }, "fetchCurrencyRateSettings failed");
+    return {};
+  }
+}
+router3.get("/admin/currencies", requireUser, requireAdmin, async (_req, res) => {
+  const overrides = await fetchCurrencyRateSettings();
+  setRateOverrides(overrides);
+  const rates = NON_CFA_COUNTRIES_INFO.map((c) => ({
+    country: c.code,
+    name: c.name,
+    currency: c.currency,
+    symbol: c.symbol,
+    fcfaPerUnit: overrides[c.code] ?? c.defaultFcfaPerUnit,
+    default: c.defaultFcfaPerUnit
+  }));
+  res.set("Cache-Control", "no-store");
+  res.json({ rates });
+});
+router3.put("/admin/currencies", requireUser, requireAdmin, async (req, res) => {
+  if (!SUPABASE_URL6 || !SUPABASE_SERVICE_ROLE_KEY5) {
+    return res.status(503).json({ error: "Configuration serveur manquante" });
+  }
+  const country = req.body?.country;
+  const fcfaPerUnit = req.body?.fcfaPerUnit;
+  if (typeof country !== "string" || !/^[A-Z]{2}$/.test(country.toUpperCase())) {
+    return res.status(400).json({ error: "Param\xE8tre country invalide (code ISO 2 lettres requis)" });
+  }
+  const upperCountry = country.toUpperCase();
+  const allowed = NON_CFA_COUNTRIES_INFO.map((c) => c.code);
+  if (!allowed.includes(upperCountry)) {
+    return res.status(400).json({ error: `Pays non modifiable : ${upperCountry}. Seuls ${allowed.join(", ")} sont configurables.` });
+  }
+  const rate = typeof fcfaPerUnit === "number" ? fcfaPerUnit : parseFloat(String(fcfaPerUnit));
+  if (!Number.isFinite(rate) || rate <= 0 || rate > 1e6) {
+    return res.status(400).json({ error: "Taux invalide (doit \xEAtre un nombre positif)" });
+  }
+  const settingKey = `currency_rate_${upperCountry}`;
+  const r = await fetch(
+    `${SUPABASE_URL6}/rest/v1/settings`,
+    {
+      method: "POST",
+      headers: { ...serviceRoleHeaders2(), Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify({ key: settingKey, value: String(rate) })
+    }
+  );
+  if (!r.ok) {
+    const body = await r.text();
+    logger.error({ status: r.status, body: body.slice(0, 300) }, "admin/currencies upsert failed");
+    return res.status(502).json({ error: "Impossible de sauvegarder le taux" });
+  }
+  const latest = await fetchCurrencyRateSettings();
+  setRateOverrides(latest);
+  logger.info({ country: upperCountry, fcfaPerUnit: rate }, "admin: currency rate updated");
+  res.json({ ok: true, country: upperCountry, fcfaPerUnit: rate });
+});
+router3.delete("/admin/currencies/:country", requireUser, requireAdmin, async (req, res) => {
+  if (!SUPABASE_URL6 || !SUPABASE_SERVICE_ROLE_KEY5) {
+    return res.status(503).json({ error: "Configuration serveur manquante" });
+  }
+  const upperCountry = String(req.params["country"] ?? "").toUpperCase();
+  const allowed = NON_CFA_COUNTRIES_INFO.map((c) => c.code);
+  if (!allowed.includes(upperCountry)) {
+    return res.status(400).json({ error: `Pays non modifiable : ${upperCountry}` });
+  }
+  const settingKey = `currency_rate_${upperCountry}`;
+  const r = await fetch(
+    `${SUPABASE_URL6}/rest/v1/settings?key=eq.${encodeURIComponent(settingKey)}`,
+    { method: "DELETE", headers: serviceRoleHeaders2() }
+  );
+  if (!r.ok) {
+    return res.status(502).json({ error: "Suppression impossible" });
+  }
+  const latest = await fetchCurrencyRateSettings();
+  setRateOverrides(latest);
+  logger.info({ country: upperCountry }, "admin: currency rate reset to default");
+  res.json({ ok: true });
 });
 var admin_default = router3;
 

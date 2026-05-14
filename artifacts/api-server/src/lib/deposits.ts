@@ -1,5 +1,5 @@
 import { logger } from "./logger";
-import { toFcfa, setRateOverrides, isRateCacheValid } from "./currency";
+import { toFcfa, toFcfaByCurrency, setRateOverrides, isRateCacheValid } from "./currency";
 
 const SUPABASE_URL = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
 const SUPABASE_ANON_KEY = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
@@ -32,6 +32,10 @@ export interface PaymentRow {
   bonus_status?: string | null;
   bonus_credited_at?: string | null;
   credited_at?: string | null;
+  /** ISO 4217 currency code set at deposit initiation (e.g. "CDF", "GNF", "GMD", "XOF"). */
+  currency?: string | null;
+  /** ISO 3166-1 alpha-2 country code set at deposit initiation (e.g. "CD", "GN", "GM"). */
+  country?: string | null;
 }
 
 /**
@@ -203,13 +207,35 @@ export async function creditDeposit(
 
   // The amount stored in the payment row is in local currency (as sent to AfribaPay).
   // We must convert to FCFA before crediting the balance.
+  //
+  // Primary path: use payments.currency (set at initiation time — always
+  // reliable regardless of whether profiles.country has been populated).
+  // Fallback: look up the user's country in profiles (covers edge cases
+  // where payment.currency is null, e.g. old rows from before migration 008).
   const localAmount = Number(payment.amount);
-  const userCountry = await fetchUserCountry(payment.user_id);
-  const amount = toFcfa(localAmount, userCountry);
+  let amount: number;
+  if (payment.currency) {
+    amount = toFcfaByCurrency(localAmount, payment.currency);
+  } else {
+    const userCountry = await fetchUserCountry(payment.user_id);
+    amount = toFcfa(localAmount, userCountry);
+  }
   if (amount !== localAmount) {
     logger.info(
-      { paymentId, userId: payment.user_id, localAmount, fcfaAmount: amount, country: userCountry },
+      {
+        paymentId,
+        userId: payment.user_id,
+        localAmount,
+        fcfaAmount: amount,
+        currency: payment.currency,
+        country: payment.country,
+      },
       "currency conversion applied for deposit",
+    );
+  } else {
+    logger.info(
+      { paymentId, userId: payment.user_id, amount, currency: payment.currency ?? "unknown" },
+      "deposit amount in FCFA (no conversion needed)",
     );
   }
 

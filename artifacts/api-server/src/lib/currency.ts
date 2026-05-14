@@ -110,9 +110,59 @@ export function getCurrencyInfo(country: string | null | undefined): CurrencyInf
 }
 
 /**
+ * ISO 4217 currency code → fcfaPerUnit rate.
+ * For XOF/XAF (CFA zones) the rate is 1:1.
+ * For non-CFA currencies, the in-memory admin overrides take precedence
+ * over these static defaults.
+ */
+const CURRENCY_DEFAULT_RATE: Record<string, number> = {
+  XOF: 1,
+  XAF: 1,
+  CDF: 0.27,   // Congo RDC : 1 CDF = 0.27 FCFA
+  GNF: 0.0625, // Guinée Conakry : 1 GNF = 0.0625 FCFA (1 FCFA = 16 GNF)
+  GMD: 6.6667, // Gambie : 1 GMD ≈ 6.6667 FCFA (1 FCFA ≈ 0.15 GMD)
+};
+
+/**
+ * Country code → ISO 4217 currency code.
+ * Used to look up the rate when we only have a country code.
+ */
+const COUNTRY_TO_CURRENCY: Record<string, string> = {
+  CD: "CDF", GN: "GNF", GM: "GMD",
+};
+
+/**
+ * Convert an amount in a given ISO 4217 currency to FCFA.
+ * This is the **primary conversion path**: use this when you have the
+ * currency code directly (e.g. from payments.currency set by the deposit
+ * initiation flow). Admin-configured rate overrides are applied when valid.
+ *
+ * Falls back to 1:1 for unknown currencies (safe for CFA zones).
+ */
+export function toFcfaByCurrency(localAmount: number, currencyCode: string | null | undefined): number {
+  if (!currencyCode) return localAmount;
+  const upper = currencyCode.toUpperCase();
+
+  // Apply admin-configured override when cache is valid
+  if (_rateOverrides !== null && Date.now() < _rateCacheExpiry) {
+    // Overrides are keyed by country code; translate currency → country first
+    const countryForCurrency = Object.entries(COUNTRY_TO_CURRENCY).find(([, c]) => c === upper)?.[0];
+    if (countryForCurrency && _rateOverrides[countryForCurrency] !== undefined) {
+      return Math.round(localAmount * _rateOverrides[countryForCurrency]!);
+    }
+  }
+
+  const rate = CURRENCY_DEFAULT_RATE[upper] ?? 1;
+  return Math.round(localAmount * rate);
+}
+
+/**
  * Convert an amount in local currency to FCFA.
  * Used when crediting a deposit: the amount received from AfribaPay is in
  * local currency, so we must convert before storing in profiles.balance.
+ *
+ * Prefer `toFcfaByCurrency` when the ISO 4217 currency code is available
+ * (more reliable than a country-based lookup).
  */
 export function toFcfa(localAmount: number, country: string | null | undefined): number {
   const info = getCurrencyInfo(country);
