@@ -14,6 +14,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LogoLoader } from "@/components/ui/LogoLoader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -616,7 +617,7 @@ const AdminTransactions = () => {
 
       {/* Table */}
       {loading ? (
-        <div className="flex justify-center py-8"><div className="animate-spin h-7 w-7 border-4 border-primary border-t-transparent rounded-full" /></div>
+        <LogoLoader />
       ) : filtered.length === 0 ? (
         <p className="text-center text-sm text-muted-foreground py-8">Aucune transaction pour ces filtres.</p>
       ) : (
@@ -1596,7 +1597,7 @@ const AdminUsers = () => {
       </form>
       <p className="text-sm text-muted-foreground">{users.length} utilisateur(s){search ? ` (filtré: "${search}")` : ""}</p>
       {loading ? (
-        <div className="flex justify-center py-8"><div className="animate-spin h-7 w-7 border-4 border-primary border-t-transparent rounded-full" /></div>
+        <LogoLoader />
       ) : (
         <div className="space-y-3">
           {users.map(u => (
@@ -1914,7 +1915,7 @@ const AdminOrders = () => {
       </Card>
 
       {loading ? (
-        <div className="flex justify-center py-8"><div className="animate-spin h-7 w-7 border-4 border-primary border-t-transparent rounded-full" /></div>
+        <LogoLoader />
       ) : filtered.length === 0 ? (
         <p className="text-center text-sm text-muted-foreground py-8">Aucune commande pour ces filtres.</p>
       ) : (
@@ -1996,7 +1997,7 @@ const AdminPayments = () => {
         <p className="text-sm text-muted-foreground">{payments.length} paiement(s)</p>
         <Button variant="outline" size="sm" onClick={load}><RefreshCw size={14} className="mr-1" />Actualiser</Button>
       </div>
-      {loading ? <div className="flex justify-center py-8"><div className="animate-spin h-7 w-7 border-4 border-primary border-t-transparent rounded-full" /></div> : (
+      {loading ? <LogoLoader /> : (
         <div className="space-y-3">
           {payments.map(p => (
             <Card key={p.id}>
@@ -2422,9 +2423,7 @@ const AdminServices = ({ providerId = 1 }: { providerId?: number }) => {
       </Card>
 
       {loading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin h-7 w-7 border-4 border-primary border-t-transparent rounded-full" />
-        </div>
+        <LogoLoader />
       ) : (
         <>
           <p className="text-xs text-muted-foreground">
@@ -2644,7 +2643,7 @@ const AdminContent = () => {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-8"><div className="animate-spin h-7 w-7 border-4 border-primary border-t-transparent rounded-full" /></div>
+        <LogoLoader />
       ) : (
         Object.entries(grouped).map(([section, items]: [string, any]) => (
           <Card key={section}>
@@ -2811,7 +2810,7 @@ const AdminSettings = () => {
 
   return (
     <div className="space-y-4 max-w-xl">
-      {loading ? <div className="flex justify-center py-8"><div className="animate-spin h-7 w-7 border-4 border-primary border-t-transparent rounded-full" /></div> : (
+      {loading ? <LogoLoader /> : (
         <>
           <Card>
             <CardHeader><CardTitle className="text-sm">API SMM</CardTitle></CardHeader>
@@ -3682,7 +3681,7 @@ export default function Admin() {
   }, [isAdmin]);
 
   if (loading || checking) {
-    return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+    return <LogoLoader fullPage />;
   }
 
   if (!isAdmin) return null;
