@@ -36700,6 +36700,7 @@ async function cleanupExpired() {
       const orphans = [];
       let offset = 0;
       const PAGE = 1e3;
+      const now = Date.now();
       while (true) {
         const r = await fetch(listUrl, {
           method: "POST",
@@ -36710,7 +36711,10 @@ async function cleanupExpired() {
         const items = await r.json().catch(() => []);
         if (!Array.isArray(items) || items.length === 0) break;
         for (const it of items) {
-          if (it.name && !referenced.has(it.name)) orphans.push(it.name);
+          if (!it.name) continue;
+          if (referenced.has(it.name)) continue;
+          const createdAt = it.created_at ? new Date(it.created_at).getTime() : now;
+          if (now - createdAt > TTL_MS) orphans.push(it.name);
         }
         if (items.length < PAGE) break;
         offset += PAGE;
@@ -36724,6 +36728,9 @@ async function cleanupExpired() {
           body: JSON.stringify({ prefixes: batch })
         });
         if (dr.ok) imagesRemoved += batch.length;
+      }
+      if (orphans.length > 0) {
+        logger.info({ deleted: orphans.length }, "support cleanup: storage orphans removed");
       }
     } catch (err) {
       logger.warn({ err }, "support cleanup: storage purge failed");

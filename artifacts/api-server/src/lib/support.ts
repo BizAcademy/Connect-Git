@@ -315,15 +315,21 @@ export async function cleanupExpired(): Promise<{ messages_removed: number; imag
   }
 
   // Delete orphan images in Supabase Storage (primary storage since
-  // migration 016). We list all objects and delete those not referenced
-  // by any fresh message — same TTL contract as the JSONL files (7 days).
+  // migration 016). SAFETY RULE: only delete an image if it is BOTH
+  // unreferenced by any fresh JSONL message AND older than TTL_MS.
+  //
+  // On Plesk/Cybrancee, every redeploy wipes the local disk, so the JSONL
+  // files are gone at startup → `referenced` is empty → WITHOUT the age
+  // guard below, ALL Storage images would be deleted on every redeploy.
+  // The `created_at` field from the Storage list API is the source of truth
+  // for age; we never touch images younger than TTL_MS regardless of JSONL.
   if (hasStorage()) {
     try {
       const listUrl = `${SUPABASE_URL}/storage/v1/object/list/${STORAGE_BUCKET}`;
       const orphans: string[] = [];
       let offset = 0;
       const PAGE = 1000;
-      // Paginate to handle buckets with >1000 objects
+      const now = Date.now();
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const r = await fetch(listUrl, {
@@ -332,10 +338,20 @@ export async function cleanupExpired(): Promise<{ messages_removed: number; imag
           body: JSON.stringify({ prefix: "", limit: PAGE, offset }),
         });
         if (!r.ok) break;
-        const items = (await r.json().catch(() => [])) as Array<{ name: string }>;
+        const items = (await r.json().catch(() => [])) as Array<{
+          name: string;
+          created_at?: string;
+        }>;
         if (!Array.isArray(items) || items.length === 0) break;
         for (const it of items) {
-          if (it.name && !referenced.has(it.name)) orphans.push(it.name);
+          if (!it.name) continue;
+          if (referenced.has(it.name)) continue; // still referenced — keep
+          // Age guard: never delete images younger than TTL_MS.
+          // Default to `now` (safe — won't delete) if created_at is missing.
+          const createdAt = it.created_at
+            ? new Date(it.created_at).getTime()
+            : now;
+          if (now - createdAt > TTL_MS) orphans.push(it.name);
         }
         if (items.length < PAGE) break;
         offset += PAGE;
@@ -350,6 +366,9 @@ export async function cleanupExpired(): Promise<{ messages_removed: number; imag
           body: JSON.stringify({ prefixes: batch }),
         });
         if (dr.ok) imagesRemoved += batch.length;
+      }
+      if (orphans.length > 0) {
+        logger.info({ deleted: orphans.length }, "support cleanup: storage orphans removed");
       }
     } catch (err) {
       logger.warn({ err }, "support cleanup: storage purge failed");
