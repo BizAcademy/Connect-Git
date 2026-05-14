@@ -57,19 +57,29 @@ const Auth = () => {
     const { data, error } = await supabase.auth.signUp({
       email: signupEmail,
       password: signupPassword,
-      options: { emailRedirectTo: window.location.origin, data: { username } },
+      // Pass country in metadata so any trigger/function has access to it
+      options: { emailRedirectTo: window.location.origin, data: { username, country: signupCountry } },
     });
     if (error) { setLoading(false); toast.error(error.message); return; }
-    // Save country via API (profile row created by Supabase trigger)
-    if (data.session) {
-      try {
-        await authedFetch("/api/profile/country", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ country: signupCountry }),
-        });
-      } catch { /* non-blocking */ }
+
+    // Always attempt to save country — retry up to 3 times to handle
+    // the brief delay between signUp and profile row creation by trigger.
+    const session = data.session;
+    if (session) {
+      let saved = false;
+      for (let attempt = 0; attempt < 3 && !saved; attempt++) {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, 800));
+        try {
+          const res = await authedFetch("/api/profile/country", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ country: signupCountry }),
+          });
+          if (res.ok) saved = true;
+        } catch { /* retry */ }
+      }
     }
+
     setLoading(false);
     toast.success("Compte créé ! Bienvenue sur BUZZ BOOSTER 🎉");
     navigate("/dashboard");

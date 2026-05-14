@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getAuthHeaders, authedFetch } from "@/lib/authFetch";
-import { formatBalance, getCurrencyInfo } from "@/lib/currency";
+import { formatBalance, getCurrencyInfo, toFcfa } from "@/lib/currency";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,8 +56,13 @@ export default function Deposit() {
   const [amount, setAmount] = useState(0);
   const [custom, setCustom] = useState("");
   const finalAmount = custom ? Number(custom) : amount;
-  const isEligible = Number.isFinite(finalAmount) && finalAmount >= BONUS_THRESHOLD;
+  // Convert local-currency amount to FCFA before checking bonus threshold
+  const finalAmountFcfa = toFcfa(finalAmount, profile?.country);
+  const isEligible = Number.isFinite(finalAmountFcfa) && finalAmountFcfa >= BONUS_THRESHOLD;
   const bonus = isEligible ? BONUS_AMOUNT : 0;
+  // Display the bonus threshold in user's local currency (mirrors server logic)
+  const { symbol: currSymbol, fcfaPerUnit } = getCurrencyInfo(profile?.country);
+  const thresholdLocal = fcfaPerUnit === 1 ? BONUS_THRESHOLD : Math.ceil(BONUS_THRESHOLD / fcfaPerUnit);
 
   const [submitting, setSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -311,7 +316,7 @@ export default function Deposit() {
         </div>
         <div className="text-sm">
           <p className="font-bold text-amber-900 dark:text-amber-100">
-            Bonus : +{BONUS_AMOUNT.toLocaleString()} FCFA offerts dès {BONUS_THRESHOLD.toLocaleString()} FCFA déposés !
+            Bonus : +{BONUS_AMOUNT.toLocaleString()} F CFA offerts dès {thresholdLocal.toLocaleString()} {currSymbol} déposés !
           </p>
           <p className="text-amber-800 dark:text-amber-200/90 mt-0.5">
             Crédité automatiquement avec votre dépôt confirmé.
@@ -481,10 +486,10 @@ export default function Deposit() {
                 Bonus dépôt
               </span>
               {isEligible ? (
-                <span className="font-bold text-amber-600">+{bonus.toLocaleString()} FCFA</span>
+                <span className="font-bold text-amber-600">+{bonus.toLocaleString()} F CFA</span>
               ) : (
                 <span className="text-xs text-muted-foreground">
-                  dès {BONUS_THRESHOLD.toLocaleString()} FCFA
+                  dès {thresholdLocal.toLocaleString()} {currSymbol}
                 </span>
               )}
             </div>
@@ -514,7 +519,7 @@ export default function Deposit() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Bonus crédité</span>
               <span className={isEligible ? "font-bold text-amber-600" : "text-xs text-muted-foreground"}>
-                {isEligible ? `+${bonus.toLocaleString()} F CFA` : `dès ${BONUS_THRESHOLD.toLocaleString()} F CFA`}
+                {isEligible ? `+${bonus.toLocaleString()} F CFA` : `dès ${thresholdLocal.toLocaleString()} ${currSymbol}`}
               </span>
             </div>
             <Button className="w-full h-12" onClick={initiate} disabled={submitting}>

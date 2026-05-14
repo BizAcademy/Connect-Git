@@ -40,6 +40,16 @@ export function getCurrencyInfo(country: string | null | undefined): CurrencyInf
 }
 
 /**
+ * Convert local currency amount to FCFA.
+ * e.g. 1 000 CDF → 270 FCFA (for a Congolais DRC user)
+ * Mirrors the server-side toFcfa() in lib/currency.ts
+ */
+export function toFcfa(localAmount: number, country: string | null | undefined): number {
+  const info = getCurrencyInfo(country);
+  return Math.round(localAmount * info.fcfaPerUnit);
+}
+
+/**
  * Convert FCFA balance to local currency for display.
  * e.g. 270 FCFA → 1 000 CDF (for a Congolais DRC user)
  */
