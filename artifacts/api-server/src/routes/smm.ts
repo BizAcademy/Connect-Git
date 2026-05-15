@@ -427,6 +427,48 @@ router.post("/smm/order", requireUser, rateLimitOrders, async (req: AuthedReques
   }
 });
 
+// GET /api/smm/user-orders — user's own orders via service-role (bypasses RLS)
+router.get("/smm/user-orders", requireUser, async (req: AuthedRequest, res) => {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return res.json([]);
+  try {
+    const userId = req.userId!;
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/orders?user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`,
+      { headers: serviceRoleHeaders() },
+    );
+    if (!r.ok) {
+      req.log.error({ status: r.status }, "user-orders: supabase error");
+      return res.json([]);
+    }
+    const data = (await r.json()) as unknown[];
+    res.json(Array.isArray(data) ? data : []);
+  } catch (err) {
+    req.log.error({ err }, "user-orders: exception");
+    res.json([]);
+  }
+});
+
+// GET /api/smm/user-payments — user's own payments via service-role (bypasses RLS)
+router.get("/smm/user-payments", requireUser, async (req: AuthedRequest, res) => {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return res.json([]);
+  try {
+    const userId = req.userId!;
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/payments?user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`,
+      { headers: serviceRoleHeaders() },
+    );
+    if (!r.ok) {
+      req.log.error({ status: r.status }, "user-payments: supabase error");
+      return res.json([]);
+    }
+    const data = (await r.json()) as unknown[];
+    res.json(Array.isArray(data) ? data : []);
+  } catch (err) {
+    req.log.error({ err }, "user-payments: exception");
+    res.json([]);
+  }
+});
+
 // Authenticated: server-side price quote
 router.get("/smm/quote", requireUser, async (req, res) => {
   const providerId = parseProviderId(req.query["provider"]);

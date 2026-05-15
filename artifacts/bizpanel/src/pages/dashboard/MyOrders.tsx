@@ -11,6 +11,7 @@ import { fetchSmmOrderStatus } from "@/lib/smm";
 import { useToast } from "@/hooks/use-toast";
 import { fetchMyTickets } from "@/lib/tickets";
 import { formatBalance } from "@/lib/currency";
+import { getAuthHeaders } from "@/lib/authFetch";
 
 // Minimal shape we read off `orders` rows from Realtime payloads. Supabase
 // types `payload.new` as `Record<string, unknown>`; this guard narrows it
@@ -189,12 +190,9 @@ export default function MyOrders() {
   const load = async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-    const initial = data || [];
+    const headers = await getAuthHeaders();
+    const r = await fetch("/api/smm/user-orders", { headers });
+    const initial: any[] = r.ok ? (await r.json() as any[]) : [];
     setOrders(initial);
     setLoading(false);
     const { orders: synced, refunds } = await syncOrdersStatusWithRefunds(initial);
@@ -267,10 +265,9 @@ export default function MyOrders() {
   useEffect(() => {
     if (!user) return;
     const silentLoad = async () => {
-      const { data } = await supabase
-        .from("orders").select("*").eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      if (data) setOrders(data);
+      const hdrs = await getAuthHeaders();
+      const r = await fetch("/api/smm/user-orders", { headers: hdrs });
+      if (r.ok) setOrders(await r.json() as any[]);
     };
     const onVisible = () => { if (document.visibilityState === "visible") void silentLoad(); };
     document.addEventListener("visibilitychange", onVisible);

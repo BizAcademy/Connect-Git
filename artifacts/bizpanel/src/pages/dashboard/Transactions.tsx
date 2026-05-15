@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { InvoiceModal, type InvoiceData } from "@/components/dashboard/InvoiceModal";
 import { formatPaymentMethod } from "@/lib/paymentMethod";
 import { formatBalance, getCurrencyInfo } from "@/lib/currency";
+import { getAuthHeaders } from "@/lib/authFetch";
 
 type TxKind = "deposit" | "order" | "refund";
 type TxRow = {
@@ -87,13 +88,14 @@ export default function Transactions() {
     if (!user) return;
     setLoading(true);
     try {
+      const hdrs = await getAuthHeaders();
       const [ordRes, payRes] = await Promise.all([
-        supabase.from("orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        fetch("/api/smm/user-orders", { headers: hdrs }).then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
+        fetch("/api/smm/user-payments", { headers: hdrs }).then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
       ]);
-      const initial = ordRes.data || [];
+      const initial: any[] = Array.isArray(ordRes) ? ordRes : [];
       setOrders(initial);
-      setPayments(payRes.data || []);
+      setPayments(Array.isArray(payRes) ? payRes : []);
       setLoading(false);
 
       // Background sync: may trigger automatic refunds.

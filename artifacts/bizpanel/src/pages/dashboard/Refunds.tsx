@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { RefreshCw, Search, RotateCcw, Wallet, FileText } from "lucide-react";
 import { syncOrdersStatusWithRefunds } from "@/lib/orderSync";
 import { formatBalance } from "@/lib/currency";
+import { getAuthHeaders } from "@/lib/authFetch";
 import { fetchSmmProviders } from "@/lib/smm";
 import { toast } from "sonner";
 import { InvoiceModal, type InvoiceData } from "@/components/dashboard/InvoiceModal";
@@ -60,14 +61,12 @@ export default function Refunds() {
     setLoading(true);
     try {
       // On ne récupère QUE les commandes ayant un remboursement effectif
-      const { data } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("user_id", user.id)
-        .not("refunded_at", "is", null)
-        .gt("refunded_amount", 0)
-        .order("refunded_at", { ascending: false });
-      const initial = data || [];
+      const hdrs = await getAuthHeaders();
+      const r = await fetch("/api/smm/user-orders", { headers: hdrs });
+      const allOrders: any[] = r.ok ? (await r.json() as any[]) : [];
+      const initial = allOrders
+        .filter((o: any) => o.refunded_at !== null && o.refunded_at !== undefined && Number(o.refunded_amount) > 0)
+        .sort((a: any, b: any) => new Date(b.refunded_at).getTime() - new Date(a.refunded_at).getTime());
       setOrders(initial);
       setLoading(false);
 
