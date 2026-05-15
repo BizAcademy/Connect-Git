@@ -1,0 +1,9 @@
+# BUZZ BOOSTER — robots.txt
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /auth
+
+Sitemap: https://buzzbooster.site/sitemap.xml

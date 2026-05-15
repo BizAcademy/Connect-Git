@@ -33767,9 +33767,25 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
+var BUILD_TIME = "2026-05-15T21:23:14.586Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
+});
+router.get("/diag", (_req, res) => {
+  const env = process.env;
+  res.json({
+    build_time: BUILD_TIME,
+    node_env: env.NODE_ENV ?? "unset",
+    supabase_url: env.VITE_SUPABASE_URL ? env.VITE_SUPABASE_URL : "MISSING",
+    supabase_anon_key: env.VITE_SUPABASE_ANON_KEY ? "\u2713 present" : "MISSING",
+    supabase_service_role_key: env.SUPABASE_SERVICE_ROLE_KEY ? "\u2713 present" : "MISSING \u2014 fallback JWT actif",
+    afribapay_api_user: env.AFRIBAPAY_API_USER ? "\u2713 present" : "MISSING",
+    afribapay_api_key: env.AFRIBAPAY_API_KEY ? "\u2713 present" : "MISSING",
+    afribapay_merchant_key: env.AFRIBAPAY_MERCHANT_KEY ? "\u2713 present" : "MISSING",
+    session_secret: env.SESSION_SECRET ? "\u2713 present" : "MISSING",
+    port: env.PORT ?? "unset"
+  });
 });
 var health_default = router;
 
@@ -33871,14 +33887,33 @@ async function deleteEntry(serviceId, providerId = 1) {
   await savePricing(map, providerId);
   return map;
 }
-var USD_TO_FCFA_DEFAULT = 700;
-var USD_TO_FCFA_PEAKERR = 1e3;
+var USD_TO_LOCAL_RATES = {
+  peakerr: { XAF: 1e3, XOF: 1050, GMD: 80, CDF: 2700, GNF: 9e3 },
+  default: { XAF: 700, XOF: 750, GMD: 73, CDF: 2400, GNF: 7300 }
+};
+var FCFA_PER_LOCAL = {
+  XAF: 1,
+  XOF: 1,
+  GMD: 6.6667,
+  CDF: 0.27,
+  GNF: 0.0625
+};
+function usdToLocalRate(providerId, currency) {
+  const rates = providerId === 4 ? USD_TO_LOCAL_RATES.peakerr : USD_TO_LOCAL_RATES.default;
+  const cur = (currency ?? "XOF").toUpperCase();
+  return rates[cur] ?? rates["XOF"];
+}
 function usdToFcfaRate(providerId) {
-  return providerId === 4 ? USD_TO_FCFA_PEAKERR : USD_TO_FCFA_DEFAULT;
+  return usdToLocalRate(providerId, "XAF");
+}
+function defaultPriceFcfaForCurrency(rateUsd, providerId, currency) {
+  const cur = (currency ?? "XOF").toUpperCase();
+  const localRate = usdToLocalRate(providerId, cur);
+  const fcfaPerUnit = FCFA_PER_LOCAL[cur] ?? 1;
+  return Math.round(Number(rateUsd) * localRate * fcfaPerUnit / 10) * 10;
 }
 function defaultPriceFcfa(rateUsd, providerId) {
-  const rate = usdToFcfaRate(providerId);
-  return Math.round(Number(rateUsd) * rate / 10) * 10;
+  return defaultPriceFcfaForCurrency(rateUsd, providerId, "XAF");
 }
 async function enrichServices(services, providerId = 1) {
   const map = await loadPricing(providerId);
@@ -33930,12 +33965,6 @@ function warnOnceNoServiceRole() {
   logger.warn(
     "SUPABASE_SERVICE_ROLE_KEY not set \u2014 earnings ledger is writing to the local file fallback only (data/earnings.jsonl), which is NOT shared between preview and the published environment. Set SUPABASE_SERVICE_ROLE_KEY and apply migrations/003_earnings.sql so the admin earnings dashboard reflects real data in production."
   );
-}
-function computeEarning(input) {
-  const provider_cost_usd = input.quantity / 1e3 * Number(input.rate_usd);
-  const provider_cost_fcfa = Math.round(provider_cost_usd * COST_FCFA_PER_USD);
-  const gain_fcfa = Math.round(input.user_price_fcfa - provider_cost_fcfa);
-  return { provider_cost_usd, provider_cost_fcfa, gain_fcfa };
 }
 function estimateGainFromRevenue(user_price_fcfa) {
   const safe = Math.max(0, Math.round(Number(user_price_fcfa) || 0));
@@ -34428,6 +34457,40 @@ function supabaseHeaders2(userToken) {
     Prefer: "return=representation"
   };
 }
+var COUNTRY_TO_CURRENCY = {
+  BJ: "XOF",
+  BF: "XOF",
+  CI: "XOF",
+  GW: "XOF",
+  ML: "XOF",
+  NE: "XOF",
+  SN: "XOF",
+  TG: "XOF",
+  CM: "XAF",
+  CF: "XAF",
+  TD: "XAF",
+  CG: "XAF",
+  GQ: "XAF",
+  GA: "XAF",
+  CD: "CDF",
+  GN: "GNF",
+  GM: "GMD"
+};
+function countryToCurrency(country) {
+  if (!country) return "XOF";
+  return COUNTRY_TO_CURRENCY[country.toUpperCase()] ?? "XOF";
+}
+async function getUserCountry(userId, userToken) {
+  try {
+    const url = `${SUPABASE_URL4}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=country&limit=1`;
+    const r = await fetch(url, { headers: supabaseHeaders2(userToken) });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return rows[0]?.country ?? null;
+  } catch {
+    return null;
+  }
+}
 async function getUserBalance(userId, userToken) {
   const url = `${SUPABASE_URL4}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=balance`;
   const r = await fetch(url, { headers: supabaseHeaders2(userToken) });
@@ -34561,7 +34624,9 @@ router2.post("/smm/order", requireUser, rateLimitOrders, async (req, res) => {
     if (override?.hidden) {
       return res.status(403).json({ error: "Service non disponible" });
     }
-    const pricePerK = typeof override?.price_fcfa === "number" ? override.price_fcfa : defaultPriceFcfa(svc.rate, providerId);
+    const userCountry = await getUserCountry(userId, userToken);
+    const userCurrency = countryToCurrency(userCountry);
+    const pricePerK = typeof override?.price_fcfa === "number" ? override.price_fcfa : defaultPriceFcfaForCurrency(svc.rate, providerId, userCurrency);
     const totalPrice = Math.ceil(qtyNum / 1e3 * pricePerK);
     const currentBalance = await getUserBalance(userId, userToken);
     if (currentBalance === null) {
@@ -34595,36 +34660,92 @@ router2.post("/smm/order", requireUser, rateLimitOrders, async (req, res) => {
       }
       return res.status(502).json({ error: rawMsg || "Le fournisseur n'a pas accept\xE9 la commande" });
     }
-    const providerOrderId = providerData?.order;
-    if (providerOrderId) {
+    const externalOrderId = String(providerData.order ?? providerData.id ?? "");
+    let localOrderId = null;
+    if (SUPABASE_URL4) {
       try {
-        const { provider_cost_usd, provider_cost_fcfa, gain_fcfa } = computeEarning({
-          user_price_fcfa: totalPrice,
-          rate_usd: Number(svc.rate),
-          quantity: qtyNum
+        const insertHeaders = SUPABASE_SERVICE_ROLE_KEY3 ? serviceRoleHeaders() : supabaseHeaders2(userToken);
+        const insRes = await fetch(`${SUPABASE_URL4}/rest/v1/orders`, {
+          method: "POST",
+          headers: insertHeaders,
+          body: JSON.stringify({
+            user_id: userId,
+            service_name: String(svc.name ?? serviceNum),
+            service_category: String(svc.category ?? ""),
+            link: linkStr,
+            quantity: qtyNum,
+            price: totalPrice,
+            status: "processing",
+            external_order_id: externalOrderId,
+            provider: providerId
+          })
         });
-        await appendEarning({
-          ts: (/* @__PURE__ */ new Date()).toISOString(),
-          provider_order_id: String(providerOrderId),
-          user_id: userId,
-          service: serviceNum,
-          service_name: String(svc.name || "").slice(0, 200),
-          quantity: qtyNum,
-          rate_usd: Number(svc.rate),
-          user_price_fcfa: totalPrice,
-          provider_cost_usd,
-          provider_cost_fcfa,
-          gain_fcfa,
-          provider: providerId
-        });
-      } catch (e) {
-        logger.error({ err: e }, "earnings recording failed (non-fatal)");
+        if (insRes.ok) {
+          const rows = await insRes.json();
+          localOrderId = rows[0]?.id ?? null;
+          logger.info({ userId, externalOrderId, localOrderId, providerId }, "order: local record saved");
+        } else {
+          const txt = await insRes.text().catch(() => "");
+          logger.error(
+            { status: insRes.status, body: txt.slice(0, 300), userId, externalOrderId },
+            "order: local insert failed \u2014 order IS placed at provider, balance debited"
+          );
+        }
+      } catch (insErr) {
+        logger.error(
+          { err: insErr, userId, externalOrderId },
+          "order: local insert exception \u2014 order IS placed at provider, balance debited"
+        );
       }
     }
-    res.json({ ...providerData, provider: providerId });
+    res.json({ ...providerData, provider: providerId, local_order_id: localOrderId });
   } catch (err) {
     logger.error({ err, userId, providerId }, "SMM order error");
     res.status(500).json({ error: "Erreur interne lors de la commande" });
+  }
+});
+router2.get("/smm/user-orders", requireUser, async (req, res) => {
+  if (!SUPABASE_URL4) return res.json([]);
+  try {
+    const userId = req.userId;
+    const hdrs = SUPABASE_SERVICE_ROLE_KEY3 ? serviceRoleHeaders() : supabaseHeaders2(req.userToken);
+    const r = await fetch(
+      `${SUPABASE_URL4}/rest/v1/orders?user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`,
+      { headers: hdrs }
+    );
+    if (!r.ok) {
+      const body = await r.text().catch(() => "");
+      req.log.error({ status: r.status, body: body.slice(0, 200), usingServiceRole: !!SUPABASE_SERVICE_ROLE_KEY3 }, "user-orders: supabase error");
+      return res.json([]);
+    }
+    const data = await r.json();
+    req.log.info({ count: Array.isArray(data) ? data.length : -1, usingServiceRole: !!SUPABASE_SERVICE_ROLE_KEY3 }, "user-orders: ok");
+    res.json(Array.isArray(data) ? data : []);
+  } catch (err) {
+    req.log.error({ err }, "user-orders: exception");
+    res.json([]);
+  }
+});
+router2.get("/smm/user-payments", requireUser, async (req, res) => {
+  if (!SUPABASE_URL4) return res.json([]);
+  try {
+    const userId = req.userId;
+    const hdrs = SUPABASE_SERVICE_ROLE_KEY3 ? serviceRoleHeaders() : supabaseHeaders2(req.userToken);
+    const r = await fetch(
+      `${SUPABASE_URL4}/rest/v1/payments?user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`,
+      { headers: hdrs }
+    );
+    if (!r.ok) {
+      const body = await r.text().catch(() => "");
+      req.log.error({ status: r.status, body: body.slice(0, 200), usingServiceRole: !!SUPABASE_SERVICE_ROLE_KEY3 }, "user-payments: supabase error");
+      return res.json([]);
+    }
+    const data = await r.json();
+    req.log.info({ count: Array.isArray(data) ? data.length : -1, usingServiceRole: !!SUPABASE_SERVICE_ROLE_KEY3 }, "user-payments: ok");
+    res.json(Array.isArray(data) ? data : []);
+  } catch (err) {
+    req.log.error({ err }, "user-payments: exception");
+    res.json([]);
   }
 });
 router2.get("/smm/quote", requireUser, async (req, res) => {
@@ -34644,7 +34765,9 @@ router2.get("/smm/quote", requireUser, async (req, res) => {
     const map = await loadPricing(providerId);
     const override = map[String(serviceNum)];
     if (override?.hidden) return res.status(403).json({ error: "Service non disponible" });
-    const pricePerK = typeof override?.price_fcfa === "number" ? override.price_fcfa : defaultPriceFcfa(svc.rate, providerId);
+    const quoterCountry = await getUserCountry(req.userId, req.userToken);
+    const quoterCurrency = countryToCurrency(quoterCountry);
+    const pricePerK = typeof override?.price_fcfa === "number" ? override.price_fcfa : defaultPriceFcfaForCurrency(svc.rate, providerId, quoterCurrency);
     const total = Math.ceil(qtyNum / 1e3 * pricePerK);
     res.json({
       service: serviceNum,
@@ -34666,7 +34789,20 @@ router2.get("/smm/status", requireUser, async (req, res) => {
   const orderStr = String(order);
   const userId = req.userId;
   try {
-    const ownerUserId = await findEarningOwner(orderStr, providerId);
+    let ownerUserId = await findEarningOwner(orderStr, providerId);
+    if (!ownerUserId && SUPABASE_URL4 && SUPABASE_SERVICE_ROLE_KEY3) {
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL4}/rest/v1/orders?external_order_id=eq.${encodeURIComponent(orderStr)}&provider=eq.${providerId}&select=user_id&limit=1`,
+          { headers: serviceRoleHeaders() }
+        );
+        if (r.ok) {
+          const rows = await r.json();
+          ownerUserId = rows[0]?.user_id ?? null;
+        }
+      } catch {
+      }
+    }
     if (!ownerUserId || ownerUserId !== userId) {
       return res.status(403).json({ error: "Commande introuvable ou acc\xE8s refus\xE9" });
     }
@@ -34687,7 +34823,7 @@ async function syncOrderInternal(opts) {
   }
   const lookupHeader = serviceRoleHeaders();
   const lookupQuery = localOrderId ? `?id=eq.${encodeURIComponent(localOrderId)}` : `?external_order_id=eq.${encodeURIComponent(extIn)}&provider=eq.${providerIn}`;
-  const orderLookupUrl = `${SUPABASE_URL4}/rest/v1/orders` + lookupQuery + `&select=id,user_id,status,refunded_at,refunded_amount,provider,external_order_id,price&limit=1`;
+  const orderLookupUrl = `${SUPABASE_URL4}/rest/v1/orders` + lookupQuery + `&select=id,user_id,status,refunded_at,refunded_amount,provider,external_order_id,price,service,service_name,quantity&limit=1`;
   const lookupRes = await fetch(orderLookupUrl, { headers: lookupHeader });
   if (!lookupRes.ok) {
     const txt = await lookupRes.text().catch(() => "");
@@ -34744,6 +34880,28 @@ async function syncOrderInternal(opts) {
     if (!patchRes.ok) {
       const txt = await patchRes.text().catch(() => "");
       logger.warn({ status: patchRes.status, body: txt.slice(0, 200), id: order.id }, "sync: status PATCH failed");
+    }
+  }
+  if (newStatus === "completed" && order.status !== "completed") {
+    try {
+      const userPriceFcfa = Math.max(0, Math.round(Number(order.price) || 0));
+      const { provider_cost_fcfa, gain_fcfa } = estimateGainFromRevenue(userPriceFcfa);
+      await appendEarning({
+        ts: (/* @__PURE__ */ new Date()).toISOString(),
+        provider_order_id: externalId,
+        user_id: order.user_id,
+        service: Number(order.service ?? 0),
+        service_name: String(order.service_name ?? order.service ?? ""),
+        quantity: Number(order.quantity ?? 0),
+        rate_usd: 0,
+        user_price_fcfa: userPriceFcfa,
+        provider_cost_usd: 0,
+        provider_cost_fcfa,
+        gain_fcfa,
+        provider: providerId
+      });
+    } catch (e) {
+      logger.error({ err: e }, "earnings on completion failed (non-fatal)");
     }
   }
   const eligibleByProvider = FINAL_REFUND_STATUSES.has(newStatus);
@@ -34963,7 +35121,7 @@ var CURRENCY_DEFAULT_RATE = {
   GMD: 6.6667
   // Gambie : 1 GMD ≈ 6.6667 FCFA (1 FCFA ≈ 0.15 GMD)
 };
-var COUNTRY_TO_CURRENCY = {
+var COUNTRY_TO_CURRENCY2 = {
   CD: "CDF",
   GN: "GNF",
   GM: "GMD"
@@ -34972,7 +35130,7 @@ function toFcfaByCurrency(localAmount, currencyCode) {
   if (!currencyCode) return localAmount;
   const upper = currencyCode.toUpperCase();
   if (_rateOverrides !== null && Date.now() < _rateCacheExpiry) {
-    const countryForCurrency = Object.entries(COUNTRY_TO_CURRENCY).find(([, c]) => c === upper)?.[0];
+    const countryForCurrency = Object.entries(COUNTRY_TO_CURRENCY2).find(([, c]) => c === upper)?.[0];
     if (countryForCurrency && _rateOverrides[countryForCurrency] !== void 0) {
       return Math.round(localAmount * _rateOverrides[countryForCurrency]);
     }
@@ -36130,16 +36288,17 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
     const profiles = /* @__PURE__ */ new Map();
     if (userIds.length > 0) {
       const pr = await fetch(
-        `${SUPABASE_URL6}/rest/v1/profiles?user_id=in.(${userIds.join(",")})&select=user_id,username,email&limit=${userIds.length}`,
+        `${SUPABASE_URL6}/rest/v1/profiles?user_id=in.(${userIds.join(",")})&select=user_id,username,email,country&limit=${userIds.length}`,
         { headers }
       );
       if (pr.ok) {
         for (const row of await pr.json()) {
-          profiles.set(row.user_id, { username: row.username, email: row.email });
+          profiles.set(row.user_id, { username: row.username, email: row.email, country: row.country });
         }
       }
     }
     const labelFor = (uid) => profiles.get(uid)?.username || profiles.get(uid)?.email || uid?.slice(0, 8) || "?";
+    const countryFor = (uid) => profiles.get(uid)?.country || null;
     const all = [];
     if (type === "all" || type === "order") {
       for (const o of orders) {
@@ -36157,7 +36316,9 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
           external_order_id: o.external_order_id || null,
           refunded_at: o.refunded_at,
           refunded_amount: o.refunded_amount,
-          provider: typeof o.provider === "number" ? o.provider : null
+          provider: typeof o.provider === "number" ? o.provider : null,
+          country: countryFor(o.user_id),
+          currency: null
         });
       }
     }
@@ -36175,7 +36336,9 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
             user_email: profiles.get(o.user_id)?.email,
             detail: `Remboursement \xB7 ${o.service_name || ""}`,
             reference: o.external_order_id ? `#${o.external_order_id}` : null,
-            external_order_id: o.external_order_id || null
+            external_order_id: o.external_order_id || null,
+            country: countryFor(o.user_id),
+            currency: null
           });
         }
       }
@@ -36197,7 +36360,9 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
           user_label: labelFor(p.user_id),
           user_email: profiles.get(p.user_id)?.email,
           detail: parts.join(" \xB7 "),
-          reference: ref
+          reference: ref,
+          country: p.country || countryFor(p.user_id),
+          currency: p.currency || null
         });
       }
     }
@@ -38182,14 +38347,48 @@ router7.post("/profile/country", requireUser, async (req, res) => {
       `${SUPABASE_URL11}/rest/v1/profiles?user_id=eq.${userId}`,
       {
         method: "PATCH",
-        headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=minimal" },
+        headers: {
+          ...serviceHeaders(),
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        },
         body: JSON.stringify({ country, currency: info.currency })
       }
     );
     if (!patchRes.ok) {
       const detail = await patchRes.text().catch(() => "");
-      logger.error({ status: patchRes.status, detail }, "country update failed");
+      logger.error({ status: patchRes.status, detail }, "country update PATCH failed");
       return res.status(502).json({ error: "Impossible de mettre \xE0 jour le pays" });
+    }
+    const rows = await patchRes.json().catch(() => []);
+    if (rows.length > 0) {
+      return res.json({ ok: true, country, currency: info.currency });
+    }
+    logger.warn({ userId }, "country PATCH updated 0 rows \u2014 profile not yet created, retrying");
+    let upserted = false;
+    for (let attempt = 0; attempt < 3 && !upserted; attempt++) {
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      const retryRes = await fetch(
+        `${SUPABASE_URL11}/rest/v1/profiles?user_id=eq.${userId}`,
+        {
+          method: "PATCH",
+          headers: {
+            ...serviceHeaders(),
+            "Content-Type": "application/json",
+            Prefer: "return=representation"
+          },
+          body: JSON.stringify({ country, currency: info.currency })
+        }
+      );
+      if (!retryRes.ok) continue;
+      const retryRows = await retryRes.json().catch(() => []);
+      if (retryRows.length > 0) {
+        upserted = true;
+      }
+    }
+    if (!upserted) {
+      logger.error({ userId }, "country: profile row never appeared after 3 retries");
+      return res.status(503).json({ error: "Profil non encore disponible, r\xE9essayez dans quelques secondes" });
     }
     res.json({ ok: true, country, currency: info.currency });
   } catch (err) {

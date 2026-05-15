@@ -33767,7 +33767,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-05-15T21:19:34.326Z";
+var BUILD_TIME = "2026-05-15T21:23:14.586Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
