@@ -70,21 +70,64 @@ export async function deleteEntry(
   return map;
 }
 
-// Default user-facing pricing: convert provider USD rate to FCFA at a fixed
-// conversion rate. The platform margin is the spread between this rate and
-// the real USD/XOF exchange rate. Rounded to the nearest 10 FCFA.
+// ---------------------------------------------------------------------------
+// Per-provider, per-currency USD → local currency rates
+// ---------------------------------------------------------------------------
+// These define how much local currency the user pays per 1 USD of provider
+// service cost. One rate per (provider group × currency code).
 //
-// Per-provider rates:
-//   - Peakerr (provider 4) → 1 USD = 1000 FCFA (premium, fast delivery)
-//   - All other providers  → 1 USD = 700  FCFA (default)
-const USD_TO_FCFA_DEFAULT = 700;
-const USD_TO_FCFA_PEAKERR = 1000;
-export function usdToFcfaRate(providerId?: number): number {
-  return providerId === 4 ? USD_TO_FCFA_PEAKERR : USD_TO_FCFA_DEFAULT;
+// Peakerr (provider 4) uses premium rates; all other providers use default.
+export const USD_TO_LOCAL_RATES: Record<"peakerr" | "default", Record<string, number>> = {
+  peakerr: { XAF: 1000, XOF: 1050, GMD: 80,  CDF: 2700, GNF: 9000 },
+  default:  { XAF: 700,  XOF: 750,  GMD: 73,  CDF: 24,   GNF: 7300 },
+};
+
+// FCFA per unit of local currency — mirrors frontend currency.ts fcfaPerUnit.
+const FCFA_PER_LOCAL: Record<string, number> = {
+  XAF: 1, XOF: 1, GMD: 6.6667, CDF: 0.27, GNF: 0.0625,
+};
+
+/** USD → local currency rate for a given provider and currency. */
+export function usdToLocalRate(providerId?: number, currency?: string): number {
+  const rates = providerId === 4 ? USD_TO_LOCAL_RATES.peakerr : USD_TO_LOCAL_RATES.default;
+  const cur = (currency ?? "XOF").toUpperCase();
+  return rates[cur] ?? rates["XOF"]!;
 }
+
+/**
+ * Backward-compat: USD → FCFA rate using the XAF (≡ FCFA) rate.
+ * Kept so admin.ts and existing callers compile without changes.
+ */
+export function usdToFcfaRate(providerId?: number): number {
+  return usdToLocalRate(providerId, "XAF");
+}
+
+/**
+ * Default FCFA price per 1 000 units for a service, computed from the
+ * provider USD rate using the currency-specific markup.
+ *
+ * Result is in FCFA (the platform's internal billing currency):
+ *   FCFA = rate_usd × usdToLocalRate(provider, currency) × fcfaPerUnit(currency)
+ *
+ * Rounded to the nearest 10 FCFA.
+ */
+export function defaultPriceFcfaForCurrency(
+  rateUsd: string | number,
+  providerId?: number,
+  currency?: string,
+): number {
+  const cur = (currency ?? "XOF").toUpperCase();
+  const localRate = usdToLocalRate(providerId, cur);
+  const fcfaPerUnit = FCFA_PER_LOCAL[cur] ?? 1;
+  return Math.round((Number(rateUsd) * localRate * fcfaPerUnit) / 10) * 10;
+}
+
+/**
+ * Backward-compat wrapper — defaults to XAF/FCFA (no change for existing calls
+ * that do not know the user's country).
+ */
 export function defaultPriceFcfa(rateUsd: string | number, providerId?: number): number {
-  const rate = usdToFcfaRate(providerId);
-  return Math.round((Number(rateUsd) * rate) / 10) * 10;
+  return defaultPriceFcfaForCurrency(rateUsd, providerId, "XAF");
 }
 
 export interface EnrichedService {

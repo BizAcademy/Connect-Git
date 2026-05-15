@@ -6,9 +6,11 @@ import {
   fetchSmmServices,
   placeSmmOrder,
   fetchSmmProviders,
+  getLocalPricePerK,
   type SmmService,
   type SmmProviderPublic,
 } from "@/lib/smm";
+import { getCurrencyInfo } from "@/lib/currency";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -307,8 +309,14 @@ export default function NewOrder() {
   const qty = Number(quantity) || 0;
   const minQ = selectedService ? Number(selectedService.min) : 0;
   const maxQ = selectedService ? Number(selectedService.max) : 0;
-  const pricePerK = selectedService ? selectedService.price_fcfa : 0;
-  const price = selectedService ? Math.ceil((qty / 1000) * pricePerK) : 0;
+  const currencyInfo = getCurrencyInfo(profile?.country);
+  const pricePerK = selectedService
+    ? getLocalPricePerK(selectedService, currencyInfo.currency, currencyInfo.fcfaPerUnit)
+    : 0;
+  // localTotal: amount displayed to user in their local currency
+  const localTotal = selectedService ? Math.ceil((qty / 1000) * pricePerK) : 0;
+  // price: FCFA equivalent used for balance check (balance is always stored in FCFA)
+  const price = Math.round(localTotal * currencyInfo.fcfaPerUnit);
   const balance = Number(profile?.balance || 0);
 
   const platformLabel =
@@ -550,7 +558,7 @@ export default function NewOrder() {
                       {selectedService.name}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {selectedService.category} · {selectedService.price_fcfa.toLocaleString()} FCFA / 1000
+                      {selectedService.category} · {getLocalPricePerK(selectedService, currencyInfo.currency, currencyInfo.fcfaPerUnit).toLocaleString()} {currencyInfo.symbol} / 1000
                     </p>
                   </>
                 ) : (
@@ -613,7 +621,7 @@ export default function NewOrder() {
                             </div>
                             <div className="flex flex-col items-end gap-1 shrink-0">
                               <span className="text-sm font-bold text-primary whitespace-nowrap">
-                                {s.price_fcfa.toLocaleString()} FCFA / 1k
+                                {getLocalPricePerK(s, currencyInfo.currency, currencyInfo.fcfaPerUnit).toLocaleString()} {currencyInfo.symbol} / 1k
                               </span>
                               {isSelected && (
                                 <span className="inline-flex items-center gap-1 text-[10px] text-primary font-semibold">
@@ -697,15 +705,15 @@ export default function NewOrder() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Prix unitaire</span>
-                <span className="font-medium">{pricePerK.toLocaleString()} FCFA / 1000</span>
+                <span className="font-medium">{pricePerK.toLocaleString()} {currencyInfo.symbol} / 1000</span>
               </div>
               <div className="flex justify-between border-t pt-2 mt-2">
                 <span className="text-muted-foreground font-medium">Total à payer</span>
-                <span className="font-bold text-primary text-base">{price.toLocaleString()} FCFA</span>
+                <span className="font-bold text-primary text-base">{localTotal.toLocaleString()} {currencyInfo.symbol}</span>
               </div>
               {price > balance && (
                 <p className="text-xs text-destructive">
-                  Solde insuffisant ({balance.toLocaleString()} FCFA disponibles)
+                  Solde insuffisant (solde actuel : {Math.round(balance / currencyInfo.fcfaPerUnit).toLocaleString()} {currencyInfo.symbol})
                 </p>
               )}
             </div>
@@ -716,7 +724,7 @@ export default function NewOrder() {
               disabled={loading || !link || qty < minQ || qty > maxQ || price > balance}
             >
               <ShoppingCart size={16} className="mr-2" />
-              {loading ? "Traitement…" : `Commander — ${price.toLocaleString()} FCFA`}
+              {loading ? "Traitement…" : `Commander — ${localTotal.toLocaleString()} ${currencyInfo.symbol}`}
             </Button>
           </CardContent>
         </Card>

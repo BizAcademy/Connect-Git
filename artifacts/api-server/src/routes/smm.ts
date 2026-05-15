@@ -1,8 +1,8 @@
 import { Router, type IRouter, type Response, type NextFunction } from "express";
 import { logger } from "../lib/logger";
 import { requireUser, requireAdmin, type AuthedRequest } from "../lib/auth";
-import { enrichServices, defaultPriceFcfa, loadPricing } from "../lib/smm-pricing";
-import { appendEarning, computeEarning, findEarning, findEarningOwner } from "../lib/earnings";
+import { enrichServices, defaultPriceFcfa, defaultPriceFcfaForCurrency, loadPricing } from "../lib/smm-pricing";
+import { appendEarning, computeEarning, estimateGainFromRevenue, findEarning, findEarningOwner } from "../lib/earnings";
 import {
   callProvider,
   getProvider,
@@ -120,6 +120,30 @@ function supabaseHeaders(userToken: string): Record<string, string> {
     "Content-Type": "application/json",
     Prefer: "return=representation",
   };
+}
+
+// Country → ISO currency code (mirrors frontend currency.ts COUNTRY_CURRENCY)
+const COUNTRY_TO_CURRENCY: Record<string, string> = {
+  BJ: "XOF", BF: "XOF", CI: "XOF", GW: "XOF", ML: "XOF", NE: "XOF", SN: "XOF", TG: "XOF",
+  CM: "XAF", CF: "XAF", TD: "XAF", CG: "XAF", GQ: "XAF", GA: "XAF",
+  CD: "CDF", GN: "GNF", GM: "GMD",
+};
+function countryToCurrency(country: string | null | undefined): string {
+  if (!country) return "XOF";
+  return COUNTRY_TO_CURRENCY[country.toUpperCase()] ?? "XOF";
+}
+
+/** Fetch the user's country from their Supabase profile (uses their session token). */
+async function getUserCountry(userId: string, userToken: string): Promise<string | null> {
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=country&limit=1`;
+    const r = await fetch(url, { headers: supabaseHeaders(userToken) });
+    if (!r.ok) return null;
+    const rows = (await r.json()) as Array<{ country: string | null }>;
+    return rows[0]?.country ?? null;
+  } catch {
+    return null;
+  }
 }
 
 async function getUserBalance(userId: string, userToken: string): Promise<number | null> {
@@ -300,8 +324,12 @@ router.post("/smm/order", requireUser, rateLimitOrders, async (req: AuthedReques
       return res.status(403).json({ error: "Service non disponible" });
     }
 
+    const userCountry = await getUserCountry(userId, userToken);
+    const userCurrency = countryToCurrency(userCountry);
     const pricePerK =
-      typeof override?.price_fcfa === "number" ? override.price_fcfa : defaultPriceFcfa(svc.rate, providerId);
+      typeof override?.price_fcfa === "number"
+        ? override.price_fcfa
+        : defaultPriceFcfaForCurrency(svc.rate, providerId, userCurrency);
     const totalPrice = Math.ceil((qtyNum / 1000) * pricePerK);
 
     const currentBalance = await getUserBalance(userId, userToken);
@@ -342,33 +370,9 @@ router.post("/smm/order", requireUser, rateLimitOrders, async (req: AuthedReques
       return res.status(502).json({ error: rawMsg || "Le fournisseur n'a pas accepté la commande" });
     }
 
-    const providerOrderId = providerData?.order;
-    if (providerOrderId) {
-      try {
-        const { provider_cost_usd, provider_cost_fcfa, gain_fcfa } = computeEarning({
-          user_price_fcfa: totalPrice,
-          rate_usd: Number(svc.rate),
-          quantity: qtyNum,
-        });
-        await appendEarning({
-          ts: new Date().toISOString(),
-          provider_order_id: String(providerOrderId),
-          user_id: userId,
-          service: serviceNum,
-          service_name: String(svc.name || "").slice(0, 200),
-          quantity: qtyNum,
-          rate_usd: Number(svc.rate),
-          user_price_fcfa: totalPrice,
-          provider_cost_usd,
-          provider_cost_fcfa,
-          gain_fcfa,
-          provider: providerId,
-        });
-      } catch (e) {
-        logger.error({ err: e }, "earnings recording failed (non-fatal)");
-      }
-    }
-
+    // Earnings are recorded on order COMPLETION (in syncOrderInternal),
+    // not here at creation — so only confirmed completed orders appear
+    // in the admin revenue dashboard.
     res.json({ ...providerData, provider: providerId });
   } catch (err) {
     logger.error({ err, userId, providerId }, "SMM order error");
@@ -394,7 +398,12 @@ router.get("/smm/quote", requireUser, async (req, res) => {
     const map = await loadPricing(providerId);
     const override = map[String(serviceNum)];
     if (override?.hidden) return res.status(403).json({ error: "Service non disponible" });
-    const pricePerK = typeof override?.price_fcfa === "number" ? override.price_fcfa : defaultPriceFcfa(svc.rate, providerId);
+    const quoterCountry = await getUserCountry((req as AuthedRequest).userId!, (req as AuthedRequest).userToken!);
+    const quoterCurrency = countryToCurrency(quoterCountry);
+    const pricePerK =
+      typeof override?.price_fcfa === "number"
+        ? override.price_fcfa
+        : defaultPriceFcfaForCurrency(svc.rate, providerId, quoterCurrency);
     const total = Math.ceil((qtyNum / 1000) * pricePerK);
     res.json({
       service: serviceNum,
@@ -420,7 +429,20 @@ router.get("/smm/status", requireUser, async (req: AuthedRequest, res) => {
   const userId = req.userId!;
 
   try {
-    const ownerUserId = await findEarningOwner(orderStr, providerId);
+    let ownerUserId = await findEarningOwner(orderStr, providerId);
+    if (!ownerUserId && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      // Earnings are only written on completion; for in-progress orders fall back to orders table
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/orders?external_order_id=eq.${encodeURIComponent(orderStr)}&provider=eq.${providerId}&select=user_id&limit=1`,
+          { headers: serviceRoleHeaders() },
+        );
+        if (r.ok) {
+          const rows = (await r.json()) as Array<{ user_id: string }>;
+          ownerUserId = rows[0]?.user_id ?? null;
+        }
+      } catch { /* ignore */ }
+    }
     if (!ownerUserId || ownerUserId !== userId) {
       return res.status(403).json({ error: "Commande introuvable ou accès refusé" });
     }
@@ -475,7 +497,7 @@ export async function syncOrderInternal(opts: {
       `&provider=eq.${providerIn}`;
   const orderLookupUrl =
     `${SUPABASE_URL}/rest/v1/orders` + lookupQuery +
-    `&select=id,user_id,status,refunded_at,refunded_amount,provider,external_order_id,price&limit=1`;
+    `&select=id,user_id,status,refunded_at,refunded_amount,provider,external_order_id,price,service,service_name,quantity&limit=1`;
   const lookupRes = await fetch(orderLookupUrl, { headers: lookupHeader });
   if (!lookupRes.ok) {
     const txt = await lookupRes.text().catch(() => "");
@@ -488,6 +510,9 @@ export async function syncOrderInternal(opts: {
     provider: number | null;
     external_order_id: string | null;
     price: number | null;
+    service: number | null;
+    service_name: string | null;
+    quantity: number | null;
   }>;
   if (!rows || rows.length === 0) {
     return { ok: false, status: 404, error: "Commande introuvable" };
@@ -555,6 +580,31 @@ export async function syncOrderInternal(opts: {
     if (!patchRes.ok) {
       const txt = await patchRes.text().catch(() => "");
       logger.warn({ status: patchRes.status, body: txt.slice(0, 200), id: order.id }, "sync: status PATCH failed");
+    }
+  }
+
+  // Record earnings when the order first transitions to "completed".
+  // Only confirmed completed orders contribute to the admin revenue dashboard.
+  if (newStatus === "completed" && order.status !== "completed") {
+    try {
+      const userPriceFcfa = Math.max(0, Math.round(Number(order.price) || 0));
+      const { provider_cost_fcfa, gain_fcfa } = estimateGainFromRevenue(userPriceFcfa);
+      await appendEarning({
+        ts: new Date().toISOString(),
+        provider_order_id: externalId,
+        user_id: order.user_id,
+        service: Number(order.service ?? 0),
+        service_name: String(order.service_name ?? order.service ?? ""),
+        quantity: Number(order.quantity ?? 0),
+        rate_usd: 0,
+        user_price_fcfa: userPriceFcfa,
+        provider_cost_usd: 0,
+        provider_cost_fcfa,
+        gain_fcfa,
+        provider: providerId,
+      });
+    } catch (e) {
+      logger.error({ err: e }, "earnings on completion failed (non-fatal)");
     }
   }
 

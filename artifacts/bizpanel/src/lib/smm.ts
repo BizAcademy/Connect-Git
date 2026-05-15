@@ -22,6 +22,36 @@ export interface SmmService {
   featured?: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Per-provider USD → local currency display rates
+// ---------------------------------------------------------------------------
+// Mirrors server-side smm-pricing.ts. Used for client-side price display so
+// users see the correct local currency amount before placing an order.
+export const USD_TO_LOCAL_RATES: Record<"peakerr" | "default", Record<string, number>> = {
+  peakerr: { XAF: 1000, XOF: 1050, GMD: 80,  CDF: 2700, GNF: 9000 },
+  default:  { XAF: 700,  XOF: 750,  GMD: 73,  CDF: 24,   GNF: 7300 },
+};
+
+/**
+ * Price per 1 000 units in LOCAL currency for display purposes.
+ * - Custom (admin-set) prices are stored as FCFA; divide by fcfaPerUnit to get local.
+ * - Default prices are computed directly from the provider USD rate × local rate.
+ */
+export function getLocalPricePerK(
+  service: SmmService,
+  currency: string,
+  fcfaPerUnit: number,
+): number {
+  const cur = currency.toUpperCase();
+  if (service.price_is_custom) {
+    if (fcfaPerUnit === 1) return service.price_fcfa;
+    return Math.round(service.price_fcfa / fcfaPerUnit);
+  }
+  const rates = service.provider === 4 ? USD_TO_LOCAL_RATES.peakerr : USD_TO_LOCAL_RATES.default;
+  const rate = rates[cur] ?? rates["XOF"]!;
+  return Math.round((Number(service.rate) * rate) / 10) * 10;
+}
+
 export interface SmmQuote {
   service: number;
   provider?: number;
