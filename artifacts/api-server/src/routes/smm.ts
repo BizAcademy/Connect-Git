@@ -387,7 +387,6 @@ router.post("/smm/order", requireUser, rateLimitOrders, async (req: AuthedReques
           headers: insertHeaders,
           body: JSON.stringify({
             user_id: userId,
-            service: serviceNum,
             service_name: String(svc.name ?? serviceNum),
             service_category: String(svc.category ?? ""),
             link: linkStr,
