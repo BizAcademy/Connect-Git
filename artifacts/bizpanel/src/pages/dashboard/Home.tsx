@@ -66,11 +66,6 @@ export default function DashboardHome() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold font-heading">Vue d'ensemble</h2>
-        <p className="text-sm text-muted-foreground">Bienvenue, {profile?.username || user?.email} !</p>
-      </div>
-
       {/* Stats — 2 par 2 horizontalement, compacts sur mobile */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
         <Card>
