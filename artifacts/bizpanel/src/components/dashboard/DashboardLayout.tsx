@@ -36,15 +36,10 @@ export const DashboardLayout = () => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [showCountryModal, setShowCountryModal] = useState(false);
 
-  // Sync avatar when profile loads or changes
   useEffect(() => {
     setAvatarUrl(profile?.avatar_url ?? null);
   }, [profile?.avatar_url]);
 
-  // When profile is loaded without a country, check for a pending country
-  // saved at signup (covers email-confirmation flow where session is null
-  // at registration time). Auto-save it via API and clear localStorage.
-  // Falls through to modal if localStorage is also empty.
   useEffect(() => {
     if (loading || !profile || profile.country) return;
     const pending = localStorage.getItem("bb_pending_country");
@@ -69,9 +64,9 @@ export const DashboardLayout = () => {
       setShowCountryModal(true);
     }
   }, [loading, profile]);
+
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Loader de transition sur chaque changement de page
   useEffect(() => {
     setTransitioning(true);
     if (transitionTimer.current) clearTimeout(transitionTimer.current);
@@ -79,14 +74,12 @@ export const DashboardLayout = () => {
     return () => { if (transitionTimer.current) clearTimeout(transitionTimer.current); };
   }, [location.pathname]);
 
-  // Admins should not access the user dashboard — redirect to admin panel
   useEffect(() => {
     if (!loading && user && isAdmin) {
       navigate("/admin", { replace: true });
     }
   }, [loading, user, isAdmin, navigate]);
 
-  // Poll unread count = chat messages + ticket replies not yet seen
   useEffect(() => {
     if (!user || isAdmin) return;
     let cancelled = false;
@@ -101,6 +94,21 @@ export const DashboardLayout = () => {
     const id = setInterval(refresh, 12000);
     return () => { cancelled = true; clearInterval(id); };
   }, [user, isAdmin, location.pathname]);
+
+  // Close sidebar when navigating (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  // Prevent body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [sidebarOpen]);
 
   if (loading) {
     return <LogoLoader fullPage />;
@@ -118,13 +126,9 @@ export const DashboardLayout = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Modale sélection pays (existants sans pays) */}
       {showCountryModal && (
         <CountrySelectModal
           onSelected={(country, currency) => {
-            // Immediately update the profile in context so the balance
-            // re-renders in the correct local currency right away,
-            // without waiting for the server round-trip.
             patchProfile({ country, currency });
             setShowCountryModal(false);
             refreshProfile().catch(() => undefined);
@@ -132,43 +136,73 @@ export const DashboardLayout = () => {
         />
       )}
 
-      {/* Overlay mobile */}
+      {/* Overlay mobile — full screen, tapping it closes the drawer */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden touch-none"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar — full width on small phones, fixed 280px on tablets, static on desktop */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border flex flex-col transform transition-transform duration-200 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 lg:static lg:z-auto`}
+        className={`
+          fixed inset-y-0 left-0 z-50 flex flex-col
+          w-[82vw] max-w-[300px] sm:w-72
+          bg-card border-r border-border
+          transform transition-transform duration-200 ease-in-out
+          ${sidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
+          lg:translate-x-0 lg:static lg:z-auto lg:w-64 lg:shadow-none
+        `}
       >
-        <div className="p-4 border-b border-border flex items-center justify-between">
+        {/* Logo + close button */}
+        <div className="h-14 px-4 border-b border-border flex items-center justify-between flex-shrink-0">
           <button onClick={() => navigate("/")} aria-label="BUZZ BOOSTER" className="flex items-center">
-            <img src={logoImg} alt="BUZZ BOOSTER" className="h-9 w-auto rounded-md" />
+            <img src={logoImg} alt="BUZZ BOOSTER" className="h-8 w-auto rounded-md" />
           </button>
-          <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
-            <X size={20} />
+          <button
+            className="lg:hidden p-1.5 rounded-md hover:bg-muted transition-colors"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Fermer le menu"
+          >
+            <X size={18} />
           </button>
         </div>
 
         {/* User info */}
-        <div className="p-4 border-b border-border">
-          <p className="font-medium text-sm">{profile?.username || user.email}</p>
-          <p className="text-xs text-muted-foreground">{user.email}</p>
-          <div className="mt-2 bg-primary/10 rounded-md px-3 py-1.5">
+        <div className="px-4 py-3 border-b border-border flex-shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <AvatarUpload
+              avatarUrl={avatarUrl}
+              username={profile?.username}
+              email={user?.email}
+              size={36}
+              onUpdated={(url) => setAvatarUrl(url)}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-sm truncate leading-tight">
+                {profile?.username || user.email}
+              </p>
+              <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
+            </div>
+          </div>
+          <div className="mt-2.5 bg-primary/10 rounded-lg px-3 py-2 flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Solde</span>
             <p className="font-bold text-primary text-sm">
               {formatBalance(Number(profile?.balance || 0), profile?.country)}
             </p>
           </div>
+          <Button
+            size="sm"
+            className="w-full mt-2 h-8 text-xs"
+            onClick={() => { navigate("/dashboard/deposit"); setSidebarOpen(false); }}
+          >
+            <Wallet size={13} className="mr-1.5" /> Recharger mon solde
+          </Button>
         </div>
 
         {/* Navigation */}
-        <nav className="p-3 space-y-1 flex-1">
+        <nav className="p-2.5 space-y-0.5 flex-1 overflow-y-auto">
           {menuItems.map((item) => (
             <button
               key={item.href}
@@ -179,57 +213,84 @@ export const DashboardLayout = () => {
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
-              <item.icon size={16} />
-              <span>{item.label}</span>
+              <item.icon size={16} className="shrink-0" />
+              <span className="truncate">{item.label}</span>
               {item.key === "support" && unreadSupport > 0 && (
-                <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full min-w-5 h-5 px-1.5 inline-flex items-center justify-center">
+                <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full min-w-5 h-5 px-1.5 inline-flex items-center justify-center shrink-0">
                   {unreadSupport}
                 </span>
               )}
               {isActive(item.href) && !(item.key === "support" && unreadSupport > 0) && (
-                <ChevronRight size={14} className="ml-auto" />
+                <ChevronRight size={14} className="ml-auto shrink-0" />
               )}
             </button>
           ))}
-          <Button
-            size="sm"
-            className="w-full justify-center gap-2 mt-2 bg-green-600 hover:bg-green-700 text-white"
-            onClick={signOut}
-          >
-            <LogOut size={16} /> Déconnexion
-          </Button>
         </nav>
 
+        {/* Déconnexion */}
+        <div className="p-3 border-t border-border flex-shrink-0">
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full justify-center gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+            onClick={signOut}
+          >
+            <LogOut size={15} /> Déconnexion
+          </Button>
+        </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 min-h-screen flex flex-col overflow-hidden">
-        <header className="bg-card border-b border-border p-4 flex items-center gap-3 sticky top-0 z-30">
-          <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-            <Menu size={24} />
+      <main className="flex-1 min-h-screen flex flex-col overflow-hidden min-w-0">
+
+        {/* Header — compact on mobile */}
+        <header className="bg-card border-b border-border h-14 px-3 sm:px-4 flex items-center gap-2 sm:gap-3 sticky top-0 z-30 flex-shrink-0">
+          {/* Hamburger */}
+          <button
+            className="lg:hidden p-1.5 rounded-md hover:bg-muted transition-colors flex-shrink-0"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Ouvrir le menu"
+          >
+            <Menu size={22} />
           </button>
 
-          {/* Avatar cliquable */}
+          {/* Avatar */}
           <AvatarUpload
             avatarUrl={avatarUrl}
             username={profile?.username}
             email={user?.email}
-            size={84}
+            size={34}
             onUpdated={(url) => setAvatarUrl(url)}
           />
 
-          <div>
-            <h1 className="font-heading text-base font-semibold">
-              Bonjour, {profile?.username} 👋
-            </h1>
-            <p className="text-xs text-muted-foreground">Bienvenue sur BUZZ BOOSTER</p>
+          {/* Username */}
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-sm leading-tight truncate">
+              {profile?.username || user.email?.split("@")[0]}
+            </p>
+            <p className="text-[11px] text-muted-foreground leading-tight hidden sm:block">
+              {formatBalance(Number(profile?.balance || 0), profile?.country)}
+            </p>
           </div>
-          <Button size="sm" className="ml-auto" onClick={() => navigate("/dashboard/deposit")}>
-            <Wallet size={14} className="mr-1" /> Recharger
+
+          {/* Solde visible sur très petit écran (en compact) */}
+          <span className="sm:hidden text-xs font-bold text-primary whitespace-nowrap flex-shrink-0">
+            {formatBalance(Number(profile?.balance || 0), profile?.country)}
+          </span>
+
+          {/* Bouton Recharger — icône seule sur xs, texte sur sm+ */}
+          <Button
+            size="sm"
+            className="flex-shrink-0 h-8 px-2.5 sm:px-3"
+            onClick={() => navigate("/dashboard/deposit")}
+          >
+            <Wallet size={14} className="sm:mr-1.5" />
+            <span className="hidden sm:inline text-xs">Recharger</span>
           </Button>
         </header>
 
-        <div className="flex-1 p-4 md:p-6 overflow-auto">
+        {/* Page content */}
+        <div className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto">
           {transitioning ? <LogoLoader /> : <Outlet />}
         </div>
       </main>
@@ -237,12 +298,12 @@ export const DashboardLayout = () => {
       {/* Bouton flottant Support */}
       <button
         onClick={() => navigate("/dashboard/support")}
-        className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
+        className="fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-95 transition-transform"
         style={{ background: "hsl(190, 75%, 55%)" }}
         title="Contacter le support"
         aria-label="Support"
       >
-        <MessageCircle className="text-white w-6 h-6 md:w-7 md:h-7" />
+        <MessageCircle className="text-white w-6 h-6" />
         {unreadSupport > 0 && (
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1 inline-flex items-center justify-center border-2 border-background">
             {unreadSupport}
