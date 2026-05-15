@@ -1,105 +1,101 @@
-# 🚀 Déploiement BUZZ BOOSTER sur Plesk (Cybrancy)
+# 🚀 Déploiement BUZZ BOOSTER sur Plesk
 
-Ce projet est **pré-buildé** : tout est compilé dans `dist-deploy/` et committé dans Git.
+Ce projet est **pré-buildé** : les dossiers `dist/` sont compilés dans Replit et committés dans Git.
 Sur Plesk, il suffit de :
 
-> **`git pull` → "Deploy Now" → "Restart App"** — pas de build à faire.
+> **`git pull` → "Deploy Now" → "Restart App"** — pas de build à faire sur le serveur.
 
 ---
 
-## 📦 Ce que contient `dist-deploy/`
+## 📦 Fichiers pré-buildés committés dans Git
 
 ```
-dist-deploy/
-├── frontend/              ← site statique (HTML/CSS/JS)
-│   ├── index.html
-│   ├── assets/
-│   ├── favicon.svg, opengraph.jpg
-│   ├── robots.txt, sitemap.xml
-├── api-server/            ← serveur Node.js bundlé
-│   ├── index.mjs          ← point d'entrée (tout bundlé)
-│   ├── pino-*.mjs         ← workers de logs
-│   ├── package.json       ← minimal, AUCUNE dépendance à installer
-│   └── start.sh
-├── nginx.example.conf
-├── ecosystem.config.cjs
-└── .env.example
+artifacts/api-server/dist/
+├── index.mjs          ← serveur Node.js complet, tout bundlé (~1.7 Mo)
+├── pino-*.mjs         ← workers de logs
+└── *.mjs.map          ← source maps
+
+artifacts/bizpanel/dist/public/
+├── index.html
+└── assets/            ← JS, CSS, images (~2 Mo)
 ```
 
-> **Important** : `api-server/index.mjs` contient Express, Pino, CORS, Drizzle, etc.
-> **Jamais besoin de faire `npm install` sur le serveur Plesk.**
+> **L'API server est 100% auto-suffisant** : Express, Pino, Supabase, etc. sont embarqués
+> dans `index.mjs`. Aucun `npm install` n'est nécessaire pour l'API.
 
 ---
 
-## 🔧 Configuration initiale Plesk (à faire UNE SEULE FOIS)
+## 🔧 Configuration Plesk (à faire UNE SEULE FOIS)
 
-### 1. Créer le dépôt Git dans Plesk
+### 1. Git dans Plesk
 
-Dans Plesk → votre domaine → **Git** :
-- **Remote Git** : `https://github.com/BizAcademy/Connect-Git.git`
+- **Remote** : `https://github.com/BizAcademy/Connect-Git.git`
 - **Branch** : `main`
-- **Deploy mode** : **Manual**
+- **Deploy mode** : Manual
 
-### 2. Configurer le frontend (site statique)
-
-Dans Plesk → votre domaine → **Hosting Settings** :
-- **Document root** : `.../dist-deploy/frontend`
-
-### 3. Activer Node.js pour l'API
+### 2. Node.js — API Server
 
 Dans Plesk → votre domaine → **Node.js** :
 
 | Champ | Valeur |
 |---|---|
-| **Application root** | `.../dist-deploy/api-server` |
-| **Application startup file** | `index.mjs` |
+| **Application root** | racine du repo |
+| **Application startup file** | `artifacts/api-server/dist/index.mjs` |
 | **Application mode** | `production` |
 
-> ⚠️ **NE CLIQUEZ PAS sur "NPM install"** — tout est déjà bundlé.
+> ⚠️ Ne pas utiliser "NPM install" — tout est déjà bundlé.
 
-### 4. Variables d'environnement
+### 3. Frontend statique
 
-Copier `.env.example` → `.env` dans `dist-deploy/api-server/` et remplir :
+Servir `artifacts/bizpanel/dist/public/` depuis la racine du domaine.
+
+Règle de réécriture Apache (`.htaccess` à placer dans le document root) :
+```apache
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ /index.html [L]
+```
+
+Les requêtes `/api/*` doivent être proxifiées vers le serveur Node.js.
+
+### 4. Variables d'environnement (déjà configurées)
 
 ```
-SUPABASE_URL=https://xxxx.supabase.co
-SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
-AFRIBAPAY_API_USER=...
-AFRIBAPAY_API_KEY=...
-AFRIBAPAY_MERCHANT_KEY=...
+PORT=<port assigné par Plesk>
+NODE_ENV=production
+VITE_SUPABASE_URL=https://xxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+AFRIBAPAY_API_USER=pk_live_...
+AFRIBAPAY_API_KEY=sk_live_...
+AFRIBAPAY_MERCHANT_KEY=mk_live_...
+SESSION_SECRET=...
 ```
 
 ---
 
 ## 🔄 Workflow de mise à jour (usage courant)
 
-### Sur Replit (développement)
+### Dans Replit (Shell) — après chaque modification de code
 
-1. Faire les modifications dans le code
-2. **Quand prêt à déployer** — lancer le build :
-   ```bash
-   pnpm --filter @workspace/bizpanel run build
-   pnpm --filter @workspace/api-server run build
-   ```
-3. Copier les builds dans `dist-deploy/` :
-   ```bash
-   bash scripts/prepare-deploy.sh
-   ```
-4. Push vers GitHub :
-   ```bash
-   bash push-to-github.sh "feat: description des changements"
-   ```
+```bash
+# 1. Rebuilder les fichiers dist/ (obligatoire)
+bash build-for-plesk.sh
 
-### Sur Plesk (mise en ligne)
+# 2. Pousser vers GitHub (dist/ inclus)
+bash push-to-github.sh "description des changements"
+```
 
-1. Dans Plesk → **Git** → **"Deploy Now"** (= `git pull`)
-2. Dans Plesk → **Node.js** → **"Restart App"**
+### Dans Plesk — mettre en ligne
+
+1. **Git** → **"Deploy Now"** (= `git pull` depuis GitHub)
+2. **Node.js** → **"Restart App"**
 3. ✅ C'est tout !
 
 ---
 
 ## 📝 Migrations SQL
 
-Chaque fois qu'une migration SQL est nécessaire, elle sera donnée dans la conversation.
-Les fichiers SQL sont dans `migrations/` — à exécuter manuellement dans l'éditeur SQL Supabase.
+Les migrations SQL sont dans `migrations/` — à exécuter **manuellement** dans l'éditeur SQL Supabase (par ordre numérique).
+
+La migration `009_orders_rls.sql` est **recommandée** si `SUPABASE_SERVICE_ROLE_KEY` n'est pas disponible — elle permet aux utilisateurs de lire leurs propres commandes et paiements via RLS.

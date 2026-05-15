@@ -4,6 +4,13 @@
 dist
 tmp
 out-tsc
+
+# Exceptions : les dist/ buildés pour Plesk SONT commités dans git.
+# Plesk fait `git pull` + "Restart" sans avoir besoin de rebuilder.
+!artifacts/api-server/dist/
+!artifacts/api-server/dist/**
+!artifacts/bizpanel/dist/
+!artifacts/bizpanel/dist/**
 *.tsbuildinfo
 .expo
 .expo-shared
