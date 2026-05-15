@@ -212,12 +212,23 @@ export default function MyOrders() {
   };
 
   const loadDetails = useCallback(async (list: any[]) => {
-    // Ne fetcher QUE les commandes non finales : les terminées/annulées ne
-    // changent plus de remains, ça évite des appels API inutiles et le risque
-    // que le provider renvoie "not found" pour des ids anciens.
-    const targets = list.filter(
-      (o) => o.external_order_id && !FINAL_STATUSES.has(String(o.status || "").toLowerCase()),
-    );
+    // Stratégie de fetch :
+    // - completed  → fetch UNE SEULE FOIS pour capturer start_count (remains=0 par définition).
+    //   On saute si start_count est déjà connu (l'ordre ne changera plus).
+    // - partial    → toujours fetch (en cours, données vivantes).
+    // - pending / processing → toujours fetch.
+    // - canceled / refunded / failed → on ne fetche PAS : le provider renvoie
+    //   souvent "not found" pour les anciens ordres et ça génère des erreurs inutiles.
+    const targets = list.filter((o) => {
+      if (!o.external_order_id) return false;
+      const s = String(o.status || "").toLowerCase();
+      if (s === "completed") {
+        // Fetch uniquement si start_count n'est pas encore connu
+        return detailsRef.current[o.id]?.start_count === undefined;
+      }
+      if (FINAL_STATUSES.has(s)) return false; // canceled / refunded / failed
+      return true; // pending / processing / partial
+    });
     if (targets.length === 0) return;
 
     // Race-condition guard : on incrémente la séquence à chaque appel et on
@@ -554,8 +565,18 @@ export default function MyOrders() {
                 <tbody>
                   {filtered.map((o) => {
                     const d = details[o.id] || {};
+                    const orderStatus = String(o.status || "").toLowerCase();
+                    const isCompleted = orderStatus === "completed";
+                    const isFinal = FINAL_STATUSES.has(orderStatus);
+                    const showProgressBar = !isFinal;
                     const { pct } = computeProgress(o.status, Number(o.quantity), d.remains);
                     const cancellable = canCancelOrder(o.status);
+                    // Restant : 0 si terminé, valeur provider si disponible, sinon —
+                    const displayRemains = isCompleted
+                      ? "0"
+                      : d.remains !== undefined
+                        ? Number(d.remains).toLocaleString()
+                        : "—";
                     return (
                       <tr key={o.id} className="border-t hover:bg-muted/30">
                         <td className="px-3 py-2 font-mono">
@@ -597,11 +618,21 @@ export default function MyOrders() {
                           {d.start_count !== undefined ? Number(d.start_count).toLocaleString() : "—"}
                         </td>
                         <td className="px-3 py-2 text-right">{Number(o.quantity).toLocaleString()}</td>
-                        <td className="px-3 py-2 text-right">
-                          {d.remains !== undefined ? Number(d.remains).toLocaleString() : "—"}
-                        </td>
-                        <td className="px-3 py-2">
-                          <ProgressBar pct={pct} />
+                        <td className="px-3 py-2 text-right">{displayRemains}</td>
+                        <td className="px-3 py-2 min-w-[110px]">
+                          {showProgressBar ? (
+                            <ProgressBar pct={pct} />
+                          ) : isCompleted ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-700">
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                                <circle cx="6" cy="6" r="5.5" fill="#dcfce7" stroke="#16a34a"/>
+                                <path d="M3.5 6l2 2 3-3" stroke="#16a34a" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              Terminé
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-[11px]">—</span>
+                          )}
                         </td>
                         <td className="px-3 py-2">
                           <StatusBadge status={o.status} />
@@ -644,8 +675,17 @@ export default function MyOrders() {
           <div className="md:hidden space-y-3">
             {filtered.map((o) => {
               const d = details[o.id] || {};
+              const orderStatus = String(o.status || "").toLowerCase();
+              const isCompleted = orderStatus === "completed";
+              const isFinal = FINAL_STATUSES.has(orderStatus);
+              const showProgressBar = !isFinal;
               const { pct } = computeProgress(o.status, Number(o.quantity), d.remains);
               const cancellable = canCancelOrder(o.status);
+              const displayRemains = isCompleted
+                ? "0"
+                : d.remains !== undefined
+                  ? Number(d.remains).toLocaleString()
+                  : "—";
               return (
                 <Card key={o.id}>
                   <CardContent className="p-3 space-y-2">
@@ -679,13 +719,15 @@ export default function MyOrders() {
                       </div>
                       <div>
                         <span className="text-muted-foreground">Restant :</span>{" "}
-                        <span className="font-medium">{d.remains !== undefined ? Number(d.remains).toLocaleString() : "—"}</span>
+                        <span className="font-medium">{displayRemains}</span>
                       </div>
                     </div>
-                    <div className="pt-1">
-                      <div className="text-[10px] text-muted-foreground mb-1">Progression</div>
-                      <ProgressBar pct={pct} />
-                    </div>
+                    {showProgressBar && (
+                      <div className="pt-1">
+                        <div className="text-[10px] text-muted-foreground mb-1">Progression</div>
+                        <ProgressBar pct={pct} />
+                      </div>
+                    )}
                     <div className="flex items-center justify-between pt-1 text-[10px] text-muted-foreground border-t">
                       <span>
                         {new Date(o.created_at).toLocaleDateString("fr-FR")}{" "}
