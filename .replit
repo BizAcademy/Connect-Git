@@ -33,3 +33,9 @@ externalPort = 3000
 [[ports]]
 localPort = 20626
 externalPort = 3002
+
+[userenv]
+
+[userenv.shared]
+AFRIBAPAY_API_BASE = "https://api.afribapay.com"
+SMM_PANEL_5_API_URL = "https://exosupplier.com/api/v2"
