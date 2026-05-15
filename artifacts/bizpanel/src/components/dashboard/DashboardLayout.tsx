@@ -32,7 +32,6 @@ export const DashboardLayout = () => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadSupport, setUnreadSupport] = useState(0);
-  const [transitioning, setTransitioning] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [showCountryModal, setShowCountryModal] = useState(false);
 
@@ -102,14 +101,6 @@ export const DashboardLayout = () => {
       setShowCountryModal(true);
     }
   }, [loading, profile]);
-
-  const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    setTransitioning(true);
-    if (transitionTimer.current) clearTimeout(transitionTimer.current);
-    transitionTimer.current = setTimeout(() => setTransitioning(false), 400);
-    return () => { if (transitionTimer.current) clearTimeout(transitionTimer.current); };
-  }, [location.pathname]);
 
   // Close sidebar on navigation
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
@@ -346,7 +337,7 @@ export const DashboardLayout = () => {
 
         {/* Page outlet */}
         <div className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto">
-          {transitioning ? <LogoLoader /> : <Outlet />}
+          <Outlet />
         </div>
       </main>
 
