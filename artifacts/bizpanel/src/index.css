@@ -54,6 +54,10 @@
 }
 
 :root {
+  /* Force light mode on all devices — prevents Android/iOS dark-mode
+     from overriding CSS variables and rendering colors incorrectly */
+  color-scheme: light;
+
   --background: 220 20% 97%;
   --foreground: 220 25% 10%;
 
@@ -147,6 +151,10 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
+    /* Rendu du texte net sur tous les appareils (évite le flou sur Android/iOS) */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   h1, h2, h3, h4, h5, h6 {
