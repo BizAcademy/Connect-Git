@@ -166,18 +166,56 @@ router.post("/profile/country", requireUser, async (req: AuthedRequest, res) => 
 
   const userId = req.userId!;
   try {
+    // Use return=representation so we can detect 0-row updates (race condition:
+    // profile row may not exist yet when called immediately after signUp).
     const patchRes = await fetch(
       `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${userId}`,
       {
         method: "PATCH",
-        headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=minimal" },
+        headers: {
+          ...serviceHeaders(),
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
         body: JSON.stringify({ country, currency: info.currency }),
       },
     );
     if (!patchRes.ok) {
       const detail = await patchRes.text().catch(() => "");
-      logger.error({ status: patchRes.status, detail }, "country update failed");
+      logger.error({ status: patchRes.status, detail }, "country update PATCH failed");
       return res.status(502).json({ error: "Impossible de mettre à jour le pays" });
+    }
+    const rows = (await patchRes.json().catch(() => [])) as unknown[];
+    if (rows.length > 0) {
+      // Row existed and was updated
+      return res.json({ ok: true, country, currency: info.currency });
+    }
+
+    // 0 rows updated → profile row not yet created (signup trigger lag).
+    // Retry up to 3× with backoff before giving up.
+    logger.warn({ userId }, "country PATCH updated 0 rows — profile not yet created, retrying");
+    let upserted = false;
+    for (let attempt = 0; attempt < 3 && !upserted; attempt++) {
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      const retryRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${userId}`,
+        {
+          method: "PATCH",
+          headers: {
+            ...serviceHeaders(),
+            "Content-Type": "application/json",
+            Prefer: "return=representation",
+          },
+          body: JSON.stringify({ country, currency: info.currency }),
+        },
+      );
+      if (!retryRes.ok) continue;
+      const retryRows = (await retryRes.json().catch(() => [])) as unknown[];
+      if (retryRows.length > 0) { upserted = true; }
+    }
+    if (!upserted) {
+      logger.error({ userId }, "country: profile row never appeared after 3 retries");
+      return res.status(503).json({ error: "Profil non encore disponible, réessayez dans quelques secondes" });
     }
     res.json({ ok: true, country, currency: info.currency });
   } catch (err) {

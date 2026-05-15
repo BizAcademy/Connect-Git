@@ -83,7 +83,13 @@ const Auth = () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ country: signupCountry }),
           });
-          if (res.ok) { saved = true; localStorage.removeItem("bb_pending_country"); }
+          if (res.ok) {
+            saved = true;
+            // Do NOT remove bb_pending_country here — DashboardLayout will clear
+            // it only after confirming profile.country is set in the DB.
+            // Removing it here caused a race condition where profile.country was
+            // still null when DashboardLayout mounted, triggering the country modal.
+          }
         } catch { /* retry */ }
       }
     }

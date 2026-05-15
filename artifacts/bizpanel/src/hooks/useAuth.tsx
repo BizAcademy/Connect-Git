@@ -88,11 +88,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsAdmin(false);
   };
 
-  // Auto-déconnexion après 5 minutes d'inactivité
+  // Auto-déconnexion après 60 minutes d'inactivité
   useEffect(() => {
     if (!user) return;
 
-    const INACTIVITY_MS = 5 * 60 * 1000; // 5 minutes
+    const INACTIVITY_MS = 60 * 60 * 1000; // 60 minutes
     let timer: ReturnType<typeof setTimeout>;
 
     const handleTimeout = async () => {
@@ -102,7 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (typeof window !== "undefined") {
           try {
             const { toast } = await import("sonner");
-            toast.info("Vous avez été déconnecté pour inactivité (5 min).");
+            toast.info("Vous avez été déconnecté pour inactivité (60 min).");
           } catch {}
           window.location.href = "/auth";
         }
