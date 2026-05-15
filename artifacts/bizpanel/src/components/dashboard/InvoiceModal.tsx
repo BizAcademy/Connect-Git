@@ -1,16 +1,19 @@
 import { Printer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoImg from "@/assets/logo-buzzbooster.png";
+import { formatBalance } from "@/lib/currency";
 
 export interface InvoiceData {
   number: string;             // e.g. "BP-2026-000123"
   date: string;               // ISO string
   type: "deposit" | "order" | "refund";
   customer: { name?: string; email?: string };
-  amount: number;             // FCFA
+  amount: number;             // stored amount (FCFA for orders/refunds, native currency for deposits)
   status: string;
   details: { label: string; value: string }[];
   note?: string;
+  country?: string;           // user's country code — used to format amounts
+  currencyLabel?: string;     // override label (e.g. "CDF") for deposit invoices
 }
 
 const typeLabel: Record<InvoiceData["type"], string> = {
@@ -107,7 +110,9 @@ export function InvoiceModal({ data, onClose }: { data: InvoiceData; onClose: ()
             </p>
             <p className={`font-bold text-2xl ${color}`}>
               {sign}
-              {Math.round(data.amount).toLocaleString("fr-FR")} FCFA
+              {data.currencyLabel
+                ? `${Math.round(data.amount).toLocaleString("fr-FR")} ${data.currencyLabel}`
+                : formatBalance(data.amount, data.country)}
             </p>
           </div>
 

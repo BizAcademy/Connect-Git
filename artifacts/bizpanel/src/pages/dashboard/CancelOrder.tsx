@@ -177,7 +177,7 @@ export default function CancelOrder() {
               </div>
               <div>
                 <strong className="text-foreground">Prix :</strong>{" "}
-                {Number(order.price).toLocaleString()} FCFA
+                {Number(order.price).toLocaleString()}
               </div>
             </div>
 

@@ -10,6 +10,7 @@ import { syncOrdersStatusWithRefunds, FINAL_STATUSES, type SyncRefundEvent } fro
 import { fetchSmmOrderStatus } from "@/lib/smm";
 import { useToast } from "@/hooks/use-toast";
 import { fetchMyTickets } from "@/lib/tickets";
+import { formatBalance } from "@/lib/currency";
 
 // Minimal shape we read off `orders` rows from Realtime payloads. Supabase
 // types `payload.new` as `Record<string, unknown>`; this guard narrows it
@@ -152,7 +153,7 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 export default function MyOrders() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,7 +179,7 @@ export default function MyOrders() {
     for (const ev of events) {
       toast({
         title: "Commande remboursée",
-        description: `+${ev.amount.toLocaleString("fr-FR")} FCFA recrédités sur votre solde (commande #${ev.externalId}).`,
+        description: `+${formatBalance(ev.amount, profile?.country)} recrédités sur votre solde (commande #${ev.externalId}).`,
       });
     }
     // Tell the rest of the dashboard (header balance, etc.) to refetch.
@@ -260,6 +261,27 @@ export default function MyOrders() {
   }, []);
 
   useEffect(() => { load(); }, [user]);
+
+  // Periodic silent refresh + visibility listener so newly placed orders
+  // always appear even if the Supabase Realtime INSERT event is missed.
+  useEffect(() => {
+    if (!user) return;
+    const silentLoad = async () => {
+      const { data } = await supabase
+        .from("orders").select("*").eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (data) setOrders(data);
+    };
+    const onVisible = () => { if (document.visibilityState === "visible") void silentLoad(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", silentLoad);
+    const id = setInterval(silentLoad, 15000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", silentLoad);
+      clearInterval(id);
+    };
+  }, [user]);
 
   // Charge les tickets de l'utilisateur et indexe ceux d'annulation encore
   // ouverts par order_local_id. Rafraîchi à chaque retour sur l'onglet pour
@@ -557,7 +579,7 @@ export default function MyOrders() {
                           </a>
                         </td>
                         <td className="px-3 py-2 text-right whitespace-nowrap">
-                          <div className="font-medium text-primary">{Number(o.price).toLocaleString()} FCFA</div>
+                          <div className="font-medium text-primary">{formatBalance(Number(o.price), profile?.country)}</div>
                           {d.charge !== undefined && (
                             <div className="text-[10px] text-muted-foreground">
                               {d.charge} {d.currency || "USD"}
@@ -642,7 +664,7 @@ export default function MyOrders() {
                       </div>
                       <div>
                         <span className="text-muted-foreground">Charge :</span>{" "}
-                        <span className="font-medium text-primary">{Number(o.price).toLocaleString()} FCFA</span>
+                        <span className="font-medium text-primary">{formatBalance(Number(o.price), profile?.country)}</span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Démarrage :</span>{" "}

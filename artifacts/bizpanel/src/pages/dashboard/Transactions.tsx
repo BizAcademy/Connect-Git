@@ -12,6 +12,7 @@ import { fetchSmmProviders } from "@/lib/smm";
 import { toast } from "sonner";
 import { InvoiceModal, type InvoiceData } from "@/components/dashboard/InvoiceModal";
 import { formatPaymentMethod } from "@/lib/paymentMethod";
+import { formatBalance, getCurrencyInfo } from "@/lib/currency";
 
 type TxKind = "deposit" | "order" | "refund";
 type TxRow = {
@@ -101,7 +102,7 @@ export default function Transactions() {
       if (result.refunds.length > 0) {
         const total = result.refunds.reduce((s, r) => s + r.amount, 0);
         toast.success(
-          `Remboursement automatique de ${total.toLocaleString("fr-FR")} FCFA crédité sur votre solde (${result.refunds.length} commande${result.refunds.length > 1 ? "s" : ""}).`,
+          `Remboursement automatique de ${formatBalance(total, profile?.country)} crédité sur votre solde (${result.refunds.length} commande${result.refunds.length > 1 ? "s" : ""}).`,
         );
       }
     } catch (err) {
@@ -109,7 +110,18 @@ export default function Transactions() {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user]);
+  useEffect(() => {
+    if (!user) return;
+    load();
+    const onVisible = () => { if (document.visibilityState === "visible") void load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", load);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", load);
+    };
+  /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [user]);
 
   // Build a unified, sorted list. A single canceled+refunded order produces
   // TWO journal entries (the original "Commande" and the matching "Remboursement"),
@@ -210,7 +222,7 @@ export default function Transactions() {
       if (p.transaction_id) details.push({ label: "Réf. paiement",    value: String(p.transaction_id) });
       if (p.reference)      details.push({ label: "Référence interne", value: String(p.reference) });
       const bonus = Number(p.bonus_amount);
-      if (bonus > 0)        details.push({ label: "Bonus crédité",    value: `+${bonus.toLocaleString("fr-FR")} FCFA` });
+      if (bonus > 0)        details.push({ label: "Bonus crédité",    value: `+${formatBalance(bonus, profile?.country)}` });
       return {
         number: `BP-DEP-${shortId(p.id)}`,
         date: p.created_at,
@@ -219,7 +231,9 @@ export default function Transactions() {
         amount: Number(p.amount) + (bonus > 0 ? bonus : 0),
         status: paymentStatusMap[p.status]?.label || p.status,
         details,
-        note: bonus > 0 ? `Dont ${bonus.toLocaleString("fr-FR")} FCFA de bonus fidélité inclus dans le total crédité.` : undefined,
+        note: bonus > 0 ? `Dont ${formatBalance(bonus, profile?.country)} de bonus fidélité inclus dans le total crédité.` : undefined,
+        country: profile?.country,
+        currencyLabel: p.currency || getCurrencyInfo(profile?.country).symbol,
       };
     }
     if (r.kind === "order") {
@@ -239,8 +253,9 @@ export default function Transactions() {
           { label: "ID fournisseur", value: o.external_order_id ? `#${o.external_order_id}` : "—" },
         ],
         note: o.refunded_at
-          ? `Cette commande a été remboursée le ${new Date(o.refunded_at).toLocaleString("fr-FR")} pour ${Number(o.refunded_amount).toLocaleString("fr-FR")} FCFA.`
+          ? `Cette commande a été remboursée le ${new Date(o.refunded_at).toLocaleString("fr-FR")} pour ${formatBalance(Number(o.refunded_amount), profile?.country)}.`
           : undefined,
+        country: profile?.country,
       };
     }
     // refund
@@ -260,6 +275,7 @@ export default function Transactions() {
         { label: "Motif", value: "Annulation/échec confirmé(e) chez le fournisseur" },
       ],
       note: "Le montant a été automatiquement recrédité sur votre solde BUZZ BOOSTER.",
+      country: profile?.country,
     };
   };
 
@@ -283,20 +299,17 @@ export default function Transactions() {
         </div>
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[11px] text-muted-foreground uppercase">Crédité</p>
-          <p className="text-xl font-bold mt-1 text-green-600">+{totals.credit.toLocaleString("fr-FR")}</p>
-          <p className="text-[10px] text-muted-foreground">FCFA</p>
+          <p className="text-xl font-bold mt-1 text-green-600">+{formatBalance(totals.credit, profile?.country)}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[11px] text-muted-foreground uppercase">Débité</p>
-          <p className="text-xl font-bold mt-1 text-red-600">−{totals.debit.toLocaleString("fr-FR")}</p>
-          <p className="text-[10px] text-muted-foreground">FCFA</p>
+          <p className="text-xl font-bold mt-1 text-red-600">−{formatBalance(totals.debit, profile?.country)}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[11px] text-muted-foreground uppercase">Solde net</p>
           <p className={`text-xl font-bold mt-1 ${totals.net >= 0 ? "text-green-600" : "text-red-600"}`}>
-            {totals.net >= 0 ? "+" : ""}{totals.net.toLocaleString("fr-FR")}
+            {totals.net >= 0 ? "+" : "−"}{formatBalance(Math.abs(totals.net), profile?.country)}
           </p>
-          <p className="text-[10px] text-muted-foreground">FCFA</p>
         </div>
       </div>
 
@@ -376,7 +389,7 @@ export default function Transactions() {
                       <td className="px-3 py-2 max-w-[280px] truncate" title={r.detail}>{r.detail}</td>
                       <td className="px-3 py-2 font-mono text-[11px]">{r.reference || "—"}</td>
                       <td className={`px-3 py-2 text-right font-semibold whitespace-nowrap ${meta.color}`}>
-                        {meta.sign}{Math.round(r.amount).toLocaleString("fr-FR")} FCFA
+                        {meta.sign}{formatBalance(Math.round(r.amount), profile?.country)}
                       </td>
                       <td className="px-3 py-2">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full border ${r.status_color}`}>{r.status_label}</span>
@@ -419,7 +432,7 @@ export default function Transactions() {
                         <FileText size={12} /> Facture
                       </button>
                       <span className={`font-bold text-sm ${meta.color}`}>
-                        {meta.sign}{Math.round(r.amount).toLocaleString("fr-FR")} FCFA
+                        {meta.sign}{formatBalance(Math.round(r.amount), profile?.country)}
                       </span>
                     </div>
                   </CardContent>

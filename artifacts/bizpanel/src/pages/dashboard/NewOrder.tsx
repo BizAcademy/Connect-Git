@@ -9,7 +9,7 @@ import {
   type SmmService,
   type SmmProviderPublic,
 } from "@/lib/smm";
-import { getCurrencyInfo } from "@/lib/currency";
+import { getCurrencyInfo, formatBalance } from "@/lib/currency";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -407,7 +407,7 @@ export default function NewOrder() {
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="p-4 flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Solde disponible</span>
-          <span className="font-bold text-primary text-lg">{balance.toLocaleString()} FCFA</span>
+          <span className="font-bold text-primary text-lg">{formatBalance(balance, profile?.country)}</span>
         </CardContent>
       </Card>
 

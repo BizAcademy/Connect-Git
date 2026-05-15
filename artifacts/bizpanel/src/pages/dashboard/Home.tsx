@@ -230,7 +230,7 @@ export default function DashboardHome() {
           <div>
             <p className="text-sm font-semibold text-emerald-800">Gains d'affiliation</p>
             <p className="text-xs text-emerald-600">
-              {Number(profile?.affiliate_earnings).toLocaleString()} FCFA gagnés en parrainages
+              {formatBalance(Number(profile?.affiliate_earnings || 0), profile?.country)} gagnés en parrainages
             </p>
           </div>
         </div>

@@ -138,8 +138,8 @@ export default function Deposit() {
           const bonusGot = Number(data.bonus_credited || 0);
           toast.success(
             bonusGot > 0
-              ? `Dépôt de ${credited.toLocaleString()} FCFA confirmé (+${bonusGot.toLocaleString()} FCFA bonus) !`
-              : `Dépôt de ${credited.toLocaleString()} FCFA confirmé !`,
+              ? `Dépôt de ${formatBalance(credited, profile?.country)} confirmé (+${formatBalance(bonusGot, profile?.country)} bonus) !`
+              : `Dépôt de ${formatBalance(credited, profile?.country)} confirmé !`,
           );
           window.setTimeout(() => navigate("/dashboard"), 1500);
           return;
@@ -179,8 +179,8 @@ export default function Deposit() {
         const bonusGot = Number(data.bonus_credited || 0);
         toast.success(
           bonusGot > 0
-            ? `Dépôt de ${credited.toLocaleString()} FCFA confirmé (+${bonusGot.toLocaleString()} FCFA bonus) !`
-            : `Dépôt de ${credited.toLocaleString()} FCFA confirmé !`,
+            ? `Dépôt de ${formatBalance(credited, profile?.country)} confirmé (+${formatBalance(bonusGot, profile?.country)} bonus) !`
+            : `Dépôt de ${formatBalance(credited, profile?.country)} confirmé !`,
         );
         window.setTimeout(() => navigate("/dashboard"), 1500);
       } else if (r.ok && (data?.status === "failed" || data?.status === "rejected")) {

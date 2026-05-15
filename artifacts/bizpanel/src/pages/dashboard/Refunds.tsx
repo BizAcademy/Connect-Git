@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RefreshCw, Search, RotateCcw, Wallet, FileText } from "lucide-react";
 import { syncOrdersStatusWithRefunds } from "@/lib/orderSync";
+import { formatBalance } from "@/lib/currency";
 import { fetchSmmProviders } from "@/lib/smm";
 import { toast } from "sonner";
 import { InvoiceModal, type InvoiceData } from "@/components/dashboard/InvoiceModal";
@@ -75,7 +76,7 @@ export default function Refunds() {
       if (result.refunds.length > 0) {
         const total = result.refunds.reduce((s, r) => s + r.amount, 0);
         toast.success(
-          `Nouveau remboursement : ${total.toLocaleString("fr-FR")} FCFA recrédités sur votre solde.`,
+          `Nouveau remboursement : ${formatBalance(total, profile?.country)} recrédités sur votre solde.`,
         );
         // Recharger pour voir les nouveaux remboursements
         const { data: refreshed } = await supabase
@@ -158,6 +159,7 @@ export default function Refunds() {
       customer: { name: profile?.username, email: user?.email || profile?.email },
       amount: r.amount,
       status: "Crédité",
+      country: profile?.country,
       details: [
         { label: "Commande d'origine", value: `BP-CMD-${shortId(o.id)}` },
         { label: "Fournisseur", value: providerLabel(o.provider) },
@@ -194,7 +196,7 @@ export default function Refunds() {
             Total remboursé{period !== "all" ? ` (${period === "today" ? "aujourd'hui" : period === "month" ? "ce mois" : "cette année"})` : ""}
           </div>
           <p className="text-2xl md:text-3xl font-bold text-purple-600 mt-1">
-            +{total.toLocaleString("fr-FR")} <span className="text-sm font-normal text-muted-foreground">FCFA</span>
+            +{formatBalance(total, profile?.country)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             {filtered.length} remboursement{filtered.length > 1 ? "s" : ""} affiché{filtered.length > 1 ? "s" : ""}
@@ -277,7 +279,7 @@ export default function Refunds() {
                     </td>
                     <td className="px-3 py-2 text-right whitespace-nowrap">
                       <span className="font-bold text-purple-600">
-                        +{r.amount.toLocaleString("fr-FR")} FCFA
+                        +{formatBalance(r.amount, profile?.country)}
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right">
@@ -308,7 +310,7 @@ export default function Refunds() {
                       <p className="text-[11px] text-muted-foreground truncate">{r.service_category}</p>
                     </div>
                     <span className="font-bold text-purple-600 text-sm whitespace-nowrap">
-                      +{r.amount.toLocaleString("fr-FR")} FCFA
+                      +{formatBalance(r.amount, profile?.country)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground">
