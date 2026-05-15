@@ -190,15 +190,25 @@ export default function MyOrders() {
   const load = async () => {
     if (!user) return;
     setLoading(true);
-    const headers = await getAuthHeaders();
-    const r = await fetch("/api/smm/user-orders", { headers });
-    const initial: any[] = r.ok ? (await r.json() as any[]) : [];
-    setOrders(initial);
-    setLoading(false);
-    const { orders: synced, refunds } = await syncOrdersStatusWithRefunds(initial);
-    setOrders(synced);
-    notifyRefunds(refunds);
-    void loadDetails(synced);
+    try {
+      const headers = await getAuthHeaders();
+      const r = await fetch("/api/smm/user-orders", { headers });
+      if (!r.ok) {
+        console.error("[MyOrders] user-orders returned", r.status);
+        setLoading(false);
+        return;
+      }
+      const initial: any[] = await r.json();
+      setOrders(initial);
+      setLoading(false);
+      const { orders: synced, refunds } = await syncOrdersStatusWithRefunds(initial);
+      setOrders(synced);
+      notifyRefunds(refunds);
+      void loadDetails(synced);
+    } catch (err) {
+      console.error("[MyOrders] load error:", err);
+      setLoading(false);
+    }
   };
 
   const loadDetails = useCallback(async (list: any[]) => {

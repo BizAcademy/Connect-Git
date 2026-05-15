@@ -77,15 +77,15 @@ export default function Refunds() {
         toast.success(
           `Nouveau remboursement : ${formatBalance(total, profile?.country)} recrédités sur votre solde.`,
         );
-        // Recharger pour voir les nouveaux remboursements
-        const { data: refreshed } = await supabase
-          .from("orders")
-          .select("*")
-          .eq("user_id", user.id)
-          .not("refunded_at", "is", null)
-          .gt("refunded_amount", 0)
-          .order("refunded_at", { ascending: false });
-        setOrders(refreshed || []);
+        // Recharger pour voir les nouveaux remboursements (via API pour bypasser RLS)
+        const hdrs2 = await getAuthHeaders();
+        const r2 = await fetch("/api/smm/user-orders", { headers: hdrs2 });
+        const allRefreshed: any[] = r2.ok ? (await r2.json()) : [];
+        setOrders(
+          allRefreshed
+            .filter((o: any) => o.refunded_at !== null && o.refunded_at !== undefined && Number(o.refunded_amount) > 0)
+            .sort((a: any, b: any) => new Date(b.refunded_at).getTime() - new Date(a.refunded_at).getTime())
+        );
       }
     } catch {
       setLoading(false);
