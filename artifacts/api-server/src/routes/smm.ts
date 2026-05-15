@@ -370,10 +370,57 @@ router.post("/smm/order", requireUser, rateLimitOrders, async (req: AuthedReques
       return res.status(502).json({ error: rawMsg || "Le fournisseur n'a pas accepté la commande" });
     }
 
+    // -----------------------------------------------------------------------
+    // Persist the order server-side (service role key → bypasses RLS).
+    // Previously this was done client-side which caused "invisible orders"
+    // when the user's JWT had expired or the browser closed before the insert.
+    // -----------------------------------------------------------------------
+    const externalOrderId = String(providerData.order ?? providerData.id ?? "");
+    let localOrderId: string | null = null;
+    if (SUPABASE_URL) {
+      try {
+        const insertHeaders = SUPABASE_SERVICE_ROLE_KEY
+          ? serviceRoleHeaders()
+          : supabaseHeaders(userToken);
+        const insRes = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+          method: "POST",
+          headers: insertHeaders,
+          body: JSON.stringify({
+            user_id: userId,
+            service: serviceNum,
+            service_name: String(svc.name ?? serviceNum),
+            service_category: String(svc.category ?? ""),
+            link: linkStr,
+            quantity: qtyNum,
+            price: totalPrice,
+            status: "processing",
+            external_order_id: externalOrderId,
+            provider: providerId,
+          }),
+        });
+        if (insRes.ok) {
+          const rows = (await insRes.json()) as Array<{ id: string }>;
+          localOrderId = rows[0]?.id ?? null;
+          logger.info({ userId, externalOrderId, localOrderId, providerId }, "order: local record saved");
+        } else {
+          const txt = await insRes.text().catch(() => "");
+          logger.error(
+            { status: insRes.status, body: txt.slice(0, 300), userId, externalOrderId },
+            "order: local insert failed — order IS placed at provider, balance debited",
+          );
+        }
+      } catch (insErr) {
+        logger.error(
+          { err: insErr, userId, externalOrderId },
+          "order: local insert exception — order IS placed at provider, balance debited",
+        );
+      }
+    }
+
     // Earnings are recorded on order COMPLETION (in syncOrderInternal),
     // not here at creation — so only confirmed completed orders appear
     // in the admin revenue dashboard.
-    res.json({ ...providerData, provider: providerId });
+    res.json({ ...providerData, provider: providerId, local_order_id: localOrderId });
   } catch (err) {
     logger.error({ err, userId, providerId }, "SMM order error");
     res.status(500).json({ error: "Erreur interne lors de la commande" });

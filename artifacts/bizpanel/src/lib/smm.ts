@@ -65,6 +65,8 @@ export interface SmmQuote {
 export interface SmmOrderResult {
   order?: number;
   provider?: number;
+  /** Local Supabase UUID of the inserted order row (set server-side). */
+  local_order_id?: string | null;
   error?: string;
   provider_unavailable?: boolean;
 }

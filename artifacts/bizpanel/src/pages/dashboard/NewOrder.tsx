@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import {
   fetchSmmServices,
   placeSmmOrder,
@@ -360,26 +359,18 @@ export default function NewOrder() {
 
       const providerOrderId = result.order;
 
-      // Save local order record (best-effort — server has already debited and provider has order)
-      const { error: ordErr } = await supabase.from("orders").insert({
-        user_id: user.id,
-        service_name: shortLabel(selectedService.name, platformLabel),
-        service_category: platformLabel || selectedService.category,
-        link: link.trim(),
-        quantity: qty,
-        price,
-        status: "processing",
-        external_order_id: String(providerOrderId),
-        provider: providerId,
-      });
-      if (ordErr) {
-        console.error("Order saved at provider but local insert failed:", ordErr);
-        toast.warning(
-          `Commande #${providerOrderId} envoyée chez le fournisseur, mais non enregistrée localement. Contactez le support.`,
-        );
-      } else {
-        toast.success(`Commande #${providerOrderId} envoyée ! ${price.toLocaleString()} FCFA débités.`);
+      // The server now inserts the order row server-side (service role key).
+      // No client-side insert needed — eliminates "invisible order" bugs caused
+      // by expired JWT sessions or network drops after the provider accepted.
+      if (!result.local_order_id) {
+        // Insert succeeded at provider + balance was debited, but the local
+        // record may be missing. Warn the user to contact support if the order
+        // doesn't appear, but don't block — the admin can recover it.
+        console.warn("Server did not return local_order_id for order", providerOrderId);
       }
+      toast.success(
+        `Commande #${providerOrderId} envoyée ! ${localTotal.toLocaleString()} ${currencyInfo.symbol} débités.`,
+      );
 
       await refreshProfile();
       setLink("");
