@@ -426,20 +426,27 @@ router.post("/smm/order", requireUser, rateLimitOrders, async (req: AuthedReques
   }
 });
 
-// GET /api/smm/user-orders — user's own orders via service-role (bypasses RLS)
+// GET /api/smm/user-orders — user's own orders
+// Uses service-role key to bypass RLS if available; falls back to the user's
+// own JWT (requires 009_orders_rls.sql migration to be applied in Supabase).
 router.get("/smm/user-orders", requireUser, async (req: AuthedRequest, res) => {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return res.json([]);
+  if (!SUPABASE_URL) return res.json([]);
   try {
     const userId = req.userId!;
+    const hdrs = SUPABASE_SERVICE_ROLE_KEY
+      ? serviceRoleHeaders()
+      : supabaseHeaders(req.userToken!);
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/orders?user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`,
-      { headers: serviceRoleHeaders() },
+      { headers: hdrs },
     );
     if (!r.ok) {
-      req.log.error({ status: r.status }, "user-orders: supabase error");
+      const body = await r.text().catch(() => "");
+      req.log.error({ status: r.status, body: body.slice(0, 200), usingServiceRole: !!SUPABASE_SERVICE_ROLE_KEY }, "user-orders: supabase error");
       return res.json([]);
     }
     const data = (await r.json()) as unknown[];
+    req.log.info({ count: Array.isArray(data) ? data.length : -1, usingServiceRole: !!SUPABASE_SERVICE_ROLE_KEY }, "user-orders: ok");
     res.json(Array.isArray(data) ? data : []);
   } catch (err) {
     req.log.error({ err }, "user-orders: exception");
@@ -447,20 +454,27 @@ router.get("/smm/user-orders", requireUser, async (req: AuthedRequest, res) => {
   }
 });
 
-// GET /api/smm/user-payments — user's own payments via service-role (bypasses RLS)
+// GET /api/smm/user-payments — user's own payments
+// Uses service-role key to bypass RLS if available; falls back to the user's
+// own JWT (requires 009_orders_rls.sql migration to be applied in Supabase).
 router.get("/smm/user-payments", requireUser, async (req: AuthedRequest, res) => {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return res.json([]);
+  if (!SUPABASE_URL) return res.json([]);
   try {
     const userId = req.userId!;
+    const hdrs = SUPABASE_SERVICE_ROLE_KEY
+      ? serviceRoleHeaders()
+      : supabaseHeaders(req.userToken!);
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/payments?user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`,
-      { headers: serviceRoleHeaders() },
+      { headers: hdrs },
     );
     if (!r.ok) {
-      req.log.error({ status: r.status }, "user-payments: supabase error");
+      const body = await r.text().catch(() => "");
+      req.log.error({ status: r.status, body: body.slice(0, 200), usingServiceRole: !!SUPABASE_SERVICE_ROLE_KEY }, "user-payments: supabase error");
       return res.json([]);
     }
     const data = (await r.json()) as unknown[];
+    req.log.info({ count: Array.isArray(data) ? data.length : -1, usingServiceRole: !!SUPABASE_SERVICE_ROLE_KEY }, "user-payments: ok");
     res.json(Array.isArray(data) ? data : []);
   } catch (err) {
     req.log.error({ err }, "user-payments: exception");
