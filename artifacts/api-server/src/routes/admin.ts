@@ -682,19 +682,20 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
       ...orders.map((o) => o.user_id),
       ...pays.map((p) => p.user_id),
     ].filter(Boolean)));
-    const profiles = new Map<string, { username?: string; email?: string }>();
+    const profiles = new Map<string, { username?: string; email?: string; country?: string }>();
     if (userIds.length > 0) {
       const pr = await fetch(
-        `${SUPABASE_URL}/rest/v1/profiles?user_id=in.(${userIds.join(",")})&select=user_id,username,email&limit=${userIds.length}`,
+        `${SUPABASE_URL}/rest/v1/profiles?user_id=in.(${userIds.join(",")})&select=user_id,username,email,country&limit=${userIds.length}`,
         { headers },
       );
       if (pr.ok) {
         for (const row of (await pr.json()) as any[]) {
-          profiles.set(row.user_id, { username: row.username, email: row.email });
+          profiles.set(row.user_id, { username: row.username, email: row.email, country: row.country });
         }
       }
     }
     const labelFor = (uid: string) => profiles.get(uid)?.username || profiles.get(uid)?.email || uid?.slice(0, 8) || "?";
+    const countryFor = (uid: string) => profiles.get(uid)?.country || null;
 
     type TxRow = {
       id: string; kind: "deposit" | "order" | "refund"; created_at: string;
@@ -704,6 +705,7 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
       external_order_id?: string | null;
       refunded_at?: string | null; refunded_amount?: number | null;
       provider?: number | null;
+      country?: string | null; currency?: string | null;
     };
     const all: TxRow[] = [];
     if (type === "all" || type === "order") {
@@ -717,6 +719,8 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
           external_order_id: o.external_order_id || null,
           refunded_at: o.refunded_at, refunded_amount: o.refunded_amount,
           provider: typeof o.provider === "number" ? o.provider : null,
+          country: countryFor(o.user_id),
+          currency: null,
         });
       }
     }
@@ -730,6 +734,8 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
             detail: `Remboursement · ${o.service_name || ""}`,
             reference: o.external_order_id ? `#${o.external_order_id}` : null,
             external_order_id: o.external_order_id || null,
+            country: countryFor(o.user_id),
+            currency: null,
           });
         }
       }
@@ -749,6 +755,8 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
           user_label: labelFor(p.user_id), user_email: profiles.get(p.user_id)?.email,
           detail: parts.join(" · "),
           reference: ref,
+          country: p.country || countryFor(p.user_id),
+          currency: p.currency || null,
         });
       }
     }

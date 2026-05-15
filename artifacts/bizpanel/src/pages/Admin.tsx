@@ -150,6 +150,30 @@ function fmtDepositAmount(
   return `${Math.round(amount).toLocaleString()} ${cur} → ${fcfa.toLocaleString()} FCFA`;
 }
 
+/**
+ * Format a transaction amount with the correct local currency label.
+ * - Deposits: use fmtDepositAmount (handles CDF/GNF/GMD conversions).
+ * - Orders / refunds: amounts are stored in FCFA internally.
+ *   - XAF zone → show "X XAF", XOF zone → show "X XOF" (1:1 with FCFA).
+ *   - Non-CFA zones (CDF, GNF, GMD) → keep "X FCFA" to avoid confusion.
+ */
+function fmtTxAmount(
+  amount: number,
+  type: "order" | "deposit" | "refund",
+  country?: string | null,
+  currency?: string | null,
+  rateOverrides?: Record<string, number>,
+): string {
+  if (type === "deposit") {
+    return fmtDepositAmount(amount, currency, country, rateOverrides);
+  }
+  const cur = getCurrencyInfo(country);
+  if (cur && (cur.currency === "XAF" || cur.currency === "XOF")) {
+    return `${Math.round(amount).toLocaleString()} ${cur.currency}`;
+  }
+  return fmt(amount);
+}
+
 const fmtTime = (iso: string) => {
   const d = new Date(iso);
   const today = new Date();
@@ -416,6 +440,8 @@ type TxRow = {
   refunded_at?: string | null;
   user_id?: string;
   provider?: number | null;
+  country?: string | null;
+  currency?: string | null;
 };
 
 // Minimal shape we read off `orders` rows in Realtime payloads. Supabase
@@ -499,6 +525,8 @@ const AdminTransactions = () => {
           refunded_at: row.refunded_at || null,
           user_id: row.user_id,
           provider: typeof row.provider === "number" ? row.provider : null,
+          country: row.country || null,
+          currency: row.currency || null,
         };
       });
 
@@ -764,7 +792,7 @@ const AdminTransactions = () => {
                       )}
                     </td>
                     <td className={`px-3 py-2 text-right font-semibold whitespace-nowrap ${colorClass}`}>
-                      {sign}{r.amount.toLocaleString()} FCFA
+                      {sign}{fmtTxAmount(r.amount, r.type, r.country, r.currency)}
                     </td>
                     <td className="px-3 py-2">
                       <span className={`px-2 py-0.5 rounded-full font-medium ${r.status_color}`}>
@@ -784,14 +812,14 @@ const AdminTransactions = () => {
                           <button
                             onClick={async () => {
                               if (!r.external_order_id) return;
-                              if (!window.confirm(`Forcer le remboursement de ${r.amount.toLocaleString()} FCFA pour la commande #${r.external_order_id} ?`)) return;
+                              if (!window.confirm(`Forcer le remboursement de ${fmtTxAmount(r.amount, r.type, r.country, r.currency)} pour la commande #${r.external_order_id} ?`)) return;
                               setRefunding(r.id);
                               try {
                                 const res = await adminForceOrderRefund(String(r.id));
                                 if (res.error) {
                                   toast.error(res.error);
                                 } else if (res.refunded) {
-                                  toast.success(`Remboursement de ${(res.refunded_amount || 0).toLocaleString()} FCFA crédité.`);
+                                  toast.success(`Remboursement de ${fmtTxAmount(res.refunded_amount || 0, "refund", r.country, r.currency)} crédité.`);
                                 } else {
                                   toast.info("Statut synchronisé. Aucun remboursement nécessaire (déjà remboursé ou statut non éligible).");
                                 }

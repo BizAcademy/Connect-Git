@@ -300,29 +300,13 @@ export const DashboardLayout = () => {
             <Menu size={22} />
           </button>
 
-          {/* Avatar */}
-          <AvatarUpload
-            avatarUrl={avatarUrl}
-            username={profile?.username}
-            email={user?.email}
-            size={34}
-            onUpdated={(url) => setAvatarUrl(url)}
-          />
-
-          {/* Username + balance */}
+          {/* Solde */}
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-sm leading-tight truncate">
-              {profile?.username || user?.email?.split("@")[0]}
-            </p>
-            <p className="text-[11px] text-muted-foreground hidden sm:block leading-tight">
+            <p className="text-[11px] text-muted-foreground leading-tight hidden sm:block">Solde disponible</p>
+            <p className="font-bold text-sm text-primary leading-tight truncate">
               {formatBalance(Number(profile?.balance || 0), profile?.country)}
             </p>
           </div>
-
-          {/* Solde compact (xs only) */}
-          <span className="sm:hidden text-xs font-bold text-primary whitespace-nowrap flex-shrink-0">
-            {formatBalance(Number(profile?.balance || 0), profile?.country)}
-          </span>
 
           {/* Recharge button */}
           <Button
