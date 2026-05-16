@@ -33767,7 +33767,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-05-15T21:39:55.153Z";
+var BUILD_TIME = "2026-05-16T02:12:07.343Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -34823,7 +34823,7 @@ async function syncOrderInternal(opts) {
   }
   const lookupHeader = serviceRoleHeaders();
   const lookupQuery = localOrderId ? `?id=eq.${encodeURIComponent(localOrderId)}` : `?external_order_id=eq.${encodeURIComponent(extIn)}&provider=eq.${providerIn}`;
-  const orderLookupUrl = `${SUPABASE_URL4}/rest/v1/orders` + lookupQuery + `&select=id,user_id,status,refunded_at,refunded_amount,provider,external_order_id,price,service,service_name,quantity&limit=1`;
+  const orderLookupUrl = `${SUPABASE_URL4}/rest/v1/orders` + lookupQuery + `&select=id,user_id,status,refunded_at,refunded_amount,provider,external_order_id,price,service_name,quantity&limit=1`;
   const lookupRes = await fetch(orderLookupUrl, { headers: lookupHeader });
   if (!lookupRes.ok) {
     const txt = await lookupRes.text().catch(() => "");
@@ -34855,6 +34855,7 @@ async function syncOrderInternal(opts) {
     logger.error({ orderId: order.id, externalId }, "sync: cannot determine wallet owner \u2014 skipping refund");
   }
   let providerStatus = "";
+  let providerRemains;
   if (!forceRefund) {
     try {
       const provider = await callProvider(providerId, "status", { order: externalId });
@@ -34862,6 +34863,10 @@ async function syncOrderInternal(opts) {
         return { ok: false, status: 502, error: String(provider.error) };
       }
       providerStatus = mapProviderStatus(provider?.status);
+      if (provider?.remains !== void 0 && provider.remains !== null) {
+        const r = Number(provider.remains);
+        if (Number.isFinite(r)) providerRemains = r;
+      }
     } catch (err) {
       logger.error({ err, externalId, providerId }, "sync: provider call failed");
       return { ok: false, status: 502, error: "Fournisseur SMM injoignable" };
@@ -34890,8 +34895,8 @@ async function syncOrderInternal(opts) {
         ts: (/* @__PURE__ */ new Date()).toISOString(),
         provider_order_id: externalId,
         user_id: order.user_id,
-        service: Number(order.service ?? 0),
-        service_name: String(order.service_name ?? order.service ?? ""),
+        service: 0,
+        service_name: String(order.service_name ?? ""),
         quantity: Number(order.quantity ?? 0),
         rate_usd: 0,
         user_price_fcfa: userPriceFcfa,
@@ -34905,17 +34910,26 @@ async function syncOrderInternal(opts) {
     }
   }
   const eligibleByProvider = FINAL_REFUND_STATUSES.has(newStatus);
-  if ((eligibleByProvider || forceRefund) && !order.refunded_at && trustedAmount > 0) {
-    const amount = Math.round(trustedAmount);
+  const isPartialCompletion = newStatus === "partial" && !forceRefund;
+  let refundAmount = Math.round(trustedAmount);
+  if (isPartialCompletion) {
+    const qty = Number(order.quantity ?? 0);
+    if (providerRemains !== void 0 && providerRemains > 0 && qty > 0) {
+      refundAmount = Math.round(providerRemains / qty * trustedAmount);
+    } else {
+      refundAmount = 0;
+    }
+  }
+  if ((eligibleByProvider || isPartialCompletion || forceRefund) && !order.refunded_at && refundAmount > 0) {
     const rpcRes = await fetch(`${SUPABASE_URL4}/rest/v1/rpc/smm_refund_order`, {
       method: "POST",
       headers: serviceRoleHeaders(),
-      body: JSON.stringify({ p_order_id: order.id, p_amount: amount })
+      body: JSON.stringify({ p_order_id: order.id, p_amount: refundAmount })
     });
     if (!rpcRes.ok) {
       const txt = await rpcRes.text().catch(() => "");
       logger.error(
-        { status: rpcRes.status, body: txt.slice(0, 300), orderId: order.id, userId: order.user_id, amount },
+        { status: rpcRes.status, body: txt.slice(0, 300), orderId: order.id, userId: order.user_id, refundAmount, newStatus },
         "auto-refund: RPC smm_refund_order failed \u2014 order NOT refunded, will retry on next sync"
       );
     } else {
@@ -34925,7 +34939,7 @@ async function syncOrderInternal(opts) {
         refunded = true;
         refundedAmount = row.refunded_amount;
         logger.info(
-          { orderId: order.id, userId: order.user_id, amount, externalId, newBalance: row.new_balance },
+          { orderId: order.id, userId: order.user_id, refundAmount, externalId, newBalance: row.new_balance, newStatus },
           "auto-refund credited (atomic RPC)"
         );
       } else {

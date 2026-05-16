@@ -599,7 +599,7 @@ export async function syncOrderInternal(opts: {
       `&provider=eq.${providerIn}`;
   const orderLookupUrl =
     `${SUPABASE_URL}/rest/v1/orders` + lookupQuery +
-    `&select=id,user_id,status,refunded_at,refunded_amount,provider,external_order_id,price,service,service_name,quantity&limit=1`;
+    `&select=id,user_id,status,refunded_at,refunded_amount,provider,external_order_id,price,service_name,quantity&limit=1`;
   const lookupRes = await fetch(orderLookupUrl, { headers: lookupHeader });
   if (!lookupRes.ok) {
     const txt = await lookupRes.text().catch(() => "");
@@ -612,7 +612,6 @@ export async function syncOrderInternal(opts: {
     provider: number | null;
     external_order_id: string | null;
     price: number | null;
-    service: number | null;
     service_name: string | null;
     quantity: number | null;
   }>;
@@ -653,8 +652,10 @@ export async function syncOrderInternal(opts: {
     logger.error({ orderId: order.id, externalId }, "sync: cannot determine wallet owner — skipping refund");
   }
 
-  // 3) Query the matching SMM provider for the up-to-date status
+  // 3) Query the matching SMM provider for the up-to-date status.
+  //    Also capture `remains` so partial completions can compute a prorated refund.
   let providerStatus = "";
+  let providerRemains: number | undefined;
   if (!forceRefund) {
     try {
       const provider = await callProvider(providerId, "status", { order: externalId });
@@ -662,6 +663,10 @@ export async function syncOrderInternal(opts: {
         return { ok: false, status: 502, error: String(provider.error) };
       }
       providerStatus = mapProviderStatus(provider?.status);
+      if (provider?.remains !== undefined && provider.remains !== null) {
+        const r = Number(provider.remains);
+        if (Number.isFinite(r)) providerRemains = r;
+      }
     } catch (err) {
       logger.error({ err, externalId, providerId }, "sync: provider call failed");
       return { ok: false, status: 502, error: "Fournisseur SMM injoignable" };
@@ -695,8 +700,8 @@ export async function syncOrderInternal(opts: {
         ts: new Date().toISOString(),
         provider_order_id: externalId,
         user_id: order.user_id,
-        service: Number(order.service ?? 0),
-        service_name: String(order.service_name ?? order.service ?? ""),
+        service: 0,
+        service_name: String(order.service_name ?? ""),
         quantity: Number(order.quantity ?? 0),
         rate_usd: 0,
         user_price_fcfa: userPriceFcfa,
@@ -710,18 +715,36 @@ export async function syncOrderInternal(opts: {
     }
   }
 
+  // Determine refund eligibility and amount:
+  // - Final negative statuses (canceled/failed/refunded): full refund of trustedAmount.
+  // - Partial completion: prorated refund = (remains / quantity) × trustedAmount.
+  //   Only fires once (refunded_at CAS guarantees idempotency).
+  // - forceRefund (admin action): always full refund of trustedAmount.
   const eligibleByProvider = FINAL_REFUND_STATUSES.has(newStatus);
-  if ((eligibleByProvider || forceRefund) && !order.refunded_at && trustedAmount > 0) {
-    const amount = Math.round(trustedAmount);
+  const isPartialCompletion = newStatus === "partial" && !forceRefund;
+
+  let refundAmount = Math.round(trustedAmount); // default: full refund
+  if (isPartialCompletion) {
+    const qty = Number(order.quantity ?? 0);
+    if (providerRemains !== undefined && providerRemains > 0 && qty > 0) {
+      // Credit back only the undelivered portion
+      refundAmount = Math.round((providerRemains / qty) * trustedAmount);
+    } else {
+      // Cannot determine undelivered units — skip partial refund
+      refundAmount = 0;
+    }
+  }
+
+  if ((eligibleByProvider || isPartialCompletion || forceRefund) && !order.refunded_at && refundAmount > 0) {
     const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/smm_refund_order`, {
       method: "POST",
       headers: serviceRoleHeaders(),
-      body: JSON.stringify({ p_order_id: order.id, p_amount: amount }),
+      body: JSON.stringify({ p_order_id: order.id, p_amount: refundAmount }),
     });
     if (!rpcRes.ok) {
       const txt = await rpcRes.text().catch(() => "");
       logger.error(
-        { status: rpcRes.status, body: txt.slice(0, 300), orderId: order.id, userId: order.user_id, amount },
+        { status: rpcRes.status, body: txt.slice(0, 300), orderId: order.id, userId: order.user_id, refundAmount, newStatus },
         "auto-refund: RPC smm_refund_order failed — order NOT refunded, will retry on next sync",
       );
     } else {
@@ -733,7 +756,7 @@ export async function syncOrderInternal(opts: {
         refunded = true;
         refundedAmount = row.refunded_amount;
         logger.info(
-          { orderId: order.id, userId: order.user_id, amount, externalId, newBalance: row.new_balance },
+          { orderId: order.id, userId: order.user_id, refundAmount, externalId, newBalance: row.new_balance, newStatus },
           "auto-refund credited (atomic RPC)",
         );
       } else {
