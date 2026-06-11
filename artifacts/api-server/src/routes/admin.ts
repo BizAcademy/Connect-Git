@@ -1345,7 +1345,7 @@ router.put("/admin/currencies", requireUser, requireAdmin, async (req: AuthedReq
 
   // Upsert the rate into the settings table.
   const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/settings`,
+    `${SUPABASE_URL}/rest/v1/settings?on_conflict=key`,
     {
       method: "POST",
       headers: { ...serviceRoleHeaders(), Prefer: "resolution=merge-duplicates,return=representation" },
@@ -1452,7 +1452,7 @@ router.put("/admin/usd-rates", requireUser, requireAdmin, async (req: AuthedRequ
   }
 
   const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/settings`,
+    `${SUPABASE_URL}/rest/v1/settings?on_conflict=key`,
     {
       method: "POST",
       headers: { ...serviceRoleHeaders(), "Prefer": "resolution=merge-duplicates,return=representation" },
