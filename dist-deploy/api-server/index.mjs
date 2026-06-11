@@ -53400,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-06-11T23:08:32.285Z";
+var BUILD_TIME = "2026-06-11T23:39:26.000Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -56540,7 +56540,7 @@ router3.put("/admin/currencies", requireUser, requireAdmin, async (req, res) => 
   }
   const settingKey = `currency_rate_${upperCountry}`;
   const r = await fetch(
-    `${SUPABASE_URL7}/rest/v1/settings`,
+    `${SUPABASE_URL7}/rest/v1/settings?on_conflict=key`,
     {
       method: "POST",
       headers: { ...serviceRoleHeaders3(), Prefer: "resolution=merge-duplicates,return=representation" },
@@ -56617,7 +56617,7 @@ router3.put("/admin/usd-rates", requireUser, requireAdmin, async (req, res) => {
     return res.status(400).json({ error: "Tous les taux doivent \xEAtre des nombres positifs" });
   }
   const r = await fetch(
-    `${SUPABASE_URL7}/rest/v1/settings`,
+    `${SUPABASE_URL7}/rest/v1/settings?on_conflict=key`,
     {
       method: "POST",
       headers: { ...serviceRoleHeaders3(), "Prefer": "resolution=merge-duplicates,return=representation" },
