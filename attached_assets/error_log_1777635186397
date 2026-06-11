@@ -1,0 +1,8 @@
+[Fri May 01 00:35:13.594903 2026] [ssl:warn] [pid 919027:tid 140403662347968] AH01909: buzzbooster.site:443:0 server certificate does NOT include an ID which matches the server name
+[Fri May 01 01:00:46.076936 2026] [ssl:warn] [pid 1063884:tid 140485367295680] AH01909: buzzbooster.site:443:0 server certificate does NOT include an ID which matches the server name
+[Fri May 01 01:00:48.772713 2026] [ssl:warn] [pid 1063884:tid 140485367295680] AH01909: buzzbooster.site:443:0 server certificate does NOT include an ID which matches the server name
+[Fri May 01 01:02:19.967426 2026] [ssl:warn] [pid 1068007:tid 140640013876928] AH01909: buzzbooster.site:443:0 server certificate does NOT include an ID which matches the server name
+[Fri May 01 01:02:22.499989 2026] [ssl:warn] [pid 1068007:tid 140640013876928] AH01909: buzzbooster.site:443:0 server certificate does NOT include an ID which matches the server name
+[Fri May 01 01:03:52.955609 2026] [ssl:warn] [pid 1074300:tid 140221279596224] AH01909: buzzbooster.site:443:0 server certificate does NOT include an ID which matches the server name
+[Fri May 01 01:03:55.128860 2026] [ssl:warn] [pid 1074300:tid 140221279596224] AH01909: buzzbooster.site:443:0 server certificate does NOT include an ID which matches the server name
+[Fri May 01 10:00:54.984376 2026] [proxy_fcgi:error] [pid 1503935:tid 140220179658496] [client 45.154.98.214:0] AH01071: Got error 'Primary script unknown'
