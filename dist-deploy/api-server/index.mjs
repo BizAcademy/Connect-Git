@@ -53272,7 +53272,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-06-11T14:00:10.574Z";
+var BUILD_TIME = "2026-06-11T14:37:58.780Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -53393,14 +53393,14 @@ async function deleteEntry(serviceId, providerId = 1) {
   return map;
 }
 var USD_TO_LOCAL_RATES = {
-  peakerr: { XAF: 1e3, XOF: 1050, GMD: 80, CDF: 2700, GNF: 9e3 },
-  default: { XAF: 700, XOF: 750, GMD: 73, CDF: 2400, GNF: 7300 }
+  peakerr: { XAF: 1e3, XOF: 1111, GMD: 80, CDF: 1818, GNF: 9e3 },
+  default: { XAF: 900, XOF: 1e3, GMD: 73, CDF: 1636, GNF: 7300 }
 };
 var FCFA_PER_LOCAL = {
   XAF: 1,
-  XOF: 1,
+  XOF: 0.9,
   GMD: 6.6667,
-  CDF: 0.27,
+  CDF: 0.55,
   GNF: 0.0625
 };
 function usdToLocalRate(providerId, currency) {
@@ -54615,16 +54615,16 @@ init_logger();
 
 // src/lib/currency.ts
 var COUNTRY_CURRENCY = {
-  // XOF zone (BCEAO) — 1:1 with FCFA
-  BJ: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
-  BF: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
-  CI: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
-  GW: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  // XOF zone (BCEAO) — 1 XAF = 0.90 XOF → 1 XOF = 0.90 FCFA (plateforme XAF-based)
+  BJ: { currency: "XOF", fcfaPerUnit: 0.9, symbol: "XOF" },
+  BF: { currency: "XOF", fcfaPerUnit: 0.9, symbol: "XOF" },
+  CI: { currency: "XOF", fcfaPerUnit: 0.9, symbol: "XOF" },
+  GW: { currency: "XOF", fcfaPerUnit: 0.9, symbol: "XOF" },
   // Guinée-Bissau
-  ML: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
-  NE: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
-  SN: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
-  TG: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  ML: { currency: "XOF", fcfaPerUnit: 0.9, symbol: "XOF" },
+  NE: { currency: "XOF", fcfaPerUnit: 0.9, symbol: "XOF" },
+  SN: { currency: "XOF", fcfaPerUnit: 0.9, symbol: "XOF" },
+  TG: { currency: "XOF", fcfaPerUnit: 0.9, symbol: "XOF" },
   // XAF zone (BEAC) — 1:1 with FCFA
   CM: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
   CF: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
@@ -54633,19 +54633,19 @@ var COUNTRY_CURRENCY = {
   GQ: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
   GA: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
   // Non-CFA countries — configurable via admin "Devises" tab
-  CD: { currency: "CDF", fcfaPerUnit: 0.27, symbol: "CDF" },
-  // RDC: 1 CDF = 0.27 FCFA
+  CD: { currency: "CDF", fcfaPerUnit: 0.55, symbol: "CDF" },
+  // RDC: 1 CDF = 0.55 FCFA
   GN: { currency: "GNF", fcfaPerUnit: 0.0625, symbol: "GNF" },
   // Guinée Conakry: 1 FCFA = 16 GNF
   GM: { currency: "GMD", fcfaPerUnit: 6.6667, symbol: "GMD" }
   // Gambie: 1 GMD ≈ 6.6667 FCFA (1 FCFA ≈ 0.15 GMD)
 };
 var NON_CFA_COUNTRIES_INFO = [
-  { code: "CD", name: "Congo RDC", currency: "CDF", symbol: "CDF", defaultFcfaPerUnit: 0.27 },
+  { code: "CD", name: "Congo RDC", currency: "CDF", symbol: "CDF", defaultFcfaPerUnit: 0.55 },
   { code: "GN", name: "Guin\xE9e Conakry", currency: "GNF", symbol: "GNF", defaultFcfaPerUnit: 0.0625 },
   { code: "GM", name: "Gambie", currency: "GMD", symbol: "GMD", defaultFcfaPerUnit: 6.6667 }
 ];
-var DEFAULT_CURRENCY = { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" };
+var DEFAULT_CURRENCY = { currency: "XOF", fcfaPerUnit: 0.9, symbol: "XOF" };
 var _rateOverrides = null;
 var _rateCacheExpiry = 0;
 var RATE_CACHE_TTL_MS = 5 * 60 * 1e3;
@@ -54666,10 +54666,11 @@ function getCurrencyInfo(country) {
   return base;
 }
 var CURRENCY_DEFAULT_RATE = {
-  XOF: 1,
+  XOF: 0.9,
+  // 1 XAF = 0.90 XOF → 1 XOF = 0.90 FCFA (interne XAF)
   XAF: 1,
-  CDF: 0.27,
-  // Congo RDC : 1 CDF = 0.27 FCFA
+  CDF: 0.55,
+  // Congo RDC : 1 CDF = 0.55 FCFA
   GNF: 0.0625,
   // Guinée Conakry : 1 GNF = 0.0625 FCFA (1 FCFA = 16 GNF)
   GMD: 6.6667
