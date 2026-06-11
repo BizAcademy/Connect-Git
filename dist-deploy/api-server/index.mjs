@@ -31795,15 +31795,15 @@ var init_smm_pricing = __esm({
     LEGACY_FILE = path.resolve(process.cwd(), "data", "smm-pricing.json");
     cache = {};
     USD_TO_LOCAL_RATES = {
-      peakerr: { XAF: 1e3, XOF: 1111, GMD: 80, CDF: 1818, GNF: 9e3 },
-      default: { XAF: 900, XOF: 1e3, GMD: 73, CDF: 1636, GNF: 7300 }
+      peakerr: { XAF: 1e3, XOF: 1111, GMD: 80, CDF: 9e3, GNF: 9e3 },
+      default: { XAF: 900, XOF: 1e3, GMD: 73, CDF: 8100, GNF: 7300 }
     };
     _usdRatesOverride = null;
     FCFA_PER_LOCAL = {
       XAF: 1,
       XOF: 0.9,
       GMD: 6.6667,
-      CDF: 0.55,
+      CDF: 0.1111,
       GNF: 0.0625
     };
   }
@@ -53400,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-06-11T22:57:59.930Z";
+var BUILD_TIME = "2026-06-11T23:08:32.285Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -54677,15 +54677,15 @@ var COUNTRY_CURRENCY = {
   GQ: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
   GA: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
   // Non-CFA countries — configurable via admin "Devises" tab
-  CD: { currency: "CDF", fcfaPerUnit: 0.55, symbol: "CDF" },
-  // RDC: 1 CDF = 0.55 FCFA
+  CD: { currency: "CDF", fcfaPerUnit: 0.1111, symbol: "CDF" },
+  // RDC: 1 CDF = 1/9 FCFA (1 XAF = 9 CDF)
   GN: { currency: "GNF", fcfaPerUnit: 0.0625, symbol: "GNF" },
   // Guinée Conakry: 1 FCFA = 16 GNF
   GM: { currency: "GMD", fcfaPerUnit: 6.6667, symbol: "GMD" }
   // Gambie: 1 GMD ≈ 6.6667 FCFA (1 FCFA ≈ 0.15 GMD)
 };
 var NON_CFA_COUNTRIES_INFO = [
-  { code: "CD", name: "Congo RDC", currency: "CDF", symbol: "CDF", defaultFcfaPerUnit: 0.55 },
+  { code: "CD", name: "Congo RDC", currency: "CDF", symbol: "CDF", defaultFcfaPerUnit: 0.1111 },
   { code: "GN", name: "Guin\xE9e Conakry", currency: "GNF", symbol: "GNF", defaultFcfaPerUnit: 0.0625 },
   { code: "GM", name: "Gambie", currency: "GMD", symbol: "GMD", defaultFcfaPerUnit: 6.6667 }
 ];
