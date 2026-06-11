@@ -30,8 +30,22 @@ mkdir -p dist-deploy/api-server
 # Vide le contenu précédent sauf le dossier public/ (géré séparément)
 find dist-deploy/api-server -maxdepth 1 -not -name 'api-server' -not -name 'public' -delete 2>/dev/null || true
 cp -r artifacts/api-server/dist/. dist-deploy/api-server/
-# Préserver le package.json et start.sh personnalisés (s'ils ne viennent pas du build)
-cp dist-deploy/api-server/package.json dist-deploy/api-server/package.json 2>/dev/null || true
+
+# Générer le package.json pour Plesk (point d'entrée Node.js)
+cat > dist-deploy/api-server/package.json << 'EOF'
+{
+  "name": "buzz-booster-api",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --enable-source-maps index.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
+EOF
+
 echo "   ✓ dist-deploy/api-server/ mis à jour ($(du -sh dist-deploy/api-server/index.mjs | cut -f1))"
 
 # ── Frontend → public/ (document root Plesk) ────────────────
@@ -47,6 +61,7 @@ echo ""
 echo "   dist-deploy/api-server/           → Node.js app (index.mjs)"
 echo "   dist-deploy/api-server/public/    → Frontend statique"
 echo ""
-echo "Prochaine étape :"
+echo "Pour déployer :"
 echo '   bash push-to-github.sh "description des changements"'
+echo "   → Puis dans Plesk : git pull + Deploy Now + Restart"
 echo "============================================================"
