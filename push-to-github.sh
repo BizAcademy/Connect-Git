@@ -1,8 +1,14 @@
 #!/bin/bash
 # ============================================================
-# Push vers GitHub — BUZZ BOOSTER
-# Exécutez ce script depuis l'onglet Shell de Replit :
-#   bash push-to-github.sh "votre message de commit"
+# Build + Push vers GitHub — BUZZ BOOSTER
+# Une seule commande depuis l'onglet Shell de Replit :
+#   bash push-to-github.sh "description des changements"
+#
+# Ce script fait automatiquement :
+#   1. Build de production (frontend + API)
+#   2. Commit + Push vers GitHub (avec dist-deploy/ inclus)
+#
+# Ensuite dans Plesk : Pull → Deploy Now → Restart
 # ============================================================
 
 set -e
@@ -15,23 +21,29 @@ if [ -z "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
   exit 1
 fi
 
+echo ""
+echo "============================================================"
+echo "🔨 Étape 1/2 : Build de production pour Plesk..."
+echo "============================================================"
+bash build-for-plesk.sh
+
+echo ""
+echo "============================================================"
+echo "🚀 Étape 2/2 : Push vers GitHub..."
+echo "============================================================"
+
 REPO_URL="https://x-token:${GITHUB_PERSONAL_ACCESS_TOKEN}@github.com/BizAcademy/Connect-Git.git"
 
-# Configurer l'identité git (nécessaire pour git commit)
 git config user.email "replit@buzzbooster.app"
 git config user.name "BizAcademy"
 
-# S'assurer que le remote origin pointe vers GitHub
 git remote set-url origin "$REPO_URL" 2>/dev/null \
   || git remote add origin "$REPO_URL"
 
 BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
-echo "📌 Branche locale : $BRANCH"
 
-# Ajouter tous les fichiers modifiés
 git add -A
 
-# Vérifier s'il y a des changements à commiter
 if git diff --cached --quiet; then
   echo "ℹ️  Aucun changement à commiter."
 else
@@ -39,11 +51,15 @@ else
   echo "✅ Commit : $MSG"
 fi
 
-# Push vers GitHub
-# --force-with-lease : force safe (écrase le remote uniquement si personne
-# d'autre n'a pushé entre-temps — plus sûr que --force)
 echo "🚀 Push vers GitHub (branche main)..."
 git push --force-with-lease origin "$BRANCH:main" \
   || git push --force origin "$BRANCH:main"
 
-echo "✅ Push réussi → https://github.com/BizAcademy/Connect-Git"
+echo ""
+echo "============================================================"
+echo "✅ Terminé ! Prochaines étapes dans Plesk :"
+echo "   1. Git → Pull"
+echo "   2. Deploy Now"
+echo "   3. Restart"
+echo "   → L'application est en ligne avec les nouvelles modifications"
+echo "============================================================"
