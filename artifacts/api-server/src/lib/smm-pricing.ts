@@ -78,13 +78,15 @@ export async function deleteEntry(
 //
 // Peakerr (provider 4) uses premium rates; all other providers use default.
 export const USD_TO_LOCAL_RATES: Record<"peakerr" | "default", Record<string, number>> = {
-  peakerr: { XAF: 1000, XOF: 1050, GMD: 80,  CDF: 2700, GNF: 9000 },
-  default:  { XAF: 700,  XOF: 750,  GMD: 73,  CDF: 2400, GNF: 7300 },
+  peakerr: { XAF: 1000, XOF: 1111, GMD: 80,  CDF: 1818, GNF: 9000 },
+  default:  { XAF: 900,  XOF: 1000, GMD: 73,  CDF: 1636, GNF: 7300 },
 };
 
 // FCFA per unit of local currency — mirrors frontend currency.ts fcfaPerUnit.
+// XOF: 1 XAF = 0.90 XOF → 1 XOF = 0.90 FCFA (interne XAF)
+// CDF: 1 CDF = 0.55 XAF (FCFA)
 const FCFA_PER_LOCAL: Record<string, number> = {
-  XAF: 1, XOF: 1, GMD: 6.6667, CDF: 0.27, GNF: 0.0625,
+  XAF: 1, XOF: 0.90, GMD: 6.6667, CDF: 0.55, GNF: 0.0625,
 };
 
 /** USD → local currency rate for a given provider and currency. */

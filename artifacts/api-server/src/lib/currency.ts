@@ -29,15 +29,15 @@ export interface CurrencyInfo {
 
 /** AfribaPay-supported countries with their default currency mapping. */
 export const COUNTRY_CURRENCY: Record<string, CurrencyInfo> = {
-  // XOF zone (BCEAO) — 1:1 with FCFA
-  BJ: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
-  BF: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
-  CI: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
-  GW: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" }, // Guinée-Bissau
-  ML: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
-  NE: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
-  SN: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
-  TG: { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" },
+  // XOF zone (BCEAO) — 1 XAF = 0.90 XOF → 1 XOF = 0.90 FCFA (plateforme XAF-based)
+  BJ: { currency: "XOF", fcfaPerUnit: 0.90, symbol: "XOF" },
+  BF: { currency: "XOF", fcfaPerUnit: 0.90, symbol: "XOF" },
+  CI: { currency: "XOF", fcfaPerUnit: 0.90, symbol: "XOF" },
+  GW: { currency: "XOF", fcfaPerUnit: 0.90, symbol: "XOF" }, // Guinée-Bissau
+  ML: { currency: "XOF", fcfaPerUnit: 0.90, symbol: "XOF" },
+  NE: { currency: "XOF", fcfaPerUnit: 0.90, symbol: "XOF" },
+  SN: { currency: "XOF", fcfaPerUnit: 0.90, symbol: "XOF" },
+  TG: { currency: "XOF", fcfaPerUnit: 0.90, symbol: "XOF" },
 
   // XAF zone (BEAC) — 1:1 with FCFA
   CM: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
@@ -48,7 +48,7 @@ export const COUNTRY_CURRENCY: Record<string, CurrencyInfo> = {
   GA: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
 
   // Non-CFA countries — configurable via admin "Devises" tab
-  CD: { currency: "CDF", fcfaPerUnit: 0.27,   symbol: "CDF" }, // RDC: 1 CDF = 0.27 FCFA
+  CD: { currency: "CDF", fcfaPerUnit: 0.55,   symbol: "CDF" }, // RDC: 1 CDF = 0.55 FCFA
   GN: { currency: "GNF", fcfaPerUnit: 0.0625, symbol: "GNF" }, // Guinée Conakry: 1 FCFA = 16 GNF
   GM: { currency: "GMD", fcfaPerUnit: 6.6667, symbol: "GMD" }, // Gambie: 1 GMD ≈ 6.6667 FCFA (1 FCFA ≈ 0.15 GMD)
 };
@@ -61,12 +61,12 @@ export const NON_CFA_COUNTRIES_INFO: ReadonlyArray<{
   symbol: string;
   defaultFcfaPerUnit: number;
 }> = [
-  { code: "CD", name: "Congo RDC",      currency: "CDF", symbol: "CDF",  defaultFcfaPerUnit: 0.27   },
+  { code: "CD", name: "Congo RDC",      currency: "CDF", symbol: "CDF",  defaultFcfaPerUnit: 0.55   },
   { code: "GN", name: "Guinée Conakry", currency: "GNF", symbol: "GNF",  defaultFcfaPerUnit: 0.0625 },
   { code: "GM", name: "Gambie",         currency: "GMD", symbol: "GMD",  defaultFcfaPerUnit: 6.6667 },
 ];
 
-const DEFAULT_CURRENCY: CurrencyInfo = { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" };
+const DEFAULT_CURRENCY: CurrencyInfo = { currency: "XOF", fcfaPerUnit: 0.90, symbol: "XOF" };
 
 // ---------------------------------------------------------------------------
 // In-memory rate cache — populated by the admin API and by the deposit flow.
@@ -116,9 +116,9 @@ export function getCurrencyInfo(country: string | null | undefined): CurrencyInf
  * over these static defaults.
  */
 const CURRENCY_DEFAULT_RATE: Record<string, number> = {
-  XOF: 1,
+  XOF: 0.90,   // 1 XAF = 0.90 XOF → 1 XOF = 0.90 FCFA (interne XAF)
   XAF: 1,
-  CDF: 0.27,   // Congo RDC : 1 CDF = 0.27 FCFA
+  CDF: 0.55,   // Congo RDC : 1 CDF = 0.55 FCFA
   GNF: 0.0625, // Guinée Conakry : 1 GNF = 0.0625 FCFA (1 FCFA = 16 GNF)
   GMD: 6.6667, // Gambie : 1 GMD ≈ 6.6667 FCFA (1 FCFA ≈ 0.15 GMD)
 };
