@@ -31681,6 +31681,134 @@ var init_logger = __esm({
   }
 });
 
+// src/lib/smm-pricing.ts
+var smm_pricing_exports = {};
+__export(smm_pricing_exports, {
+  USD_TO_LOCAL_RATES: () => USD_TO_LOCAL_RATES,
+  clearUsdRatesOverride: () => clearUsdRatesOverride,
+  defaultPriceFcfa: () => defaultPriceFcfa,
+  defaultPriceFcfaForCurrency: () => defaultPriceFcfaForCurrency,
+  deleteEntry: () => deleteEntry,
+  enrichServices: () => enrichServices,
+  getUsdRates: () => getUsdRates,
+  loadPricing: () => loadPricing,
+  savePricing: () => savePricing,
+  setEntry: () => setEntry,
+  setUsdRatesOverride: () => setUsdRatesOverride,
+  usdToFcfaRate: () => usdToFcfaRate,
+  usdToLocalRate: () => usdToLocalRate
+});
+import { promises as fs } from "node:fs";
+import path from "node:path";
+function fileFor(providerId) {
+  return path.resolve(process.cwd(), "data", `smm-pricing-${providerId}.json`);
+}
+async function loadPricing(providerId = 1) {
+  if (cache[providerId]) return cache[providerId];
+  const FILE2 = fileFor(providerId);
+  try {
+    await fs.mkdir(path.dirname(FILE2), { recursive: true });
+    let txt = await fs.readFile(FILE2, "utf8").catch(() => "");
+    if (!txt && providerId === 1) {
+      txt = await fs.readFile(LEGACY_FILE, "utf8").catch(() => "");
+    }
+    cache[providerId] = txt ? JSON.parse(txt) : {};
+  } catch (err) {
+    logger.error({ err, providerId }, "failed to load smm pricing, starting empty");
+    cache[providerId] = {};
+  }
+  return cache[providerId];
+}
+async function savePricing(map, providerId = 1) {
+  cache[providerId] = map;
+  const FILE2 = fileFor(providerId);
+  await fs.mkdir(path.dirname(FILE2), { recursive: true });
+  await fs.writeFile(FILE2, JSON.stringify(map, null, 2), "utf8");
+}
+async function setEntry(serviceId, entry, providerId = 1) {
+  const map = await loadPricing(providerId);
+  map[String(serviceId)] = { ...entry, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+  await savePricing(map, providerId);
+  return map;
+}
+async function deleteEntry(serviceId, providerId = 1) {
+  const map = await loadPricing(providerId);
+  delete map[String(serviceId)];
+  await savePricing(map, providerId);
+  return map;
+}
+function getUsdRates() {
+  return _usdRatesOverride ?? USD_TO_LOCAL_RATES;
+}
+function setUsdRatesOverride(rates) {
+  _usdRatesOverride = {
+    default: { ...USD_TO_LOCAL_RATES.default, ...rates.default },
+    peakerr: { ...USD_TO_LOCAL_RATES.peakerr, ...rates.peakerr }
+  };
+}
+function clearUsdRatesOverride() {
+  _usdRatesOverride = null;
+}
+function usdToLocalRate(providerId, currency) {
+  const effective = getUsdRates();
+  const rates = providerId === 4 ? effective.peakerr : effective.default;
+  const cur = (currency ?? "XOF").toUpperCase();
+  return rates[cur] ?? rates["XOF"];
+}
+function usdToFcfaRate(providerId) {
+  return usdToLocalRate(providerId, "XAF");
+}
+function defaultPriceFcfaForCurrency(rateUsd, providerId, currency) {
+  const cur = (currency ?? "XOF").toUpperCase();
+  const localRate = usdToLocalRate(providerId, cur);
+  const fcfaPerUnit = FCFA_PER_LOCAL[cur] ?? 1;
+  return Math.round(Number(rateUsd) * localRate * fcfaPerUnit / 10) * 10;
+}
+function defaultPriceFcfa(rateUsd, providerId) {
+  return defaultPriceFcfaForCurrency(rateUsd, providerId, "XAF");
+}
+async function enrichServices(services, providerId = 1) {
+  const map = await loadPricing(providerId);
+  const enriched = services.map((s) => {
+    const override = map[String(s.service)];
+    const customPrice = override?.price_fcfa;
+    return {
+      ...s,
+      provider: providerId,
+      price_fcfa: typeof customPrice === "number" ? customPrice : defaultPriceFcfa(s.rate, providerId),
+      price_is_custom: typeof customPrice === "number",
+      hidden: !!override?.hidden,
+      featured: !!override?.featured
+    };
+  });
+  return enriched.sort((a, b) => {
+    if (a.featured && !b.featured) return -1;
+    if (!a.featured && b.featured) return 1;
+    return 0;
+  });
+}
+var LEGACY_FILE, cache, USD_TO_LOCAL_RATES, _usdRatesOverride, FCFA_PER_LOCAL;
+var init_smm_pricing = __esm({
+  "src/lib/smm-pricing.ts"() {
+    "use strict";
+    init_logger();
+    LEGACY_FILE = path.resolve(process.cwd(), "data", "smm-pricing.json");
+    cache = {};
+    USD_TO_LOCAL_RATES = {
+      peakerr: { XAF: 1e3, XOF: 1111, GMD: 80, CDF: 1818, GNF: 9e3 },
+      default: { XAF: 900, XOF: 1e3, GMD: 73, CDF: 1636, GNF: 7300 }
+    };
+    _usdRatesOverride = null;
+    FCFA_PER_LOCAL = {
+      XAF: 1,
+      XOF: 0.9,
+      GMD: 6.6667,
+      CDF: 0.55,
+      GNF: 0.0625
+    };
+  }
+});
+
 // src/lib/operator-health.ts
 var operator_health_exports = {};
 __export(operator_health_exports, {
@@ -53272,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-06-11T14:58:42.774Z";
+var BUILD_TIME = "2026-06-11T22:57:59.930Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -53349,97 +53477,8 @@ async function requireAdmin(req, res, next) {
   }
 }
 
-// src/lib/smm-pricing.ts
-init_logger();
-import { promises as fs } from "node:fs";
-import path from "node:path";
-function fileFor(providerId) {
-  return path.resolve(process.cwd(), "data", `smm-pricing-${providerId}.json`);
-}
-var LEGACY_FILE = path.resolve(process.cwd(), "data", "smm-pricing.json");
-var cache = {};
-async function loadPricing(providerId = 1) {
-  if (cache[providerId]) return cache[providerId];
-  const FILE2 = fileFor(providerId);
-  try {
-    await fs.mkdir(path.dirname(FILE2), { recursive: true });
-    let txt = await fs.readFile(FILE2, "utf8").catch(() => "");
-    if (!txt && providerId === 1) {
-      txt = await fs.readFile(LEGACY_FILE, "utf8").catch(() => "");
-    }
-    cache[providerId] = txt ? JSON.parse(txt) : {};
-  } catch (err) {
-    logger.error({ err, providerId }, "failed to load smm pricing, starting empty");
-    cache[providerId] = {};
-  }
-  return cache[providerId];
-}
-async function savePricing(map, providerId = 1) {
-  cache[providerId] = map;
-  const FILE2 = fileFor(providerId);
-  await fs.mkdir(path.dirname(FILE2), { recursive: true });
-  await fs.writeFile(FILE2, JSON.stringify(map, null, 2), "utf8");
-}
-async function setEntry(serviceId, entry, providerId = 1) {
-  const map = await loadPricing(providerId);
-  map[String(serviceId)] = { ...entry, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
-  await savePricing(map, providerId);
-  return map;
-}
-async function deleteEntry(serviceId, providerId = 1) {
-  const map = await loadPricing(providerId);
-  delete map[String(serviceId)];
-  await savePricing(map, providerId);
-  return map;
-}
-var USD_TO_LOCAL_RATES = {
-  peakerr: { XAF: 1e3, XOF: 1111, GMD: 80, CDF: 1818, GNF: 9e3 },
-  default: { XAF: 900, XOF: 1e3, GMD: 73, CDF: 1636, GNF: 7300 }
-};
-var FCFA_PER_LOCAL = {
-  XAF: 1,
-  XOF: 0.9,
-  GMD: 6.6667,
-  CDF: 0.55,
-  GNF: 0.0625
-};
-function usdToLocalRate(providerId, currency) {
-  const rates = providerId === 4 ? USD_TO_LOCAL_RATES.peakerr : USD_TO_LOCAL_RATES.default;
-  const cur = (currency ?? "XOF").toUpperCase();
-  return rates[cur] ?? rates["XOF"];
-}
-function usdToFcfaRate(providerId) {
-  return usdToLocalRate(providerId, "XAF");
-}
-function defaultPriceFcfaForCurrency(rateUsd, providerId, currency) {
-  const cur = (currency ?? "XOF").toUpperCase();
-  const localRate = usdToLocalRate(providerId, cur);
-  const fcfaPerUnit = FCFA_PER_LOCAL[cur] ?? 1;
-  return Math.round(Number(rateUsd) * localRate * fcfaPerUnit / 10) * 10;
-}
-function defaultPriceFcfa(rateUsd, providerId) {
-  return defaultPriceFcfaForCurrency(rateUsd, providerId, "XAF");
-}
-async function enrichServices(services, providerId = 1) {
-  const map = await loadPricing(providerId);
-  const enriched = services.map((s) => {
-    const override = map[String(s.service)];
-    const customPrice = override?.price_fcfa;
-    return {
-      ...s,
-      provider: providerId,
-      price_fcfa: typeof customPrice === "number" ? customPrice : defaultPriceFcfa(s.rate, providerId),
-      price_is_custom: typeof customPrice === "number",
-      hidden: !!override?.hidden,
-      featured: !!override?.featured
-    };
-  });
-  return enriched.sort((a, b) => {
-    if (a.featured && !b.featured) return -1;
-    if (!a.featured && b.featured) return 1;
-    return 0;
-  });
-}
+// src/routes/smm.ts
+init_smm_pricing();
 
 // src/lib/earnings.ts
 init_logger();
@@ -54057,6 +54096,10 @@ router2.get("/smm/providers", async (_req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+router2.get("/smm/currency-rates", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ usd_rates: getUsdRates() });
+});
 var popularCache = /* @__PURE__ */ new Map();
 var POPULAR_TTL_MS = 10 * 6e4;
 router2.get("/smm/popular-services", async (req, res) => {
@@ -54609,6 +54652,7 @@ var smm_default = router2;
 // src/routes/admin.ts
 var import_express3 = __toESM(require_express2(), 1);
 init_logger();
+init_smm_pricing();
 
 // src/lib/deposits.ts
 init_logger();
@@ -56533,6 +56577,74 @@ router3.delete("/admin/currencies/:country", requireUser, requireAdmin, async (r
   const latest = await fetchCurrencyRateSettings();
   setRateOverrides(latest);
   logger.info({ country: upperCountry }, "admin: currency rate reset to default");
+  res.json({ ok: true });
+});
+var USD_RATES_SETTINGS_KEY = "smm_usd_rates";
+async function fetchUsdRatesFromSettings() {
+  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) return null;
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL7}/rest/v1/settings?key=eq.${encodeURIComponent(USD_RATES_SETTINGS_KEY)}&select=value`,
+      { headers: serviceRoleHeaders3() }
+    );
+    if (!r.ok) return null;
+    const rows = await r.json();
+    if (!rows[0]?.value) return null;
+    const parsed = JSON.parse(rows[0].value);
+    if (parsed?.default && parsed?.peakerr) return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+router3.get("/admin/usd-rates", requireUser, requireAdmin, async (_req, res) => {
+  const saved = await fetchUsdRatesFromSettings();
+  const rates = saved ?? getUsdRates();
+  if (saved) setUsdRatesOverride(saved);
+  res.set("Cache-Control", "no-store");
+  res.json({ rates, defaults: USD_TO_LOCAL_RATES });
+});
+router3.put("/admin/usd-rates", requireUser, requireAdmin, async (req, res) => {
+  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+    return res.status(503).json({ error: "Configuration serveur manquante" });
+  }
+  const body = req.body?.rates;
+  if (!body || typeof body.default !== "object" || typeof body.peakerr !== "object") {
+    return res.status(400).json({ error: "Format invalide: { rates: { default: {...}, peakerr: {...} } }" });
+  }
+  const allEntries = [...Object.values(body.default), ...Object.values(body.peakerr)];
+  if (!allEntries.every((v) => typeof v === "number" && isFinite(v) && v > 0)) {
+    return res.status(400).json({ error: "Tous les taux doivent \xEAtre des nombres positifs" });
+  }
+  const r = await fetch(
+    `${SUPABASE_URL7}/rest/v1/settings`,
+    {
+      method: "POST",
+      headers: { ...serviceRoleHeaders3(), "Prefer": "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify({ key: USD_RATES_SETTINGS_KEY, value: JSON.stringify(body) })
+    }
+  );
+  if (!r.ok) {
+    const text = await r.text();
+    logger.error({ status: r.status, body: text.slice(0, 300) }, "admin/usd-rates upsert failed");
+    return res.status(502).json({ error: "Impossible de sauvegarder les taux" });
+  }
+  setUsdRatesOverride(body);
+  logger.info({ rates: body }, "admin: USD\u2192local rates updated");
+  res.json({ ok: true, rates: body });
+});
+router3.delete("/admin/usd-rates", requireUser, requireAdmin, async (_req, res) => {
+  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+    return res.status(503).json({ error: "Configuration serveur manquante" });
+  }
+  const r = await fetch(
+    `${SUPABASE_URL7}/rest/v1/settings?key=eq.${encodeURIComponent(USD_RATES_SETTINGS_KEY)}`,
+    { method: "DELETE", headers: serviceRoleHeaders3() }
+  );
+  if (!r.ok) return res.status(502).json({ error: "R\xE9initialisation impossible" });
+  const { clearUsdRatesOverride: clearUsdRatesOverride2 } = await Promise.resolve().then(() => (init_smm_pricing(), smm_pricing_exports));
+  clearUsdRatesOverride2();
+  logger.info("admin: USD\u2192local rates reset to defaults");
   res.json({ ok: true });
 });
 router3.get("/admin/operator-logos", requireUser, requireAdmin, async (_req, res) => {
