@@ -27,7 +27,7 @@ export const COUNTRY_CURRENCY: Record<string, CurrencyInfo> = {
   GQ: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
   GA: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
   // Non-CFA
-  CD: { currency: "CDF", fcfaPerUnit: 0.55,   symbol: "CDF" },
+  CD: { currency: "CDF", fcfaPerUnit: 0.1111,  symbol: "CDF" }, // 1 XAF = 9 CDF
   GN: { currency: "GNF", fcfaPerUnit: 0.0625, symbol: "GNF" },
   GM: { currency: "GMD", fcfaPerUnit: 6.6667, symbol: "GMD" },
 };

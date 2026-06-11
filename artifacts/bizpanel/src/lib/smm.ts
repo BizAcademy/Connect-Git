@@ -29,8 +29,8 @@ export interface SmmService {
 // Mirrors server-side smm-pricing.ts. Used for client-side price display so
 // users see the correct local currency amount before placing an order.
 export const USD_TO_LOCAL_RATES: Record<"peakerr" | "default", Record<string, number>> = {
-  peakerr: { XAF: 1000, XOF: 1111, GMD: 80,  CDF: 1818, GNF: 9000 },
-  default:  { XAF: 900,  XOF: 1000, GMD: 73,  CDF: 1636, GNF: 7300 },
+  peakerr: { XAF: 1000, XOF: 1111, GMD: 80,  CDF: 9000, GNF: 9000 },
+  default:  { XAF: 900,  XOF: 1000, GMD: 73,  CDF: 8100, GNF: 7300 },
 };
 
 export type UsdRates = typeof USD_TO_LOCAL_RATES;

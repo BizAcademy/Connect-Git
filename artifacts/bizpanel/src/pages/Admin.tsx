@@ -3083,8 +3083,8 @@ const USD_RATE_CURRENCIES: { code: string; label: string }[] = [
 type UsdRateMap = Record<"default" | "peakerr", Record<string, number>>;
 
 const DEFAULT_USD_RATES: UsdRateMap = {
-  default:  { XAF: 900,  XOF: 1000, GMD: 73, CDF: 1636, GNF: 7300 },
-  peakerr:  { XAF: 1000, XOF: 1111, GMD: 80, CDF: 1818, GNF: 9000 },
+  default:  { XAF: 900,  XOF: 1000, GMD: 73, CDF: 8100, GNF: 7300 },
+  peakerr:  { XAF: 1000, XOF: 1111, GMD: 80, CDF: 9000, GNF: 9000 },
 };
 
 const AdminCurrencies = () => {

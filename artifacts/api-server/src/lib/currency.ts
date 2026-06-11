@@ -48,7 +48,7 @@ export const COUNTRY_CURRENCY: Record<string, CurrencyInfo> = {
   GA: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
 
   // Non-CFA countries — configurable via admin "Devises" tab
-  CD: { currency: "CDF", fcfaPerUnit: 0.55,   symbol: "CDF" }, // RDC: 1 CDF = 0.55 FCFA
+  CD: { currency: "CDF", fcfaPerUnit: 0.1111,  symbol: "CDF" }, // RDC: 1 CDF = 1/9 FCFA (1 XAF = 9 CDF)
   GN: { currency: "GNF", fcfaPerUnit: 0.0625, symbol: "GNF" }, // Guinée Conakry: 1 FCFA = 16 GNF
   GM: { currency: "GMD", fcfaPerUnit: 6.6667, symbol: "GMD" }, // Gambie: 1 GMD ≈ 6.6667 FCFA (1 FCFA ≈ 0.15 GMD)
 };
@@ -61,7 +61,7 @@ export const NON_CFA_COUNTRIES_INFO: ReadonlyArray<{
   symbol: string;
   defaultFcfaPerUnit: number;
 }> = [
-  { code: "CD", name: "Congo RDC",      currency: "CDF", symbol: "CDF",  defaultFcfaPerUnit: 0.55   },
+  { code: "CD", name: "Congo RDC",      currency: "CDF", symbol: "CDF",  defaultFcfaPerUnit: 0.1111 },
   { code: "GN", name: "Guinée Conakry", currency: "GNF", symbol: "GNF",  defaultFcfaPerUnit: 0.0625 },
   { code: "GM", name: "Gambie",         currency: "GMD", symbol: "GMD",  defaultFcfaPerUnit: 6.6667 },
 ];
