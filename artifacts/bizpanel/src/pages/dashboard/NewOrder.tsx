@@ -6,6 +6,7 @@ import {
   placeSmmOrder,
   fetchSmmProviders,
   getLocalPricePerK,
+  useUsdRates,
   type SmmService,
   type SmmProviderPublic,
 } from "@/lib/smm";
@@ -175,6 +176,7 @@ export default function NewOrder() {
     const n = Number(providerIdParam);
     return n === 3 || n === 4 || n === 5 ? n : 1;
   })();
+  const usdRates = useUsdRates();
   const [providerInfo, setProviderInfo] = useState<SmmProviderPublic | null>(null);
   const [services, setServices] = useState<SmmService[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
@@ -330,7 +332,7 @@ export default function NewOrder() {
   const maxQ = selectedService ? Number(selectedService.max) : 0;
   const currencyInfo = getCurrencyInfo(profile?.country);
   const pricePerK = selectedService
-    ? getLocalPricePerK(selectedService, currencyInfo.currency, currencyInfo.fcfaPerUnit)
+    ? getLocalPricePerK(selectedService, currencyInfo.currency, currencyInfo.fcfaPerUnit, usdRates)
     : 0;
   // localTotal: amount displayed to user in their local currency
   const localTotal = selectedService ? Math.ceil((qty / 1000) * pricePerK) : 0;
@@ -569,7 +571,7 @@ export default function NewOrder() {
                       {selectedService.name}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {selectedService.category} · {getLocalPricePerK(selectedService, currencyInfo.currency, currencyInfo.fcfaPerUnit).toLocaleString()} {currencyInfo.symbol} / 1000
+                      {selectedService.category} · {getLocalPricePerK(selectedService, currencyInfo.currency, currencyInfo.fcfaPerUnit, usdRates).toLocaleString()} {currencyInfo.symbol} / 1000
                     </p>
                   </>
                 ) : (
@@ -640,7 +642,7 @@ export default function NewOrder() {
                             </div>
                             <div className="flex flex-col items-end gap-1 shrink-0">
                               <span className="text-sm font-bold text-primary whitespace-nowrap">
-                                {getLocalPricePerK(s, currencyInfo.currency, currencyInfo.fcfaPerUnit).toLocaleString()} {currencyInfo.symbol} / 1k
+                                {getLocalPricePerK(s, currencyInfo.currency, currencyInfo.fcfaPerUnit, usdRates).toLocaleString()} {currencyInfo.symbol} / 1k
                               </span>
                               {isSelected && (
                                 <span className="inline-flex items-center gap-1 text-[10px] text-primary font-semibold">

@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Response, type NextFunction } from "express";
 import { logger } from "../lib/logger";
 import { requireUser, requireAdmin, type AuthedRequest } from "../lib/auth";
-import { enrichServices, defaultPriceFcfa, defaultPriceFcfaForCurrency, loadPricing } from "../lib/smm-pricing";
+import { enrichServices, defaultPriceFcfa, defaultPriceFcfaForCurrency, loadPricing, getUsdRates } from "../lib/smm-pricing";
 import { appendEarning, computeEarning, estimateGainFromRevenue, findEarning, findEarningOwner } from "../lib/earnings";
 import {
   callProvider,
@@ -220,6 +220,16 @@ router.get("/smm/providers", async (_req, res) => {
     logger.error({ err }, "smm providers list error");
     res.status(500).json({ error: (err as Error).message });
   }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/smm/currency-rates — public: current admin-configured USD→local rates.
+// Used by the frontend to compute service prices in the user's currency without
+// a server round-trip for each service.
+// ---------------------------------------------------------------------------
+router.get("/smm/currency-rates", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ usd_rates: getUsdRates() });
 });
 
 // ---------------------------------------------------------------------------

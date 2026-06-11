@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { logger } from "../lib/logger";
 import { requireUser, requireAdmin, type AuthedRequest } from "../lib/auth";
-import { loadPricing, setEntry, deleteEntry, enrichServices, usdToFcfaRate } from "../lib/smm-pricing";
+import { loadPricing, setEntry, deleteEntry, enrichServices, usdToFcfaRate, getUsdRates, setUsdRatesOverride, USD_TO_LOCAL_RATES } from "../lib/smm-pricing";
 import { invalidateServicesCache } from "./smm";
 import {
   callProvider,
@@ -1394,6 +1394,95 @@ router.delete("/admin/currencies/:country", requireUser, requireAdmin, async (re
   setRateOverrides(latest);
 
   logger.info({ country: upperCountry }, "admin: currency rate reset to default");
+  res.json({ ok: true });
+});
+
+// ---------------------------------------------------------------------------
+// USD→local rates for SMM service pricing (configurable by admin)
+// GET  /api/admin/usd-rates → current rates (DB override or hardcoded defaults)
+// PUT  /api/admin/usd-rates → save new rates; updates in-memory cache instantly
+// DELETE /api/admin/usd-rates → reset to hardcoded defaults
+// ---------------------------------------------------------------------------
+
+const USD_RATES_SETTINGS_KEY = "smm_usd_rates";
+
+async function fetchUsdRatesFromSettings(): Promise<typeof USD_TO_LOCAL_RATES | null> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/settings?key=eq.${encodeURIComponent(USD_RATES_SETTINGS_KEY)}&select=value`,
+      { headers: serviceRoleHeaders() },
+    );
+    if (!r.ok) return null;
+    const rows = (await r.json()) as { value: string }[];
+    if (!rows[0]?.value) return null;
+    const parsed = JSON.parse(rows[0].value) as typeof USD_TO_LOCAL_RATES;
+    if (parsed?.default && parsed?.peakerr) return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+router.get("/admin/usd-rates", requireUser, requireAdmin, async (_req, res) => {
+  const saved = await fetchUsdRatesFromSettings();
+  const rates = saved ?? getUsdRates();
+  if (saved) setUsdRatesOverride(saved);
+  res.set("Cache-Control", "no-store");
+  res.json({ rates, defaults: USD_TO_LOCAL_RATES });
+});
+
+router.put("/admin/usd-rates", requireUser, requireAdmin, async (req: AuthedRequest, res) => {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).json({ error: "Configuration serveur manquante" });
+  }
+
+  const body = req.body?.rates as typeof USD_TO_LOCAL_RATES | undefined;
+  if (
+    !body ||
+    typeof body.default !== "object" ||
+    typeof body.peakerr !== "object"
+  ) {
+    return res.status(400).json({ error: "Format invalide: { rates: { default: {...}, peakerr: {...} } }" });
+  }
+
+  const allEntries = [...Object.values(body.default), ...Object.values(body.peakerr)];
+  if (!allEntries.every(v => typeof v === "number" && isFinite(v) && v > 0)) {
+    return res.status(400).json({ error: "Tous les taux doivent être des nombres positifs" });
+  }
+
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/settings`,
+    {
+      method: "POST",
+      headers: { ...serviceRoleHeaders(), "Prefer": "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify({ key: USD_RATES_SETTINGS_KEY, value: JSON.stringify(body) }),
+    },
+  );
+  if (!r.ok) {
+    const text = await r.text();
+    logger.error({ status: r.status, body: text.slice(0, 300) }, "admin/usd-rates upsert failed");
+    return res.status(502).json({ error: "Impossible de sauvegarder les taux" });
+  }
+
+  setUsdRatesOverride(body);
+  logger.info({ rates: body }, "admin: USD→local rates updated");
+  res.json({ ok: true, rates: body });
+});
+
+router.delete("/admin/usd-rates", requireUser, requireAdmin, async (_req, res) => {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).json({ error: "Configuration serveur manquante" });
+  }
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/settings?key=eq.${encodeURIComponent(USD_RATES_SETTINGS_KEY)}`,
+    { method: "DELETE", headers: serviceRoleHeaders() },
+  );
+  if (!r.ok) return res.status(502).json({ error: "Réinitialisation impossible" });
+
+  const { clearUsdRatesOverride } = await import("../lib/smm-pricing");
+  clearUsdRatesOverride();
+  logger.info("admin: USD→local rates reset to defaults");
   res.json({ ok: true });
 });
 

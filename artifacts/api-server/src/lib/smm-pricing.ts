@@ -82,6 +82,32 @@ export const USD_TO_LOCAL_RATES: Record<"peakerr" | "default", Record<string, nu
   default:  { XAF: 900,  XOF: 1000, GMD: 73,  CDF: 1636, GNF: 7300 },
 };
 
+// ---------------------------------------------------------------------------
+// Dynamic admin override for USD→local rates
+// ---------------------------------------------------------------------------
+// Set by admin API routes when rates are saved to settings.
+// Falls back to the hardcoded defaults above when null.
+
+let _usdRatesOverride: typeof USD_TO_LOCAL_RATES | null = null;
+
+/** Returns current USD→local rates (admin DB override if set, else hardcoded defaults). */
+export function getUsdRates(): typeof USD_TO_LOCAL_RATES {
+  return _usdRatesOverride ?? USD_TO_LOCAL_RATES;
+}
+
+/** Populate the in-memory override. Called by admin routes after DB write. */
+export function setUsdRatesOverride(rates: typeof USD_TO_LOCAL_RATES): void {
+  _usdRatesOverride = {
+    default:  { ...USD_TO_LOCAL_RATES.default,  ...rates.default  },
+    peakerr:  { ...USD_TO_LOCAL_RATES.peakerr,  ...rates.peakerr  },
+  };
+}
+
+/** Clear the in-memory override (reverts to hardcoded defaults). */
+export function clearUsdRatesOverride(): void {
+  _usdRatesOverride = null;
+}
+
 // FCFA per unit of local currency — mirrors frontend currency.ts fcfaPerUnit.
 // XOF: 1 XAF = 0.90 XOF → 1 XOF = 0.90 FCFA (interne XAF)
 // CDF: 1 CDF = 0.55 XAF (FCFA)
@@ -91,7 +117,8 @@ const FCFA_PER_LOCAL: Record<string, number> = {
 
 /** USD → local currency rate for a given provider and currency. */
 export function usdToLocalRate(providerId?: number, currency?: string): number {
-  const rates = providerId === 4 ? USD_TO_LOCAL_RATES.peakerr : USD_TO_LOCAL_RATES.default;
+  const effective = getUsdRates();
+  const rates = providerId === 4 ? effective.peakerr : effective.default;
   const cur = (currency ?? "XOF").toUpperCase();
   return rates[cur] ?? rates["XOF"]!;
 }

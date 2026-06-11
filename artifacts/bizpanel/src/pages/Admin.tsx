@@ -3071,12 +3071,40 @@ interface CurrencyRate {
   default: number;
 }
 
+// Currencies displayed in USD rate editor (code → display label)
+const USD_RATE_CURRENCIES: { code: string; label: string }[] = [
+  { code: "XAF", label: "XAF (Cameroun, Tchad…)" },
+  { code: "XOF", label: "XOF (Sénégal, CI, Mali…)" },
+  { code: "CDF", label: "CDF (Congo RDC)" },
+  { code: "GMD", label: "GMD (Gambie)" },
+  { code: "GNF", label: "GNF (Guinée Conakry)" },
+];
+
+type UsdRateMap = Record<"default" | "peakerr", Record<string, number>>;
+
+const DEFAULT_USD_RATES: UsdRateMap = {
+  default:  { XAF: 900,  XOF: 1000, GMD: 73, CDF: 1636, GNF: 7300 },
+  peakerr:  { XAF: 1000, XOF: 1111, GMD: 80, CDF: 1818, GNF: 9000 },
+};
+
 const AdminCurrencies = () => {
+  // --- non-CFA deposit rates (CDF, GNF, GMD) ---
   const [rates, setRates] = useState<CurrencyRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+
+  // --- USD→local service pricing rates ---
+  const [usdRates, setUsdRates] = useState<UsdRateMap>(DEFAULT_USD_RATES);
+  const [usdDefaults, setUsdDefaults] = useState<UsdRateMap>(DEFAULT_USD_RATES);
+  const [usdEdit, setUsdEdit] = useState<Record<string, Record<string, string>>>({
+    default: Object.fromEntries(Object.entries(DEFAULT_USD_RATES.default).map(([k, v]) => [k, String(v)])),
+    peakerr: Object.fromEntries(Object.entries(DEFAULT_USD_RATES.peakerr).map(([k, v]) => [k, String(v)])),
+  });
+  const [usdLoading, setUsdLoading] = useState(true);
+  const [usdSaving, setUsdSaving] = useState(false);
+  const [usdSaved, setUsdSaved] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -3095,7 +3123,27 @@ const AdminCurrencies = () => {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  const loadUsd = async () => {
+    setUsdLoading(true);
+    try {
+      const data = await authedFetch("/api/admin/usd-rates");
+      const json = await data.json();
+      const r: UsdRateMap = json.rates ?? DEFAULT_USD_RATES;
+      const d: UsdRateMap = json.defaults ?? DEFAULT_USD_RATES;
+      setUsdRates(r);
+      setUsdDefaults(d);
+      setUsdEdit({
+        default: Object.fromEntries(Object.entries(r.default).map(([k, v]) => [k, String(v)])),
+        peakerr: Object.fromEntries(Object.entries(r.peakerr).map(([k, v]) => [k, String(v)])),
+      });
+    } catch {
+      toast.error("Impossible de charger les taux USD");
+    } finally {
+      setUsdLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); loadUsd(); }, []);
 
   const save = async (country: string) => {
     const raw = editValues[country] ?? "";
@@ -3148,6 +3196,63 @@ const AdminCurrencies = () => {
     }
   };
 
+  const saveUsd = async () => {
+    const newRates: UsdRateMap = { default: {}, peakerr: {} };
+    for (const group of ["default", "peakerr"] as const) {
+      for (const { code } of USD_RATE_CURRENCIES) {
+        const raw = usdEdit[group]?.[code] ?? "";
+        const val = parseFloat(raw.replace(",", "."));
+        if (!Number.isFinite(val) || val <= 0) {
+          toast.error(`Taux invalide pour ${code} (${group}) — entrez un nombre positif`);
+          return;
+        }
+        newRates[group][code] = val;
+      }
+    }
+    setUsdSaving(true);
+    try {
+      const r = await authedFetch("/api/admin/usd-rates", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rates: newRates }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        toast.error(j.error ?? "Sauvegarde impossible");
+        return;
+      }
+      setUsdRates(newRates);
+      setUsdSaved(true);
+      setTimeout(() => setUsdSaved(false), 2500);
+      toast.success("Tarifs des services mis à jour — visibles immédiatement pour les utilisateurs");
+    } catch {
+      toast.error("Erreur réseau");
+    } finally {
+      setUsdSaving(false);
+    }
+  };
+
+  const resetUsd = async () => {
+    setUsdSaving(true);
+    try {
+      const r = await authedFetch("/api/admin/usd-rates", { method: "DELETE" });
+      if (!r.ok) {
+        toast.error("Réinitialisation impossible");
+        return;
+      }
+      setUsdRates(DEFAULT_USD_RATES);
+      setUsdEdit({
+        default: Object.fromEntries(Object.entries(DEFAULT_USD_RATES.default).map(([k, v]) => [k, String(v)])),
+        peakerr: Object.fromEntries(Object.entries(DEFAULT_USD_RATES.peakerr).map(([k, v]) => [k, String(v)])),
+      });
+      toast.success("Taux USD remis aux valeurs par défaut");
+    } catch {
+      toast.error("Erreur réseau");
+    } finally {
+      setUsdSaving(false);
+    }
+  };
+
   const isModified = (r: CurrencyRate) => {
     const v = parseFloat((editValues[r.country] ?? "").replace(",", "."));
     return Number.isFinite(v) && Math.abs(v - r.fcfaPerUnit) > 1e-9;
@@ -3155,19 +3260,131 @@ const AdminCurrencies = () => {
 
   const isCustom = (r: CurrencyRate) => Math.abs(r.fcfaPerUnit - r.default) > 1e-9;
 
+  const isUsdModified = () => {
+    for (const group of ["default", "peakerr"] as const) {
+      for (const { code } of USD_RATE_CURRENCIES) {
+        const current = usdRates[group]?.[code] ?? 0;
+        const edited = parseFloat((usdEdit[group]?.[code] ?? "").replace(",", "."));
+        if (Number.isFinite(edited) && Math.abs(edited - current) > 0.001) return true;
+      }
+    }
+    return false;
+  };
+
+  const isUsdCustom = () => {
+    for (const group of ["default", "peakerr"] as const) {
+      for (const { code } of USD_RATE_CURRENCIES) {
+        const def = usdDefaults[group]?.[code] ?? 0;
+        const cur = usdRates[group]?.[code] ?? 0;
+        if (Math.abs(cur - def) > 0.001) return true;
+      }
+    }
+    return false;
+  };
+
   return (
     <div className="space-y-4 max-w-2xl">
+
+      {/* ── Tarifs services : 1 USD = X devise ── */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
-            Taux de conversion non-CFA
+            Tarifs des services SMM (1 USD = X devise)
+            <Button size="sm" variant="ghost" onClick={loadUsd} className="h-7 px-2 ml-auto">
+              <RefreshCw size={13} className={usdLoading ? "animate-spin" : ""} />
+            </Button>
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Ces taux définissent le prix affiché aux utilisateurs pour chaque service SMM.
+            Une modification est <strong>instantanément visible</strong> sur la page de commande, sans redéploiement.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {usdLoading ? <LogoLoader /> : (
+            <div className="space-y-5">
+              {(["default", "peakerr"] as const).map(group => (
+                <div key={group} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm">
+                      {group === "default" ? "Fournisseurs standard (P1, P3, P5)" : "Peakerr (P4)"}
+                    </span>
+                    {isUsdCustom() && (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium px-1.5 py-0.5">
+                        Personnalisé
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {USD_RATE_CURRENCIES.map(({ code, label }) => (
+                      <div key={code}>
+                        <Label className="text-xs text-muted-foreground">{label}</Label>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={usdEdit[group]?.[code] ?? ""}
+                            onChange={e => setUsdEdit(prev => ({
+                              ...prev,
+                              [group]: { ...prev[group], [code]: e.target.value },
+                            }))}
+                            className="h-8 text-sm"
+                            placeholder={String(usdDefaults[group]?.[code] ?? "")}
+                          />
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{code}</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Défaut : {usdDefaults[group]?.[code]}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex gap-2 pt-1">
+                <Button
+                  size="sm"
+                  onClick={saveUsd}
+                  disabled={usdSaving || !isUsdModified()}
+                  className="flex items-center gap-1.5"
+                >
+                  {usdSaved ? (
+                    <><CheckCircle2 size={13} className="text-green-300" /> Sauvegardé</>
+                  ) : usdSaving ? (
+                    <><RefreshCw size={13} className="animate-spin" /> Sauvegarde…</>
+                  ) : (
+                    <><Save size={13} /> Sauvegarder les tarifs</>
+                  )}
+                </Button>
+                {isUsdCustom() && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={resetUsd}
+                    disabled={usdSaving}
+                    className="flex items-center gap-1.5"
+                  >
+                    <RotateCcw size={13} /> Réinitialiser aux défauts
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Taux dépôt : 1 devise non-CFA = X FCFA ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            Taux de conversion dépôts (non-CFA)
             <Button size="sm" variant="ghost" onClick={load} className="h-7 px-2 ml-auto">
               <RefreshCw size={13} />
             </Button>
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Seules les devises hors zone CFA nécessitent un taux de conversion. Les modifications sont
-            appliquées immédiatement aux prochains dépôts, sans redéploiement.
+            Taux de change pour convertir les dépôts reçus en devises hors zone CFA (CDF, GNF, GMD) en FCFA avant de créditer le compte.
           </p>
         </CardHeader>
         <CardContent>
@@ -3241,11 +3458,11 @@ const AdminCurrencies = () => {
           )}
         </CardContent>
       </Card>
+
       <div className="rounded-md bg-muted px-4 py-3 text-xs text-muted-foreground space-y-1">
-        <p className="font-medium text-foreground">Comment fonctionne la conversion</p>
-        <p>Le solde est toujours stocké en FCFA. Lorsqu'un dépôt est reçu d'un pays non-CFA (ex : Congo RDC en CDF),
-        le montant est converti en FCFA selon le taux configuré ici avant d'être crédité au compte de l'utilisateur.</p>
-        <p>Les pays XOF/XAF (zone CFA) ont un taux fixe de 1:1 et ne sont pas modifiables.</p>
+        <p className="font-medium text-foreground">Comment fonctionnent ces taux</p>
+        <p><strong>Tarifs services</strong> : multipliés par le taux USD du fournisseur pour calculer le prix affiché à l'utilisateur. Un taux plus élevé = prix plus élevé affiché.</p>
+        <p><strong>Taux dépôts</strong> : le solde est toujours stocké en FCFA. Un dépôt en CDF/GNF/GMD est converti en FCFA selon ce taux avant d'être crédité.</p>
       </div>
     </div>
   );

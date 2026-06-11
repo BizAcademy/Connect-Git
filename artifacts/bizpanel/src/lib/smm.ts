@@ -1,4 +1,5 @@
 // SMM Panel API client (calls our backend proxy, not the provider directly)
+import { useState, useEffect } from "react";
 import { getAuthHeaders, authedFetch } from "./authFetch";
 
 const authHeaders = getAuthHeaders;
@@ -32,22 +33,47 @@ export const USD_TO_LOCAL_RATES: Record<"peakerr" | "default", Record<string, nu
   default:  { XAF: 900,  XOF: 1000, GMD: 73,  CDF: 1636, GNF: 7300 },
 };
 
+export type UsdRates = typeof USD_TO_LOCAL_RATES;
+
+/**
+ * Hook: fetches current admin-configured USD→local rates from the server.
+ * Falls back to hardcoded defaults while loading or on error.
+ * Rates update automatically when this hook re-mounts (page navigation).
+ */
+export function useUsdRates(): UsdRates {
+  const [rates, setRates] = useState<UsdRates | null>(null);
+  useEffect(() => {
+    fetch("/api/smm/currency-rates")
+      .then(r => r.json())
+      .then((data: { usd_rates?: UsdRates }) => {
+        if (data?.usd_rates?.default && data?.usd_rates?.peakerr) {
+          setRates(data.usd_rates);
+        }
+      })
+      .catch(() => {});
+  }, []);
+  return rates ?? USD_TO_LOCAL_RATES;
+}
+
 /**
  * Price per 1 000 units in LOCAL currency for display purposes.
  * - Custom (admin-set) prices are stored as FCFA; divide by fcfaPerUnit to get local.
  * - Default prices are computed directly from the provider USD rate × local rate.
+ * @param dynamicRates — pass the result of useUsdRates() for live admin-configured rates.
  */
 export function getLocalPricePerK(
   service: SmmService,
   currency: string,
   fcfaPerUnit: number,
+  dynamicRates?: UsdRates,
 ): number {
   const cur = currency.toUpperCase();
   if (service.price_is_custom) {
     if (fcfaPerUnit === 1) return service.price_fcfa;
     return Math.round(service.price_fcfa / fcfaPerUnit);
   }
-  const rates = service.provider === 4 ? USD_TO_LOCAL_RATES.peakerr : USD_TO_LOCAL_RATES.default;
+  const effective = dynamicRates ?? USD_TO_LOCAL_RATES;
+  const rates = service.provider === 4 ? effective.peakerr : effective.default;
   const rate = rates[cur] ?? rates["XOF"]!;
   return Math.round((Number(service.rate) * rate) / 10) * 10;
 }
