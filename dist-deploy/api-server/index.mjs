@@ -53400,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-06-11T23:39:26.000Z";
+var BUILD_TIME = "2026-06-12T16:44:53.256Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -56597,6 +56597,15 @@ async function fetchUsdRatesFromSettings() {
     return null;
   }
 }
+async function loadUsdRatesAtStartup() {
+  const saved = await fetchUsdRatesFromSettings();
+  if (saved) {
+    setUsdRatesOverride(saved);
+    logger.info({ rates: saved }, "USD rates loaded from settings at startup");
+  } else {
+    logger.info("No saved USD rates in settings \u2014 using hardcoded defaults");
+  }
+}
 router3.get("/admin/usd-rates", requireUser, requireAdmin, async (_req, res) => {
   const saved = await fetchUsdRatesFromSettings();
   const rates = saved ?? getUsdRates();
@@ -58932,7 +58941,7 @@ if (rawPort && rawPort.trim() !== "") {
     "PORT environment variable is required but was not provided."
   );
 }
-app_default.listen(port, (err) => {
+app_default.listen(port, async (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
@@ -58940,6 +58949,7 @@ app_default.listen(port, (err) => {
   logger.info({ port }, "Server listening");
   startSupportCleanup();
   void purgeSensitiveSettingRows();
+  await loadUsdRatesAtStartup();
   void warmServicesCache();
   startMissedRefundScanner();
   startPendingPaymentScanner();
