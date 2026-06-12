@@ -21,6 +21,7 @@ import { startOrderStatusPoller } from "./lib/order-status-poller";
 import { startMissedRefundScanner } from "./lib/missed-refund-scanner";
 import { startPendingPaymentScanner } from "./lib/pending-payment-scanner";
 import { syncOrderInternal, warmServicesCache } from "./routes/smm";
+import { loadUsdRatesAtStartup } from "./routes/admin";
 
 // PORT detection :
 // - Replit/dev : PORT est toujours fourni par l'env -> on l'utilise.
@@ -45,7 +46,7 @@ if (rawPort && rawPort.trim() !== "") {
   );
 }
 
-app.listen(port, (err) => {
+app.listen(port, async (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
@@ -54,6 +55,10 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
   startSupportCleanup();
   void purgeSensitiveSettingRows();
+  // Load admin-configured USD→local pricing from the DB BEFORE warming the
+  // services cache, so the warmed prices reflect the saved rates instead of
+  // reverting to the hardcoded defaults on every restart/redeploy.
+  await loadUsdRatesAtStartup();
   // Pre-warm the enriched services cache so the first user request is instant
   void warmServicesCache();
   // Background poller: pushes provider status updates onto local orders so

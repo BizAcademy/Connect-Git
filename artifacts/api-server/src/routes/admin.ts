@@ -1424,6 +1424,23 @@ async function fetchUsdRatesFromSettings(): Promise<typeof USD_TO_LOCAL_RATES | 
   }
 }
 
+/**
+ * Load the admin-configured USD→local rates from Supabase into the in-memory
+ * override at server startup. Without this, every restart/redeploy silently
+ * reverts pricing to the hardcoded defaults in smm-pricing.ts until an admin
+ * reopens the "Devises" tab and re-saves. Safe no-op when nothing is saved or
+ * Supabase is unreachable (keeps the hardcoded defaults).
+ */
+export async function loadUsdRatesAtStartup(): Promise<void> {
+  const saved = await fetchUsdRatesFromSettings();
+  if (saved) {
+    setUsdRatesOverride(saved);
+    logger.info({ rates: saved }, "USD rates loaded from settings at startup");
+  } else {
+    logger.info("No saved USD rates in settings — using hardcoded defaults");
+  }
+}
+
 router.get("/admin/usd-rates", requireUser, requireAdmin, async (_req, res) => {
   const saved = await fetchUsdRatesFromSettings();
   const rates = saved ?? getUsdRates();

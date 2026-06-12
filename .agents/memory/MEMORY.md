@@ -1,1 +1,2 @@
 - [PostgREST upsert needs on_conflict](supabase-postgrest-upsert.md) — settings upserts must pass ?on_conflict=key or they 409 on the 2nd save (PK-default conflict target).
+- [USD service rates startup load](usd-rates-startup-load.md) — admin USD pricing is in-memory only; must load from DB at boot (before warmServicesCache) or it reverts to hardcoded defaults on restart.
