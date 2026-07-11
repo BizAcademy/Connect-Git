@@ -47,7 +47,9 @@ const Navbar = () => {
 
   useEffect(() => {
     setLoadingServices(true);
-    fetchSmmServices()
+    // Provider #1 (SMMpanel) est retiré ; le menu affiche le catalogue du
+    // fournisseur #4 (Peakerr), le plus complet.
+    fetchSmmServices(4)
       .then((data) => setServices(data))
       .catch((err) => console.error("SMM services error:", err))
       .finally(() => setLoadingServices(false));
