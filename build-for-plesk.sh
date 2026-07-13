@@ -23,6 +23,17 @@ NODE_ENV=production BASE_PATH=/ pnpm --filter @workspace/bizpanel run build
 echo "✅ Frontend buildé"
 
 echo ""
+echo "🔎 [2b/4] Pré-rendu SEO de la page d'accueil (contenu visible pour Google)..."
+# Étape volontairement NON bloquante : si le navigateur headless échoue,
+# le build continue avec l'index.html standard (le site reste fonctionnel).
+if pnpm --filter @workspace/bizpanel run prerender; then
+  echo "✅ Page d'accueil pré-rendue"
+else
+  echo "⚠️  Pré-rendu ignoré — le site reste fonctionnel, mais la page d'accueil"
+  echo "    ne contiendra pas le contenu statique attendu par Google."
+fi
+
+echo ""
 echo "📋 [3/4] Copie vers dist-deploy/ (structure Plesk)..."
 
 # ── API Server ──────────────────────────────────────────────
