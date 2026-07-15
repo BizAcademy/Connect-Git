@@ -211,7 +211,7 @@ export const DashboardLayout = () => {
         <Button
           size="sm"
           variant="outline"
-          className="w-full justify-center gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+          className="w-full justify-center gap-2 text-blue-600 border-blue-600/30 hover:bg-blue-600/10 hover:text-blue-700"
           onClick={signOut}
         >
           <LogOut size={15} /> Déconnexion
