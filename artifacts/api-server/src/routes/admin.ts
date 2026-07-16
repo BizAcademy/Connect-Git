@@ -759,8 +759,24 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
       wantOrders ? fetch(buildOrderUrl(), { headers }) : Promise.resolve(null as any),
       wantPays ? fetch(buildPayUrl(), { headers }) : Promise.resolve(null as any),
     ]);
-    const orders: any[] = ordRes && ordRes.ok ? await ordRes.json() : [];
-    const pays: any[] = payRes && payRes.ok ? await payRes.json() : [];
+    let orders: any[] = [];
+    let pays: any[] = [];
+    if (ordRes) {
+      if (ordRes.ok) {
+        orders = await ordRes.json();
+      } else {
+        const errBody = await ordRes.text().catch(() => "");
+        logger.error({ status: ordRes.status, body: errBody.slice(0, 400) }, "admin/transactions: orders query failed — possible missing column in DB");
+      }
+    }
+    if (payRes) {
+      if (payRes.ok) {
+        pays = await payRes.json();
+      } else {
+        const errBody = await payRes.text().catch(() => "");
+        logger.error({ status: payRes.status, body: errBody.slice(0, 400) }, "admin/transactions: payments query failed — possible missing column in DB");
+      }
+    }
 
     // Resolve user labels in one query
     const userIds = Array.from(new Set([
