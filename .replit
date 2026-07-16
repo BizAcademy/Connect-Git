@@ -24,6 +24,8 @@ timeoutMs = 20000
 [userenv.shared]
 SMM_PANEL_5_API_URL = "https://exosupplier.com/api/v2"
 AFRIBAPAY_API_BASE = "https://api.afribapay.com"
+VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxYWhxbnhqZmx0aGF6cGhocHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMTEzNTYsImV4cCI6MjA5MTU4NzM1Nn0.f56ogQYWBK8cqzyp-P6--K3n3y0JVZGkw6VtSF462jI"
+VITE_SUPABASE_URL = "https://yqahqnxjflthazphhpqx.supabase.co"
 
 [nix]
 channel = "stable-25_05"
