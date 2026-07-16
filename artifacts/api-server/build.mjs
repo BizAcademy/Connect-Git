@@ -14,6 +14,11 @@ async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
+<<<<<<< HEAD
+=======
+  const buildTime = new Date().toISOString();
+
+>>>>>>> origin/main
   await esbuild({
     entryPoints: [path.resolve(artifactDir, "src/index.ts")],
     platform: "node",
@@ -22,6 +27,12 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
+<<<<<<< HEAD
+=======
+    define: {
+      "process.env.BUILD_TIME": JSON.stringify(buildTime),
+    },
+>>>>>>> origin/main
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
     // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
     // Examples of unbundleable packages:

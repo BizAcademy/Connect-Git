@@ -18,3 +18,15 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+<<<<<<< HEAD
+=======
+
+[userenv]
+
+[userenv.shared]
+SMM_PANEL_5_API_URL = "https://exosupplier.com/api/v2"
+AFRIBAPAY_API_BASE = "https://api.afribapay.com"
+
+[nix]
+channel = "stable-25_05"
+>>>>>>> origin/main

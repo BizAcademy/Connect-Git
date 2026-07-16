@@ -1,0 +1,89 @@
+ash push-to-github.sh "description précise des changements"
+
+============================================================
+🔨 Étape 1/2 : Build de production pour Plesk...
+============================================================
+
+🔨 [1/4] Build API Server...
+
+> @workspace/api-server@0.0.0 build /home/runner/workspace/artifacts/api-server
+> node ./build.mjs
+
+
+  dist/index.mjs                       2.1mb ⚠️
+  dist/pino-worker.mjs               153.4kb
+  dist/pino-file.mjs                 142.1kb
+  dist/pino-pretty.mjs               114.6kb
+  dist/thread-stream-worker.mjs        7.3kb
+  dist/index.mjs.map                   3.5mb
+  dist/pino-worker.mjs.map           256.9kb
+  dist/pino-file.mjs.map             229.0kb
+  dist/pino-pretty.mjs.map           204.0kb
+  dist/thread-stream-worker.mjs.map   12.0kb
+
+⚡ Done in 611ms
+✅ API Server buildé
+
+🔨 [2/4] Build Frontend (BizPanel)...
+
+> @workspace/bizpanel@0.0.0 build /home/runner/workspace/artifacts/bizpanel
+> vite build --config vite.config.ts
+
+vite v7.3.3 building client environment for production...
+src/components/ui/sonner.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/label.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/select.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+✓ 2517 modules transformed.
+[plugin vite:reporter] 
+(!) /home/runner/workspace/node_modules/.pnpm/sonner@2.0.7_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/sonner/dist/index.mjs is dynamically imported by /home/runner/workspace/artifacts/bizpanel/src/hooks/useAuth.tsx but also statically imported by /home/runner/workspace/artifacts/bizpanel/src/components/ui/AvatarUpload.tsx, /home/runner/workspace/artifacts/bizpanel/src/components/ui/CountrySelectModal.tsx, /home/runner/workspace/artifacts/bizpanel/src/components/ui/sonner.tsx, /home/runner/workspace/artifacts/bizpanel/src/lib/authFetch.ts, /home/runner/workspace/artifacts/bizpanel/src/pages/Admin.tsx, /home/runner/workspace/artifacts/bizpanel/src/pages/Auth.tsx, /home/runner/workspace/artifacts/bizpanel/src/pages/ResetPassword.tsx, /home/runner/workspace/artifacts/bizpanel/src/pages/dashboard/Deposit.tsx, /home/runner/workspace/artifacts/bizpanel/src/pages/dashboard/NewOrder.tsx, /home/runner/workspace/artifacts/bizpanel/src/pages/dashboard/OrderProviderSelect.tsx, /home/runner/workspace/artifacts/bizpanel/src/pages/dashboard/Refunds.tsx, /home/runner/workspace/artifacts/bizpanel/src/pages/dashboard/Support.tsx, /home/runner/workspace/artifacts/bizpanel/src/pages/dashboard/Transactions.tsx, dynamic import will not move module into another chunk.
+
+dist/public/index.html                                                 4.76 kB │ gzip:   1.54 kB
+dist/public/assets/6044021293859933661_1778088768929-B9obPzdq.jpg     75.06 kB
+dist/public/assets/logo-buzzbooster-DJ1FHwhh.png                     109.88 kB
+dist/public/assets/index-Ca1FoaM4.css                                140.25 kB │ gzip:  22.51 kB
+dist/public/assets/index-C7Ie3PwJ.js                               1,347.54 kB │ gzip: 377.89 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 6.40s
+✅ Frontend buildé
+
+🔎 [2b/4] Pré-rendu SEO de la page d'accueil (contenu visible pour Google)...
+
+> @workspace/bizpanel@0.0.0 prerender /home/runner/workspace/artifacts/bizpanel
+> node prerender.mjs
+
+[prerender] Chromium : /nix/store/qa9cnw4v5xkxyip6mb9kxqfq1z4x2dx1-chromium-138.0.7204.100/bin/chromium
+[prerender] / -> index.html (51766 octets HTML, ~16876 caractères de texte)
+✅ Page d'accueil pré-rendue
+
+📋 [3/4] Copie vers dist-deploy/ (structure Plesk)...
+   ✓ dist-deploy/api-server/ mis à jour (2.2M)
+   ✓ dist-deploy/api-server/public/ créé (1.9M)
+
+============================================================
+✅ [4/4] Build terminé ! Structure Plesk prête :
+
+   dist-deploy/api-server/           → Node.js app (index.mjs)
+   dist-deploy/api-server/public/    → Frontend statique
+
+Pour déployer :
+   bash push-to-github.sh "description des changements"
+   → Puis dans Plesk : git pull + Deploy Now + Restart
+============================================================
+
+============================================================
+🚀 Étape 2/2 : Push vers GitHub...
+============================================================
+[main e43f85b] description précise des changements
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+✅ Commit : description précise des changements
+🚀 Push vers GitHub (branche main)...
+remote: Invalid username or token. Password authentication is not supported for Git operations.
+fatal: Authentication failed for 'https://github.com/BizAcademy/Connect-Git.git/'
+remote: Invalid username or token. Password authentication is not supported for Git operations.
+fatal: Authentication failed for 'https://github.com/BizAcademy/Connect-Git.git/'
+~/workspace$ 
