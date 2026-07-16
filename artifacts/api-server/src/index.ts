@@ -1,11 +1,3 @@
-<<<<<<< HEAD
-import app from "./app";
-import { logger } from "./lib/logger";
-
-const rawPort = process.env["PORT"];
-
-if (!rawPort) {
-=======
 // Capture toute erreur non gérée AVANT le moindre import (utile pour
 // diagnostiquer les crashs au démarrage sur Plesk Passenger : sans ça,
 // Passenger affiche juste "We're sorry, but something went wrong" sans
@@ -49,31 +41,18 @@ if (rawPort && rawPort.trim() !== "") {
   // Production sans PORT explicite (typique Passenger) -> port 0 (auto).
   port = 0;
 } else {
->>>>>>> origin/main
   throw new Error(
     "PORT environment variable is required but was not provided.",
   );
 }
 
-<<<<<<< HEAD
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-app.listen(port, (err) => {
-=======
 app.listen(port, async (err) => {
->>>>>>> origin/main
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
 
   logger.info({ port }, "Server listening");
-<<<<<<< HEAD
-=======
   startSupportCleanup();
   void purgeSensitiveSettingRows();
   // Load admin-configured USD→local pricing from the DB BEFORE warming the
@@ -94,5 +73,4 @@ app.listen(port, async (err) => {
       ? { ok: true, status: r.status, refunded: r.refunded }
       : { ok: false };
   });
->>>>>>> origin/main
 });

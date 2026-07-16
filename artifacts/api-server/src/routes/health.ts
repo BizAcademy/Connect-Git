@@ -3,19 +3,14 @@ import { HealthCheckResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-<<<<<<< HEAD
-=======
 // Build timestamp injected at build time (falls back to "dev" in development)
 const BUILD_TIME = process.env.BUILD_TIME ?? "dev";
 
->>>>>>> origin/main
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
 });
 
-<<<<<<< HEAD
-=======
 // Diagnostic endpoint — shows config presence without exposing secret values.
 // Usage: GET /api/diag
 // In production: curl https://yourdomain.com/api/diag
@@ -35,5 +30,4 @@ router.get("/diag", (_req, res) => {
   });
 });
 
->>>>>>> origin/main
 export default router;

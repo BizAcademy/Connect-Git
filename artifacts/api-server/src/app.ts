@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-import express, { type Express } from "express";
-import cors from "cors";
-import pinoHttp from "pino-http";
-=======
 import express, { type Express, type Request } from "express";
 import cors from "cors";
 import compression from "compression";
@@ -11,21 +6,17 @@ import pinoHttp from "pino-http";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
->>>>>>> origin/main
 import router from "./routes";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
 
-<<<<<<< HEAD
-=======
 // Replit (preview/prod) et Plesk/Cybrancy mettent un reverse proxy devant Node.
 // Sans `trust proxy`, express-rate-limit identifie tous les clients par l'IP du
 // proxy → faux positifs massifs + warning ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
 // `1` = on fait confiance au premier hop seulement (sécurité contre le spoofing).
 app.set("trust proxy", 1);
 
->>>>>>> origin/main
 app.use(
   pinoHttp({
     logger,
@@ -45,13 +36,6 @@ app.use(
     },
   }),
 );
-<<<<<<< HEAD
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use("/api", router);
-=======
 app.use(compression());
 app.use(cors());
 
@@ -139,6 +123,5 @@ if (process.env["NODE_ENV"] === "production") {
     );
   }
 }
->>>>>>> origin/main
 
 export default app;

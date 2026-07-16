@@ -18,8 +18,6 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
-<<<<<<< HEAD
-=======
 
 [userenv]
 
@@ -29,4 +27,3 @@ AFRIBAPAY_API_BASE = "https://api.afribapay.com"
 
 [nix]
 channel = "stable-25_05"
->>>>>>> origin/main
