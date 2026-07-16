@@ -461,6 +461,8 @@ router.post("/smm/order", requireUser, rateLimitOrders, async (req: AuthedReques
             status: "processing",
             external_order_id: externalOrderId,
             provider: providerId,
+            balance_before: currentBalance,
+            balance_after: newBalance,
           }),
         });
         if (insRes.ok) {

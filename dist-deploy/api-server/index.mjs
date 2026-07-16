@@ -53400,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-07-16T00:27:57.894Z";
+var BUILD_TIME = "2026-07-16T20:13:14.801Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -54260,7 +54260,9 @@ router2.post("/smm/order", requireUser, rateLimitOrders, async (req, res) => {
             price: totalPrice,
             status: "processing",
             external_order_id: externalOrderId,
-            provider: providerId
+            provider: providerId,
+            balance_before: currentBalance,
+            balance_after: newBalance
           })
         });
         if (insRes.ok) {
@@ -54972,6 +54974,15 @@ async function creditDeposit(paymentId, opts) {
     }
     return { ok: false, error: "Cr\xE9dit du solde \xE9chou\xE9 (r\xE9essayez)", status: 500 };
   }
+  try {
+    await fetch(`${SUPABASE_URL5}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
+      method: "PATCH",
+      headers: writeHeaders(userToken),
+      body: JSON.stringify({ balance_before: newBalance - total, balance_after: newBalance })
+    });
+  } catch (err) {
+    logger.warn({ err, paymentId }, "creditDeposit: could not record balance_before/after");
+  }
   logger.info({ paymentId, userId: payment.user_id, amount, bonus, newBalance }, "deposit credited");
   return { ok: true, alreadyCredited: false, amountCredited: amount, bonusCredited: bonus, newBalance, payment: claimed[0] };
 }
@@ -55532,6 +55543,51 @@ function serviceRoleHeaders3() {
   const key2 = SUPABASE_SERVICE_ROLE_KEY6;
   return { apikey: key2, Authorization: `Bearer ${key2}`, "Content-Type": "application/json" };
 }
+var MAIN_ADMIN_EMAIL = (process.env["MAIN_ADMIN_EMAIL"] || "jude@gmail.com").toLowerCase();
+function requireActionCode(req, res, next) {
+  const expected = process.env["ADMIN_ACTION_CODE"] || "";
+  if (!expected) {
+    return res.status(503).json({
+      error: "Code de confirmation non configur\xE9 c\xF4t\xE9 serveur (secret ADMIN_ACTION_CODE manquant)"
+    });
+  }
+  const given = String(req.headers["x-admin-action-code"] || "");
+  if (!given) {
+    return res.status(428).json({ error: "Code de confirmation requis", code_required: true });
+  }
+  if (given !== expected) {
+    return res.status(403).json({ error: "Code de confirmation invalide", code_invalid: true });
+  }
+  next();
+}
+async function fetchAdminIds() {
+  const ids = /* @__PURE__ */ new Set();
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL7}/rest/v1/user_roles?role=eq.admin&select=user_id&limit=1000`,
+      { headers: serviceRoleHeaders3() }
+    );
+    if (r.ok) {
+      for (const row of await r.json()) ids.add(row.user_id);
+    }
+  } catch (err) {
+    logger.error({ err }, "fetchAdminIds failed");
+  }
+  return ids;
+}
+async function fetchProfileEmail(userId) {
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL7}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=email`,
+      { headers: serviceRoleHeaders3() }
+    );
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return rows[0]?.email?.toLowerCase() || null;
+  } catch {
+    return null;
+  }
+}
 router3.get("/admin/earnings", requireUser, requireAdmin, async (req, res) => {
   try {
     const all = await readEarnings();
@@ -55967,6 +56023,7 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
   const q = req.query;
   const type = (q.type || "all").toLowerCase();
   const statusF = (q.status || "").toLowerCase();
+  const userIdF = (q.user_id || "").trim();
   const search = (q.search || "").replace(/[%,()]/g, "").trim();
   const limit = Math.min(Math.max(parseInt(q.limit || "200", 10) || 200, 1), 1e3);
   const offset = Math.max(parseInt(q.offset || "0", 10) || 0, 0);
@@ -55980,9 +56037,10 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
   const FETCH = Math.min(limit + offset + 200, 2e3);
   const buildOrderUrl = () => {
     const p = new URLSearchParams();
-    p.set("select", "id,user_id,created_at,price,status,service_name,service_category,link,external_order_id,quantity,refunded_at,refunded_amount,provider");
+    p.set("select", "id,user_id,created_at,price,status,service_name,service_category,link,external_order_id,quantity,refunded_at,refunded_amount,provider,balance_before,balance_after");
     p.set("order", "created_at.desc");
     p.set("limit", String(FETCH));
+    if (userIdF) p.append("user_id", `eq.${userIdF}`);
     if (fromIso) p.append("created_at", `gte.${fromIso}`);
     if (toIso) p.append("created_at", `lte.${toIso}`);
     if (statusF && type === "order") p.append("status", `eq.${statusF}`);
@@ -55990,17 +56048,19 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
   };
   const buildPayUrl = () => {
     const p = new URLSearchParams();
-    p.set("select", "id,user_id,created_at,amount,status,method,reference,operator,country,phone_number,transaction_id,order_id,currency");
+    p.set("select", "id,user_id,created_at,amount,status,method,reference,operator,country,phone_number,transaction_id,order_id,currency,balance_before,balance_after");
     p.set("order", "created_at.desc");
     p.set("limit", String(FETCH));
+    if (userIdF) p.append("user_id", `eq.${userIdF}`);
     if (fromIso) p.append("created_at", `gte.${fromIso}`);
     if (toIso) p.append("created_at", `lte.${toIso}`);
-    if (statusF && type === "deposit") p.append("status", `eq.${statusF}`);
+    if (statusF && (type === "deposit" || type === "adjustment")) p.append("status", `eq.${statusF}`);
+    if (type === "adjustment") p.append("method", "eq.admin_adjustment");
     return `${SUPABASE_URL7}/rest/v1/payments?${p.toString()}`;
   };
   try {
     const wantOrders = type === "all" || type === "order" || type === "refund";
-    const wantPays = type === "all" || type === "deposit";
+    const wantPays = type === "all" || type === "deposit" || type === "adjustment";
     const [ordRes, payRes] = await Promise.all([
       wantOrders ? fetch(buildOrderUrl(), { headers }) : Promise.resolve(null),
       wantPays ? fetch(buildPayUrl(), { headers }) : Promise.resolve(null)
@@ -56044,7 +56104,9 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
           refunded_amount: o.refunded_amount,
           provider: typeof o.provider === "number" ? o.provider : null,
           country: countryFor(o.user_id),
-          currency: null
+          currency: null,
+          balance_before: o.balance_before ?? null,
+          balance_after: o.balance_after ?? null
         });
       }
     }
@@ -56069,16 +56131,21 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
         }
       }
     }
-    if (type === "all" || type === "deposit") {
+    if (type === "all" || type === "deposit" || type === "adjustment") {
       for (const p of pays) {
-        const parts = [`D\xE9p\xF4t \xB7 ${(p.method || "").toUpperCase()}`];
-        if (p.operator) parts.push(String(p.operator).toUpperCase());
-        if (p.country) parts.push(String(p.country).toUpperCase());
-        if (p.phone_number) parts.push(String(p.phone_number));
+        const isAdjustment = p.method === "admin_adjustment";
+        if (type === "deposit" && isAdjustment) continue;
+        if (type === "adjustment" && !isAdjustment) continue;
+        const parts = isAdjustment ? ["Ajustement administrateur"] : [`D\xE9p\xF4t \xB7 ${(p.method || "").toUpperCase()}`];
+        if (!isAdjustment) {
+          if (p.operator) parts.push(String(p.operator).toUpperCase());
+          if (p.country) parts.push(String(p.country).toUpperCase());
+          if (p.phone_number) parts.push(String(p.phone_number));
+        }
         const ref = p.transaction_id || p.order_id || p.reference || null;
         all.push({
           id: `p-${p.id}`,
-          kind: "deposit",
+          kind: isAdjustment ? "adjustment" : "deposit",
           created_at: p.created_at,
           amount: Number(p.amount),
           status: p.status,
@@ -56088,7 +56155,9 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
           detail: parts.join(" \xB7 "),
           reference: ref,
           country: p.country || countryFor(p.user_id),
-          currency: p.currency || null
+          currency: p.currency || null,
+          balance_before: p.balance_before ?? null,
+          balance_after: p.balance_after ?? null
         });
       }
     }
@@ -56359,6 +56428,21 @@ router3.get("/admin/users", requireUser, requireAdmin, async (req, res) => {
   if (range && /\/(\d+)$/.test(range)) {
     totalCount = Number(range.match(/\/(\d+)$/)[1]);
   }
+  const adminIds = await fetchAdminIds();
+  const requesterEmail = req.userId ? await fetchProfileEmail(req.userId) : null;
+  const requesterIsMain = requesterEmail === MAIN_ADMIN_EMAIL;
+  for (const row of rows) {
+    const uid = String(row["user_id"] || "");
+    const email = String(row["email"] || "").toLowerCase();
+    const isMain = email === MAIN_ADMIN_EMAIL;
+    row["role"] = adminIds.has(uid) || isMain ? "admin" : "user";
+    row["is_main_admin"] = isMain;
+  }
+  if (!requesterIsMain) {
+    const before = rows.length;
+    rows = rows.filter((row) => row["is_main_admin"] !== true);
+    if (totalCount !== null) totalCount -= before - rows.length;
+  }
   const missing = rows.filter((r2) => !r2["email"] || String(r2["email"]).trim() === "");
   if (missing.length > 0) {
     const CONCURRENCY = 8;
@@ -56372,9 +56456,9 @@ router3.get("/admin/users", requireUser, requireAdmin, async (req, res) => {
       }));
     }
   }
-  res.json({ users: rows, total_count: totalCount, has_more: rows.length === limit });
+  res.json({ users: rows, total_count: totalCount, has_more: rows.length === limit, requester_is_main_admin: requesterIsMain });
 });
-router3.patch("/admin/users/:userId", requireUser, requireAdmin, async (req, res) => {
+router3.patch("/admin/users/:userId", requireUser, requireAdmin, requireActionCode, async (req, res) => {
   if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }
@@ -56418,6 +56502,22 @@ router3.patch("/admin/users/:userId", requireUser, requireAdmin, async (req, res
       return res.status(502).json({ error: friendly });
     }
   }
+  let balanceBefore = null;
+  const wantsBalanceChange = profilePatch["balance"] !== void 0;
+  if (wantsBalanceChange) {
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL7}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=balance`,
+        { headers: serviceRoleHeaders3() }
+      );
+      if (r.ok) {
+        const rows = await r.json();
+        if (rows.length > 0) balanceBefore = Math.round(Number(rows[0].balance) || 0);
+      }
+    } catch (err) {
+      logger.error({ err, userId }, "admin/users: could not read balance before adjustment");
+    }
+  }
   if (Object.keys(profilePatch).length > 0) {
     const r = await fetch(
       `${SUPABASE_URL7}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}`,
@@ -56433,9 +56533,39 @@ router3.patch("/admin/users/:userId", requireUser, requireAdmin, async (req, res
       return res.status(502).json({ error: "Mise \xE0 jour du profil impossible" });
     }
   }
+  if (wantsBalanceChange && balanceBefore !== null) {
+    const balanceAfter = Number(profilePatch["balance"]);
+    const delta = balanceAfter - balanceBefore;
+    if (delta !== 0) {
+      try {
+        const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+        const ins = await fetch(`${SUPABASE_URL7}/rest/v1/payments`, {
+          method: "POST",
+          headers: serviceRoleHeaders3(),
+          body: JSON.stringify({
+            user_id: userId,
+            amount: delta,
+            currency: "XAF",
+            method: "admin_adjustment",
+            status: "completed",
+            reference: `ADJ-${Date.now()}`,
+            credited_at: nowIso,
+            balance_before: balanceBefore,
+            balance_after: balanceAfter
+          })
+        });
+        if (!ins.ok) {
+          const body = await ins.text();
+          logger.error({ status: ins.status, body: body.slice(0, 300), userId }, "admin adjustment journal insert failed");
+        }
+      } catch (err) {
+        logger.error({ err, userId }, "admin adjustment journal insert exception");
+      }
+    }
+  }
   res.json({ ok: true });
 });
-router3.post("/admin/users/:userId/password", requireUser, requireAdmin, async (req, res) => {
+router3.post("/admin/users/:userId/password", requireUser, requireAdmin, requireActionCode, async (req, res) => {
   if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }

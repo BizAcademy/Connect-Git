@@ -62,6 +62,66 @@ function serviceRoleHeaders(): Record<string, string> {
   return { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
 }
 
+// ---------------------------------------------------------------------------
+// Main admin + admin action confirmation code
+// ---------------------------------------------------------------------------
+// The "main admin" is identified by email. All OTHER admins never see the
+// main admin in the users list; the main admin can see everyone (including
+// other admins). Override with the MAIN_ADMIN_EMAIL env var if needed.
+const MAIN_ADMIN_EMAIL = (process.env["MAIN_ADMIN_EMAIL"] || "jude@gmail.com").toLowerCase();
+
+// Sensitive admin actions on a user (balance adjustment, password reset,
+// profile edits, activation toggles) require a confirmation code defined by
+// the owner and stored server-side in the ADMIN_ACTION_CODE secret.
+function requireActionCode(req: AuthedRequest, res: import("express").Response, next: import("express").NextFunction) {
+  const expected = process.env["ADMIN_ACTION_CODE"] || "";
+  if (!expected) {
+    return res.status(503).json({
+      error: "Code de confirmation non configuré côté serveur (secret ADMIN_ACTION_CODE manquant)",
+    });
+  }
+  const given = String(req.headers["x-admin-action-code"] || "");
+  if (!given) {
+    return res.status(428).json({ error: "Code de confirmation requis", code_required: true });
+  }
+  if (given !== expected) {
+    return res.status(403).json({ error: "Code de confirmation invalide", code_invalid: true });
+  }
+  next();
+}
+
+/** Fetch the set of user_ids that hold the admin role. */
+async function fetchAdminIds(): Promise<Set<string>> {
+  const ids = new Set<string>();
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_roles?role=eq.admin&select=user_id&limit=1000`,
+      { headers: serviceRoleHeaders() },
+    );
+    if (r.ok) {
+      for (const row of (await r.json()) as Array<{ user_id: string }>) ids.add(row.user_id);
+    }
+  } catch (err) {
+    logger.error({ err }, "fetchAdminIds failed");
+  }
+  return ids;
+}
+
+/** Fetch the email of a user (profiles first, auth fallback handled by caller). */
+async function fetchProfileEmail(userId: string): Promise<string | null> {
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=email`,
+      { headers: serviceRoleHeaders() },
+    );
+    if (!r.ok) return null;
+    const rows = (await r.json()) as Array<{ email: string | null }>;
+    return rows[0]?.email?.toLowerCase() || null;
+  } catch {
+    return null;
+  }
+}
+
 // GET /api/admin/earnings — aggregated platform earnings + daily series
 //
 // Query params (all optional):
@@ -650,6 +710,7 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
   const q = req.query as Record<string, string | undefined>;
   const type = (q.type || "all").toLowerCase();
   const statusF = (q.status || "").toLowerCase();
+  const userIdF = (q.user_id || "").trim();
   const search = (q.search || "").replace(/[%,()]/g, "").trim();
   const limit = Math.min(Math.max(parseInt(q.limit || "200", 10) || 200, 1), 1000);
   const offset = Math.max(parseInt(q.offset || "0", 10) || 0, 0);
@@ -669,9 +730,10 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
 
   const buildOrderUrl = () => {
     const p = new URLSearchParams();
-    p.set("select", "id,user_id,created_at,price,status,service_name,service_category,link,external_order_id,quantity,refunded_at,refunded_amount,provider");
+    p.set("select", "id,user_id,created_at,price,status,service_name,service_category,link,external_order_id,quantity,refunded_at,refunded_amount,provider,balance_before,balance_after");
     p.set("order", "created_at.desc");
     p.set("limit", String(FETCH));
+    if (userIdF) p.append("user_id", `eq.${userIdF}`);
     if (fromIso) p.append("created_at", `gte.${fromIso}`);
     if (toIso) p.append("created_at", `lte.${toIso}`);
     if (statusF && type === "order") p.append("status", `eq.${statusF}`);
@@ -679,18 +741,20 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
   };
   const buildPayUrl = () => {
     const p = new URLSearchParams();
-    p.set("select", "id,user_id,created_at,amount,status,method,reference,operator,country,phone_number,transaction_id,order_id,currency");
+    p.set("select", "id,user_id,created_at,amount,status,method,reference,operator,country,phone_number,transaction_id,order_id,currency,balance_before,balance_after");
     p.set("order", "created_at.desc");
     p.set("limit", String(FETCH));
+    if (userIdF) p.append("user_id", `eq.${userIdF}`);
     if (fromIso) p.append("created_at", `gte.${fromIso}`);
     if (toIso) p.append("created_at", `lte.${toIso}`);
-    if (statusF && type === "deposit") p.append("status", `eq.${statusF}`);
+    if (statusF && (type === "deposit" || type === "adjustment")) p.append("status", `eq.${statusF}`);
+    if (type === "adjustment") p.append("method", "eq.admin_adjustment");
     return `${SUPABASE_URL}/rest/v1/payments?${p.toString()}`;
   };
 
   try {
     const wantOrders = type === "all" || type === "order" || type === "refund";
-    const wantPays = type === "all" || type === "deposit";
+    const wantPays = type === "all" || type === "deposit" || type === "adjustment";
     const [ordRes, payRes] = await Promise.all([
       wantOrders ? fetch(buildOrderUrl(), { headers }) : Promise.resolve(null as any),
       wantPays ? fetch(buildPayUrl(), { headers }) : Promise.resolve(null as any),
@@ -719,7 +783,7 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
     const countryFor = (uid: string) => profiles.get(uid)?.country || null;
 
     type TxRow = {
-      id: string; kind: "deposit" | "order" | "refund"; created_at: string;
+      id: string; kind: "deposit" | "order" | "refund" | "adjustment"; created_at: string;
       amount: number; status: string; user_id: string;
       user_label: string; user_email?: string;
       detail: string; reference: string | null;
@@ -727,6 +791,7 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
       refunded_at?: string | null; refunded_amount?: number | null;
       provider?: number | null;
       country?: string | null; currency?: string | null;
+      balance_before?: number | null; balance_after?: number | null;
     };
     const all: TxRow[] = [];
     if (type === "all" || type === "order") {
@@ -742,6 +807,8 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
           provider: typeof o.provider === "number" ? o.provider : null,
           country: countryFor(o.user_id),
           currency: null,
+          balance_before: o.balance_before ?? null,
+          balance_after: o.balance_after ?? null,
         });
       }
     }
@@ -761,23 +828,32 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
         }
       }
     }
-    if (type === "all" || type === "deposit") {
+    if (type === "all" || type === "deposit" || type === "adjustment") {
       for (const p of pays) {
+        const isAdjustment = p.method === "admin_adjustment";
+        if (type === "deposit" && isAdjustment) continue;
+        if (type === "adjustment" && !isAdjustment) continue;
         // Build a rich label: "Dépôt · AFRIBAPAY · ORANGE-CI · CI · 07XX…"
-        const parts: string[] = [`Dépôt · ${(p.method || "").toUpperCase()}`];
-        if (p.operator) parts.push(String(p.operator).toUpperCase());
-        if (p.country)  parts.push(String(p.country).toUpperCase());
-        if (p.phone_number) parts.push(String(p.phone_number));
+        const parts: string[] = isAdjustment
+          ? ["Ajustement administrateur"]
+          : [`Dépôt · ${(p.method || "").toUpperCase()}`];
+        if (!isAdjustment) {
+          if (p.operator) parts.push(String(p.operator).toUpperCase());
+          if (p.country)  parts.push(String(p.country).toUpperCase());
+          if (p.phone_number) parts.push(String(p.phone_number));
+        }
         // Reference shown in the admin journal: AfribaPay txid wins, else order_id, else legacy reference.
         const ref = p.transaction_id || p.order_id || p.reference || null;
         all.push({
-          id: `p-${p.id}`, kind: "deposit", created_at: p.created_at,
+          id: `p-${p.id}`, kind: isAdjustment ? "adjustment" : "deposit", created_at: p.created_at,
           amount: Number(p.amount), status: p.status, user_id: p.user_id,
           user_label: labelFor(p.user_id), user_email: profiles.get(p.user_id)?.email,
           detail: parts.join(" · "),
           reference: ref,
           country: p.country || countryFor(p.user_id),
           currency: p.currency || null,
+          balance_before: p.balance_before ?? null,
+          balance_after: p.balance_after ?? null,
         });
       }
     }
@@ -1112,6 +1188,25 @@ router.get("/admin/users", requireUser, requireAdmin, async (req: AuthedRequest,
     totalCount = Number(range.match(/\/(\d+)$/)![1]);
   }
 
+  // --- Roles + main-admin visibility ---------------------------------------
+  // Annotate each row with its role. The main admin (MAIN_ADMIN_EMAIL) sees
+  // everyone; other admins never see the main admin in the list.
+  const adminIds = await fetchAdminIds();
+  const requesterEmail = req.userId ? await fetchProfileEmail(req.userId) : null;
+  const requesterIsMain = requesterEmail === MAIN_ADMIN_EMAIL;
+  for (const row of rows) {
+    const uid = String(row["user_id"] || "");
+    const email = String(row["email"] || "").toLowerCase();
+    const isMain = email === MAIN_ADMIN_EMAIL;
+    row["role"] = adminIds.has(uid) || isMain ? "admin" : "user";
+    row["is_main_admin"] = isMain;
+  }
+  if (!requesterIsMain) {
+    const before = rows.length;
+    rows = rows.filter((row) => row["is_main_admin"] !== true);
+    if (totalCount !== null) totalCount -= before - rows.length;
+  }
+
   // Enrich rows whose profiles.email is empty by falling back to auth.users.email.
   // Done per-row only when needed; in steady-state profiles.email is populated at signup.
   const missing = rows.filter(r => !r["email"] || String(r["email"]).trim() === "");
@@ -1130,11 +1225,11 @@ router.get("/admin/users", requireUser, requireAdmin, async (req: AuthedRequest,
     }
   }
 
-  res.json({ users: rows, total_count: totalCount, has_more: rows.length === limit });
+  res.json({ users: rows, total_count: totalCount, has_more: rows.length === limit, requester_is_main_admin: requesterIsMain });
 });
 
 // PATCH /api/admin/users/:userId — body: { username?, email?, phone?, whatsapp?, country?, balance?, is_active? }
-router.patch("/admin/users/:userId", requireUser, requireAdmin, async (req: AuthedRequest, res) => {
+router.patch("/admin/users/:userId", requireUser, requireAdmin, requireActionCode, async (req: AuthedRequest, res) => {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }
@@ -1188,6 +1283,25 @@ router.patch("/admin/users/:userId", requireUser, requireAdmin, async (req: Auth
     }
   }
 
+  // 1b) If the balance is being changed, read the current balance FIRST so the
+  //     adjustment can be journalized with before/after values.
+  let balanceBefore: number | null = null;
+  const wantsBalanceChange = profilePatch["balance"] !== undefined;
+  if (wantsBalanceChange) {
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=balance`,
+        { headers: serviceRoleHeaders() },
+      );
+      if (r.ok) {
+        const rows = (await r.json()) as Array<{ balance: number | string | null }>;
+        if (rows.length > 0) balanceBefore = Math.round(Number(rows[0]!.balance) || 0);
+      }
+    } catch (err) {
+      logger.error({ err, userId }, "admin/users: could not read balance before adjustment");
+    }
+  }
+
   // 2) Update profile row (RLS bypassed via service role)
   if (Object.keys(profilePatch).length > 0) {
     const r = await fetch(
@@ -1205,11 +1319,45 @@ router.patch("/admin/users/:userId", requireUser, requireAdmin, async (req: Auth
     }
   }
 
+  // 3) Journalize the balance adjustment as a payments row so it appears in
+  //    the transactions history (admin sees "Ajustement administrateur",
+  //    the user sees it as a deposit).
+  if (wantsBalanceChange && balanceBefore !== null) {
+    const balanceAfter = Number(profilePatch["balance"]);
+    const delta = balanceAfter - balanceBefore;
+    if (delta !== 0) {
+      try {
+        const nowIso = new Date().toISOString();
+        const ins = await fetch(`${SUPABASE_URL}/rest/v1/payments`, {
+          method: "POST",
+          headers: serviceRoleHeaders(),
+          body: JSON.stringify({
+            user_id: userId,
+            amount: delta,
+            currency: "XAF",
+            method: "admin_adjustment",
+            status: "completed",
+            reference: `ADJ-${Date.now()}`,
+            credited_at: nowIso,
+            balance_before: balanceBefore,
+            balance_after: balanceAfter,
+          }),
+        });
+        if (!ins.ok) {
+          const body = await ins.text();
+          logger.error({ status: ins.status, body: body.slice(0, 300), userId }, "admin adjustment journal insert failed");
+        }
+      } catch (err) {
+        logger.error({ err, userId }, "admin adjustment journal insert exception");
+      }
+    }
+  }
+
   res.json({ ok: true });
 });
 
 // POST /api/admin/users/:userId/password — body: { password }
-router.post("/admin/users/:userId/password", requireUser, requireAdmin, async (req: AuthedRequest, res) => {
+router.post("/admin/users/:userId/password", requireUser, requireAdmin, requireActionCode, async (req: AuthedRequest, res) => {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }

@@ -443,7 +443,7 @@ const AdminSupport = () => {
 
 type TxRow = {
   id: string;
-  type: "order" | "deposit" | "refund";
+  type: "order" | "deposit" | "refund" | "adjustment";
   created_at: string;
   amount: number;
   status: string; // raw
@@ -501,7 +501,7 @@ const AdminTransactions = () => {
   const [period, setPeriod] = useState<"today" | "month" | "total" | "custom">("month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [type, setType] = useState<"all" | "order" | "deposit" | "refund">("all");
+  const [type, setType] = useState<"all" | "order" | "deposit" | "refund" | "adjustment">("all");
   const [status, setStatus] = useState<"all" | "completed" | "pending" | "rejected" | "processing">("all");
   const [search, setSearch] = useState("");
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
@@ -736,6 +736,7 @@ const AdminTransactions = () => {
             { key: "order", label: "Commandes", icon: ArrowUpCircle },
             { key: "deposit", label: "Dépôts", icon: ArrowDownCircle },
             { key: "refund", label: "Remboursements", icon: RotateCcw },
+            { key: "adjustment", label: "Ajustements", icon: Wallet },
           ].map((t) => (
             <button
               key={t.key}
@@ -791,16 +792,19 @@ const AdminTransactions = () => {
                   <th className="px-3 py-2 font-medium">Utilisateur</th>
                   <th className="px-3 py-2 font-medium">Détail</th>
                   <th className="px-3 py-2 font-medium text-right">Montant</th>
+                  <th className="px-3 py-2 font-medium text-right">Solde avant</th>
+                  <th className="px-3 py-2 font-medium text-right">Solde après</th>
                   <th className="px-3 py-2 font-medium">Statut</th>
                   <th className="px-3 py-2 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.slice(0, 300).map((r) => {
-                  const sign = r.type === "order" ? "−" : "+";
+                  const sign = r.type === "order" ? "−" : (r.type === "adjustment" && r.amount < 0) ? "−" : "+";
                   const colorClass =
                     r.type === "order" ? "text-red-600" :
-                    r.type === "refund" ? "text-purple-600" : "text-green-600";
+                    r.type === "refund" ? "text-purple-600" :
+                    r.type === "adjustment" ? (r.amount < 0 ? "text-red-600" : "text-blue-600") : "text-green-600";
                   // Force refund is shown when an order is in a final unsuccessful
                   // status, has not been refunded yet, and has an external id.
                   const canForceRefund =
@@ -824,6 +828,10 @@ const AdminTransactions = () => {
                       ) : r.type === "refund" ? (
                         <span className="inline-flex items-center gap-1 text-purple-600">
                           <RotateCcw size={12} /> Remboursement
+                        </span>
+                      ) : r.type === "adjustment" ? (
+                        <span className="inline-flex items-center gap-1 text-blue-600">
+                          <Wallet size={12} /> Ajustement administrateur
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-green-600">
@@ -852,7 +860,13 @@ const AdminTransactions = () => {
                       )}
                     </td>
                     <td className={`px-3 py-2 text-right font-semibold whitespace-nowrap ${colorClass}`}>
-                      {sign}{fmtTxAmount(r.amount, r.type, r.country, r.currency)}
+                      {sign}{fmtTxAmount(Math.abs(r.amount), r.type, r.country, r.currency)}
+                    </td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">
+                      {r.raw?.balance_before != null ? `${Number(r.raw.balance_before).toLocaleString("fr-FR")} XAF` : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">
+                      {r.raw?.balance_after != null ? `${Number(r.raw.balance_after).toLocaleString("fr-FR")} XAF` : "—"}
                     </td>
                     <td className="px-3 py-2">
                       <span className={`px-2 py-0.5 rounded-full font-medium ${r.status_color}`}>
@@ -1566,6 +1580,8 @@ type AdminUserRow = {
   is_active: boolean;
   created_at: string;
   affiliate_earnings?: number;
+  role?: "admin" | "user";
+  is_main_admin?: boolean;
 };
 
 async function adminApiFetch(path: string, init: RequestInit = {}) {
@@ -1581,6 +1597,191 @@ async function adminApiFetch(path: string, init: RequestInit = {}) {
   return body;
 }
 
+// ---------------------------------------------------------------------------
+// Transactions d'un utilisateur (vue admin) — filtre par type et par période
+// ---------------------------------------------------------------------------
+const UserTransactionsDialog = ({ user, onClose }: { user: AdminUserRow; onClose: () => void }) => {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [type, setType] = useState<"all" | "deposit" | "order" | "refund" | "adjustment">("all");
+  const [period, setPeriod] = useState<"total" | "today" | "month" | "custom">("total");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await adminApiFetch(`/api/admin/transactions?user_id=${user.user_id}&limit=1000`);
+        if (!cancelled) setRows(data.rows || []);
+      } catch (err) {
+        if (!cancelled) toast.error((err as Error).message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user.user_id]);
+
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const customFrom = dateFrom ? new Date(dateFrom).getTime() : 0;
+  const customTo = dateTo ? new Date(dateTo + "T23:59:59").getTime() : Infinity;
+
+  const filtered = rows.filter((r) => {
+    const t = new Date(r.created_at).getTime();
+    if (period === "today" && t < startOfDay) return false;
+    if (period === "month" && t < startOfMonth) return false;
+    if (period === "custom") {
+      if (dateFrom && t < customFrom) return false;
+      if (dateTo && t > customTo) return false;
+    }
+    if (type !== "all" && r.kind !== type) return false;
+    return true;
+  });
+
+  const kindLabel = (k: string, amount: number) =>
+    k === "order" ? (
+      <span className="inline-flex items-center gap-1 text-red-600"><ArrowUpCircle size={12} /> Commande</span>
+    ) : k === "refund" ? (
+      <span className="inline-flex items-center gap-1 text-purple-600"><RotateCcw size={12} /> Remboursement</span>
+    ) : k === "adjustment" ? (
+      <span className={`inline-flex items-center gap-1 ${amount < 0 ? "text-red-600" : "text-blue-600"}`}><Wallet size={12} /> Ajustement administrateur</span>
+    ) : (
+      <span className="inline-flex items-center gap-1 text-green-600"><ArrowDownCircle size={12} /> Dépôt</span>
+    );
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Transactions — {user.username || user.email || user.user_id.slice(0, 8)}</DialogTitle>
+          <DialogDescription>
+            Solde actuel : <strong>{Number(user.balance).toLocaleString("fr-FR")} XAF</strong>
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Filtres période */}
+        <div className="flex gap-1.5 flex-wrap items-center">
+          {[
+            { key: "total", label: "Total" },
+            { key: "today", label: "Aujourd'hui" },
+            { key: "month", label: "Mois en cours" },
+            { key: "custom", label: "Période…" },
+          ].map((p) => (
+            <button
+              key={p.key}
+              onClick={() => setPeriod(p.key as any)}
+              className={`px-3 py-1.5 rounded-md text-xs border ${
+                period === p.key ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+          {period === "custom" && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs text-muted-foreground">Du</span>
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="text-xs border rounded-md px-2 py-1.5 bg-background" />
+              <span className="text-xs text-muted-foreground">au</span>
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="text-xs border rounded-md px-2 py-1.5 bg-background" />
+            </div>
+          )}
+        </div>
+
+        {/* Filtres type */}
+        <div className="flex gap-1 flex-wrap">
+          {[
+            { key: "all", label: "Tous" },
+            { key: "deposit", label: "Dépôts" },
+            { key: "order", label: "Commandes" },
+            { key: "refund", label: "Remboursements" },
+            { key: "adjustment", label: "Ajustements" },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setType(t.key as any)}
+              className={`px-2.5 py-1.5 rounded-md text-xs border ${
+                type === t.key ? "bg-secondary border-secondary text-secondary-foreground" : "bg-background hover:bg-muted"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {loading ? (
+          <LogoLoader />
+        ) : filtered.length === 0 ? (
+          <p className="text-center text-sm text-muted-foreground py-8">Aucune transaction pour ces filtres.</p>
+        ) : (
+          <div className="border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/60">
+                  <tr className="text-left">
+                    <th className="px-3 py-2 font-medium">Date</th>
+                    <th className="px-3 py-2 font-medium">Type</th>
+                    <th className="px-3 py-2 font-medium">Détail</th>
+                    <th className="px-3 py-2 font-medium text-right">Montant</th>
+                    <th className="px-3 py-2 font-medium text-right">Solde avant</th>
+                    <th className="px-3 py-2 font-medium text-right">Solde après</th>
+                    <th className="px-3 py-2 font-medium">Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r) => {
+                    const isOrder = r.kind === "order";
+                    const m = isOrder
+                      ? orderStatusMap[r.status] || { label: r.status, color: "bg-gray-100 text-gray-700" }
+                      : r.kind === "refund"
+                      ? { label: "Remboursé", color: "bg-purple-100 text-purple-700" }
+                      : paymentStatusMap[r.status] || { label: r.status, color: "bg-gray-100 text-gray-700" };
+                    const sign = isOrder || Number(r.amount) < 0 ? "−" : "+";
+                    const colorClass =
+                      isOrder ? "text-red-600" :
+                      r.kind === "refund" ? "text-purple-600" :
+                      r.kind === "adjustment" ? (Number(r.amount) < 0 ? "text-red-600" : "text-blue-600") : "text-green-600";
+                    return (
+                      <tr key={r.id} className="border-t hover:bg-muted/30">
+                        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
+                          {new Date(r.created_at).toLocaleString("fr-FR", {
+                            day: "2-digit", month: "2-digit", year: "2-digit",
+                            hour: "2-digit", minute: "2-digit",
+                          })}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">{kindLabel(r.kind, Number(r.amount))}</td>
+                        <td className="px-3 py-2 truncate max-w-[220px]">
+                          {r.detail}
+                          {r.reference && <span className="text-muted-foreground"> · {r.reference}</span>}
+                        </td>
+                        <td className={`px-3 py-2 text-right font-semibold whitespace-nowrap ${colorClass}`}>
+                          {sign}{Math.abs(Number(r.amount)).toLocaleString("fr-FR")} {r.kind === "deposit" && r.currency ? r.currency : "XAF"}
+                        </td>
+                        <td className="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">
+                          {r.balance_before != null ? `${Number(r.balance_before).toLocaleString("fr-FR")} XAF` : "—"}
+                        </td>
+                        <td className="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">
+                          {r.balance_after != null ? `${Number(r.balance_after).toLocaleString("fr-FR")} XAF` : "—"}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className={`px-2 py-0.5 rounded-full font-medium ${m.color}`}>{m.label}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const AdminUsers = () => {
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1595,6 +1796,29 @@ const AdminUsers = () => {
 
   const [minBalanceFilter, setMinBalanceFilter] = useState(false);
   const [countryFilter, setCountryFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"" | "admin" | "user">("");
+  const [isMainAdmin, setIsMainAdmin] = useState(false);
+  const [txUser, setTxUser] = useState<AdminUserRow | null>(null);
+
+  // Confirmation par code avant toute action sensible sur un utilisateur.
+  // `codePrompt.run(code)` exécute l'action une fois le code saisi.
+  const [codePrompt, setCodePrompt] = useState<null | { label: string; run: (code: string) => Promise<void> }>(null);
+  const [codeInput, setCodeInput] = useState("");
+  const [codeBusy, setCodeBusy] = useState(false);
+
+  const confirmCode = async () => {
+    if (!codePrompt || !codeInput.trim()) return;
+    setCodeBusy(true);
+    try {
+      await codePrompt.run(codeInput.trim());
+      setCodePrompt(null);
+      setCodeInput("");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setCodeBusy(false);
+    }
+  };
 
   const [totals, setTotals] = useState<{ total_balance: number; user_count: number; updated_at: number } | null>(null);
   const totalsSeqRef = useRef(0);
@@ -1623,6 +1847,7 @@ const AdminUsers = () => {
       params.set("limit", "2000");
       const data = await adminApiFetch(`/api/admin/users?${params.toString()}`);
       setUsers(data.users || []);
+      setIsMainAdmin(!!data.requester_is_main_admin);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -1632,6 +1857,7 @@ const AdminUsers = () => {
 
   // Filtres client-side (appliqués après chargement complet)
   const displayedUsers = users.filter(u => {
+    if (roleFilter && (u.role || "user") !== roleFilter) return false;
     if (countryFilter && u.country?.toUpperCase() !== countryFilter) return false;
     if (minBalanceFilter) {
       const localAmt = fromFcfaAdmin(Number(u.balance), u.country);
@@ -1686,54 +1912,48 @@ const AdminUsers = () => {
     });
   };
 
-  const save = async () => {
+  const save = async (code: string) => {
     if (!editing) return;
     setSaving(true);
     try {
       await adminApiFetch(`/api/admin/users/${editing.user_id}`, {
         method: "PATCH",
+        headers: { "X-Admin-Action-Code": code },
         body: JSON.stringify(form),
       });
       toast.success("Utilisateur mis à jour");
       setEditing(null);
       load();
-    } catch (err) {
-      toast.error((err as Error).message);
     } finally {
       setSaving(false);
     }
   };
 
-  const resetPassword = async () => {
+  const resetPassword = async (code: string) => {
     if (!editing) return;
-    if (pw.length < 8) { toast.error("Le mot de passe doit contenir au moins 8 caractères"); return; }
     setPwSaving(true);
     try {
       await adminApiFetch(`/api/admin/users/${editing.user_id}/password`, {
         method: "POST",
+        headers: { "X-Admin-Action-Code": code },
         body: JSON.stringify({ password: pw }),
       });
       toast.success("Mot de passe modifié");
       setPw("");
       setPwOpen(false);
-    } catch (err) {
-      toast.error((err as Error).message);
     } finally {
       setPwSaving(false);
     }
   };
 
-  const toggleActive = async (u: AdminUserRow) => {
-    try {
-      await adminApiFetch(`/api/admin/users/${u.user_id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ is_active: !u.is_active }),
-      });
-      toast.success(u.is_active ? "Compte désactivé" : "Compte activé");
-      load();
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
+  const toggleActive = async (u: AdminUserRow, code: string) => {
+    await adminApiFetch(`/api/admin/users/${u.user_id}`, {
+      method: "PATCH",
+      headers: { "X-Admin-Action-Code": code },
+      body: JSON.stringify({ is_active: !u.is_active }),
+    });
+    toast.success(u.is_active ? "Compte désactivé" : "Compte activé");
+    load();
   };
 
   return (
@@ -1792,6 +2012,17 @@ const AdminUsers = () => {
           })}
         </select>
 
+        {/* Filtre rôle (les autres admins ne voient jamais l'admin principal — filtré côté serveur) */}
+        <select
+          value={roleFilter}
+          onChange={e => setRoleFilter(e.target.value as "" | "admin" | "user")}
+          className="h-8 text-xs rounded-md border border-input bg-background px-2 pr-6 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="">👥 Tous les rôles</option>
+          <option value="user">Utilisateurs</option>
+          <option value="admin">Administrateurs</option>
+        </select>
+
         {/* Filtre solde ≥ 10 */}
         <button
           type="button"
@@ -1805,10 +2036,10 @@ const AdminUsers = () => {
           {minBalanceFilter ? "✓ " : ""}Solde ≥ 10
         </button>
 
-        {(countryFilter || minBalanceFilter) && (
+        {(countryFilter || minBalanceFilter || roleFilter) && (
           <button
             type="button"
-            onClick={() => { setCountryFilter(""); setMinBalanceFilter(false); }}
+            onClick={() => { setCountryFilter(""); setMinBalanceFilter(false); setRoleFilter(""); }}
             className="h-8 text-xs px-2 rounded-md text-muted-foreground hover:text-foreground"
           >
             Réinitialiser
@@ -1831,9 +2062,14 @@ const AdminUsers = () => {
             <Card key={u.user_id}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setTxUser(u)} title="Voir les transactions de cet utilisateur">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium text-sm">{u.username || "(sans nom)"}</p>
+                      {u.role === "admin" && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${u.is_main_admin ? "bg-purple-100 text-purple-700 border border-purple-300" : "bg-indigo-100 text-indigo-700"}`}>
+                          {u.is_main_admin ? "Admin principal" : "Admin"}
+                        </span>
+                      )}
                       <span className={`text-xs px-1.5 py-0.5 rounded-full ${u.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                         {u.is_active ? "Actif" : "Inactif"}
                       </span>
@@ -1885,10 +2121,20 @@ const AdminUsers = () => {
                     })()}
                   </div>
                   <div className="flex gap-1">
+                    <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => setTxUser(u)} title="Transactions">
+                      <Receipt size={13} className="mr-1" />Transactions
+                    </Button>
                     <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => openEdit(u)}>
                       <Edit2 size={13} className="mr-1" />Modifier
                     </Button>
-                    <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => toggleActive(u)} title={u.is_active ? "Désactiver" : "Activer"}>
+                    <Button
+                      size="sm" variant="outline" className="h-8 px-2"
+                      onClick={() => setCodePrompt({
+                        label: u.is_active ? `Désactiver le compte de ${u.username || u.email || "cet utilisateur"}` : `Activer le compte de ${u.username || u.email || "cet utilisateur"}`,
+                        run: (code) => toggleActive(u, code),
+                      })}
+                      title={u.is_active ? "Désactiver" : "Activer"}
+                    >
                       {u.is_active ? <ToggleRight size={14} className="text-green-600" /> : <ToggleLeft size={14} className="text-red-500" />}
                     </Button>
                   </div>
@@ -1970,7 +2216,11 @@ const AdminUsers = () => {
               Réinitialiser le mot de passe
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setEditing(null)}>Annuler</Button>
-            <Button size="sm" onClick={save} disabled={saving}>
+            <Button
+              size="sm"
+              onClick={() => setCodePrompt({ label: "Enregistrer les modifications de l'utilisateur", run: save })}
+              disabled={saving}
+            >
               {saving ? "Enregistrement…" : "Enregistrer"}
             </Button>
           </DialogFooter>
@@ -2000,12 +2250,50 @@ const AdminUsers = () => {
           </div>
           <DialogFooter>
             <Button variant="ghost" size="sm" onClick={() => setPwOpen(false)}>Annuler</Button>
-            <Button size="sm" onClick={resetPassword} disabled={pwSaving || pw.length < 8}>
+            <Button
+              size="sm"
+              onClick={() => setCodePrompt({ label: "Réinitialiser le mot de passe de l'utilisateur", run: resetPassword })}
+              disabled={pwSaving || pw.length < 8}
+            >
               {pwSaving ? "Modification…" : "Modifier le mot de passe"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmation par code avant action sensible */}
+      <Dialog open={!!codePrompt} onOpenChange={(o) => { if (!o) { setCodePrompt(null); setCodeInput(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Code de confirmation requis</DialogTitle>
+            <DialogDescription>{codePrompt?.label}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label className="text-xs">Code de confirmation</Label>
+            <Input
+              type="password"
+              value={codeInput}
+              onChange={e => setCodeInput(e.target.value)}
+              placeholder="••••••"
+              autoComplete="off"
+              className="h-9"
+              onKeyDown={(e) => { if (e.key === "Enter" && codeInput.trim() && !codeBusy) confirmCode(); }}
+            />
+            <p className="text-xs text-muted-foreground">
+              Ce code est défini par l'administrateur principal et vérifié côté serveur.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => { setCodePrompt(null); setCodeInput(""); }}>Annuler</Button>
+            <Button size="sm" onClick={confirmCode} disabled={codeBusy || !codeInput.trim()}>
+              {codeBusy ? "Vérification…" : "Confirmer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transactions de l'utilisateur */}
+      {txUser && <UserTransactionsDialog user={txUser} onClose={() => setTxUser(null)} />}
     </div>
   );
 };

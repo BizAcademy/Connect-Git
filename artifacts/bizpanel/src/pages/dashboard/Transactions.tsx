@@ -140,7 +140,7 @@ export default function Transactions() {
         status: p.status,
         status_label: m.label,
         status_color: m.color,
-        detail: `Dépôt ${formatPaymentMethod(p.method)}`,
+        detail: p.method === "admin_adjustment" ? "Dépôt" : `Dépôt ${formatPaymentMethod(p.method)}`,
         reference: p.reference || null,
         raw: p,
       });

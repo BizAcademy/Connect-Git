@@ -343,6 +343,19 @@ export async function creditDeposit(
     return { ok: false, error: "Crédit du solde échoué (réessayez)", status: 500 };
   }
 
+  // Journalize before/after balances on the payment row (best effort — the
+  // credit itself already succeeded; a failure here only leaves the columns
+  // empty for this row).
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
+      method: "PATCH",
+      headers: writeHeaders(userToken),
+      body: JSON.stringify({ balance_before: newBalance - total, balance_after: newBalance }),
+    });
+  } catch (err) {
+    logger.warn({ err, paymentId }, "creditDeposit: could not record balance_before/after");
+  }
+
   logger.info({ paymentId, userId: payment.user_id, amount, bonus, newBalance }, "deposit credited");
   return { ok: true, alreadyCredited: false, amountCredited: amount, bonusCredited: bonus, newBalance, payment: claimed[0] };
 }
