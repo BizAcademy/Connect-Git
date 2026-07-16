@@ -52,8 +52,19 @@ else
 fi
 
 echo "🚀 Push vers GitHub (branche main)..."
-git push --force-with-lease origin "$BRANCH:main" \
-  || git push --force origin "$BRANCH:main"
+if ! git push --force-with-lease origin "$BRANCH:main"; then
+  if ! git push --force origin "$BRANCH:main"; then
+    echo ""
+    echo "❌ Échec du push (authentification refusée)."
+    echo "   Cause la plus fréquente : vous avez mis à jour le token GitHub"
+    echo "   dans un onglet Shell DÉJÀ OUVERT. Un shell ouvert garde l'ancien"
+    echo "   token en mémoire."
+    echo ""
+    echo "   👉 Solution : fermez cet onglet Shell, ouvrez-en un NOUVEAU,"
+    echo "      puis relancez :  bash push-to-github.sh \"votre message\""
+    exit 1
+  fi
+fi
 
 echo ""
 echo "============================================================"
