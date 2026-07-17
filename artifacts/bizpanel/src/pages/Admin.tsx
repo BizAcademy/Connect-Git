@@ -1607,6 +1607,7 @@ const UserTransactionsDialog = ({ user, onClose }: { user: AdminUserRow; onClose
   const [period, setPeriod] = useState<"total" | "today" | "month" | "custom">("total");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -1639,6 +1640,11 @@ const UserTransactionsDialog = ({ user, onClose }: { user: AdminUserRow; onClose
       if (dateTo && t > customTo) return false;
     }
     if (type !== "all" && r.kind !== type) return false;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      const haystack = [r.detail, r.reference, r.external_order_id, r.status].filter(Boolean).join(" ").toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
     return true;
   });
 
@@ -1712,6 +1718,23 @@ const UserTransactionsDialog = ({ user, onClose }: { user: AdminUserRow; onClose
           ))}
         </div>
 
+        {/* Barre de recherche */}
+        <div className="relative">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Rechercher par détail, N° commande, référence…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-8 pr-3 py-1.5 text-xs border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <X size={12} />
+            </button>
+          )}
+        </div>
+
         {loading ? (
           <LogoLoader />
         ) : filtered.length === 0 ? (
@@ -1722,13 +1745,14 @@ const UserTransactionsDialog = ({ user, onClose }: { user: AdminUserRow; onClose
               <table className="w-full text-xs">
                 <thead className="bg-muted/60">
                   <tr className="text-left">
-                    <th className="px-3 py-2 font-medium">Date</th>
-                    <th className="px-3 py-2 font-medium">Type</th>
+                    <th className="px-3 py-2 font-medium whitespace-nowrap">Date</th>
+                    <th className="px-3 py-2 font-medium whitespace-nowrap">Type</th>
+                    <th className="px-3 py-2 font-medium whitespace-nowrap">N° / Réf.</th>
                     <th className="px-3 py-2 font-medium">Détail</th>
-                    <th className="px-3 py-2 font-medium text-right">Montant</th>
-                    <th className="px-3 py-2 font-medium text-right">Solde avant</th>
-                    <th className="px-3 py-2 font-medium text-right">Solde après</th>
-                    <th className="px-3 py-2 font-medium">Statut</th>
+                    <th className="px-3 py-2 font-medium text-right whitespace-nowrap">Montant</th>
+                    <th className="px-3 py-2 font-medium text-right whitespace-nowrap">Solde avant</th>
+                    <th className="px-3 py-2 font-medium text-right whitespace-nowrap">Solde après</th>
+                    <th className="px-3 py-2 font-medium whitespace-nowrap">Statut</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1753,9 +1777,11 @@ const UserTransactionsDialog = ({ user, onClose }: { user: AdminUserRow; onClose
                           })}
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap">{kindLabel(r.kind, Number(r.amount))}</td>
-                        <td className="px-3 py-2 truncate max-w-[220px]">
+                        <td className="px-3 py-2 whitespace-nowrap font-mono text-xs text-muted-foreground">
+                          {r.reference || "—"}
+                        </td>
+                        <td className="px-3 py-2 truncate max-w-[200px]">
                           {r.detail}
-                          {r.reference && <span className="text-muted-foreground"> · {r.reference}</span>}
                         </td>
                         <td className={`px-3 py-2 text-right font-semibold whitespace-nowrap ${colorClass}`}>
                           {sign}{Math.abs(Number(r.amount)).toLocaleString("fr-FR")} {r.kind === "deposit" && r.currency ? r.currency : "XAF"}
