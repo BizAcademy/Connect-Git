@@ -2573,19 +2573,29 @@ const AdminPayments = () => {
 
   const validate = async (payment: any) => {
     if (payment.status === "completed") { toast.error("Déjà validé"); return; }
-    const { data: prof } = await supabase.from("profiles").select("balance").eq("user_id", payment.user_id).single();
-    if (prof) {
-      await supabase.from("profiles").update({ balance: Number(prof.balance) + Number(payment.amount) }).eq("user_id", payment.user_id);
+    try {
+      await adminApiFetch(`/api/admin/deposits/${payment.id}/status`, {
+        method: "POST",
+        body: JSON.stringify({ status: "completed" }),
+      });
+      toast.success(`${Number(payment.amount).toLocaleString()} FCFA crédités`);
+      load();
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur lors de la validation");
     }
-    await supabase.from("payments").update({ status: "completed" }).eq("id", payment.id);
-    toast.success(`${Number(payment.amount).toLocaleString()} FCFA crédités`);
-    load();
   };
 
   const reject = async (id: string) => {
-    await supabase.from("payments").update({ status: "rejected" }).eq("id", id);
-    toast.success("Paiement rejeté");
-    load();
+    try {
+      await adminApiFetch(`/api/admin/deposits/${id}/status`, {
+        method: "POST",
+        body: JSON.stringify({ status: "rejected" }),
+      });
+      toast.success("Paiement rejeté");
+      load();
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur lors du rejet");
+    }
   };
 
   return (
