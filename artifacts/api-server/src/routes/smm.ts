@@ -122,6 +122,22 @@ function supabaseHeaders(userToken: string): Record<string, string> {
   };
 }
 
+/**
+ * Headers for balance WRITE operations (debit / refund).
+ * Uses service_role key so the balance trigger (which blocks the
+ * `authenticated` role) and the column-level REVOKE are bypassed.
+ * Falls back to the anon key if service_role is not configured.
+ */
+function serviceWriteHeaders(): Record<string, string> {
+  const key = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY!;
+  return {
+    apikey: key,
+    Authorization: `Bearer ${key}`,
+    "Content-Type": "application/json",
+    Prefer: "return=representation",
+  };
+}
+
 // Country → ISO currency code (mirrors frontend currency.ts COUNTRY_CURRENCY)
 const COUNTRY_TO_CURRENCY: Record<string, string> = {
   BJ: "XOF", BF: "XOF", CI: "XOF", GW: "XOF", ML: "XOF", NE: "XOF", SN: "XOF", TG: "XOF",
@@ -163,9 +179,10 @@ async function debitBalance(
 ): Promise<number | null> {
   const newBalance = currentBalance - amount;
   const url = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&balance=eq.${currentBalance}`;
+  // Use service_role key: the balance trigger and column REVOKE block `authenticated` role writes.
   const r = await fetch(url, {
     method: "PATCH",
-    headers: supabaseHeaders(userToken),
+    headers: serviceWriteHeaders(),
     body: JSON.stringify({ balance: newBalance }),
   });
   if (!r.ok) return null;
@@ -184,9 +201,10 @@ async function refundBalance(userId: string, userToken: string, amount: number):
     }
     const newBalance = current + amount;
     const url = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&balance=eq.${current}`;
+    // Use service_role key: the balance trigger and column REVOKE block `authenticated` role writes.
     const r = await fetch(url, {
       method: "PATCH",
-      headers: supabaseHeaders(userToken),
+      headers: serviceWriteHeaders(),
       body: JSON.stringify({ balance: newBalance }),
     });
     if (!r.ok) {
