@@ -2182,7 +2182,7 @@ const AdminUsers = () => {
           <DialogHeader>
             <DialogTitle>Modifier l'utilisateur</DialogTitle>
             <DialogDescription>
-              {editing?.user_id && <span className="text-xs font-mono break-all">{editing.user_id}</span>}
+              {editing?.email || editing?.username || ""}
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
