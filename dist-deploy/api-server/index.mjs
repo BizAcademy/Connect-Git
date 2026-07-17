@@ -53400,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-07-16T20:13:14.801Z";
+var BUILD_TIME = "2026-07-17T18:56:48.625Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -54001,6 +54001,15 @@ function supabaseHeaders2(userToken) {
     Prefer: "return=representation"
   };
 }
+function serviceWriteHeaders() {
+  const key2 = SUPABASE_SERVICE_ROLE_KEY3 || SUPABASE_ANON_KEY2;
+  return {
+    apikey: key2,
+    Authorization: `Bearer ${key2}`,
+    "Content-Type": "application/json",
+    Prefer: "return=representation"
+  };
+}
 var COUNTRY_TO_CURRENCY = {
   BJ: "XOF",
   BF: "XOF",
@@ -54048,7 +54057,7 @@ async function debitBalance(userId, userToken, currentBalance, amount) {
   const url = `${SUPABASE_URL4}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&balance=eq.${currentBalance}`;
   const r = await fetch(url, {
     method: "PATCH",
-    headers: supabaseHeaders2(userToken),
+    headers: serviceWriteHeaders(),
     body: JSON.stringify({ balance: newBalance })
   });
   if (!r.ok) return null;
@@ -54068,7 +54077,7 @@ async function refundBalance(userId, userToken, amount) {
     const url = `${SUPABASE_URL4}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&balance=eq.${current}`;
     const r = await fetch(url, {
       method: "PATCH",
-      headers: supabaseHeaders2(userToken),
+      headers: serviceWriteHeaders(),
       body: JSON.stringify({ balance: newBalance })
     });
     if (!r.ok) {
@@ -56065,8 +56074,24 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
       wantOrders ? fetch(buildOrderUrl(), { headers }) : Promise.resolve(null),
       wantPays ? fetch(buildPayUrl(), { headers }) : Promise.resolve(null)
     ]);
-    const orders = ordRes && ordRes.ok ? await ordRes.json() : [];
-    const pays = payRes && payRes.ok ? await payRes.json() : [];
+    let orders = [];
+    let pays = [];
+    if (ordRes) {
+      if (ordRes.ok) {
+        orders = await ordRes.json();
+      } else {
+        const errBody = await ordRes.text().catch(() => "");
+        logger.error({ status: ordRes.status, body: errBody.slice(0, 400) }, "admin/transactions: orders query failed \u2014 possible missing column in DB");
+      }
+    }
+    if (payRes) {
+      if (payRes.ok) {
+        pays = await payRes.json();
+      } else {
+        const errBody = await payRes.text().catch(() => "");
+        logger.error({ status: payRes.status, body: errBody.slice(0, 400) }, "admin/transactions: payments query failed \u2014 possible missing column in DB");
+      }
+    }
     const userIds = Array.from(new Set([
       ...orders.map((o) => o.user_id),
       ...pays.map((p) => p.user_id)
