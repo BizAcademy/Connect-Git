@@ -60,7 +60,10 @@ const apiLimiter = rateLimit({
   max: 600,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path.startsWith("/api/payments/webhook"),
+  // NB : le limiteur est monté sur "/api", donc req.path ne contient PAS le
+  // préfixe /api (req.path = "/payments/webhook"). On utilise req.originalUrl
+  // qui contient toujours l'URL complète, sinon l'exemption ne matche jamais.
+  skip: (req) => req.originalUrl.startsWith("/api/payments/webhook"),
   handler: (_req, res) => {
     res.status(429).json({ error: "Trop de requêtes — réessayez dans 1 minute." });
   },

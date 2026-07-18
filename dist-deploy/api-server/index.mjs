@@ -53400,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-07-18T18:28:30.962Z";
+var BUILD_TIME = "2026-07-18T18:32:17.020Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -58580,7 +58580,10 @@ var apiLimiter = rate_limit_default({
   max: 600,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path.startsWith("/api/payments/webhook"),
+  // NB : le limiteur est monté sur "/api", donc req.path ne contient PAS le
+  // préfixe /api (req.path = "/payments/webhook"). On utilise req.originalUrl
+  // qui contient toujours l'URL complète, sinon l'exemption ne matche jamais.
+  skip: (req) => req.originalUrl.startsWith("/api/payments/webhook"),
   handler: (_req, res) => {
     res.status(429).json({ error: "Trop de requ\xEAtes \u2014 r\xE9essayez dans 1 minute." });
   }
