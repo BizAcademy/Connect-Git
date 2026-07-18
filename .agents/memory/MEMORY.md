@@ -2,3 +2,4 @@
 - [USD service rates startup load](usd-rates-startup-load.md) — admin USD pricing is in-memory only; must load from DB at boot (before warmServicesCache) or it reverts to hardcoded defaults on restart.
 - [BizPanel preview setup](bizpanel-preview-setup.md) — real project synced from GitHub; frontend needs VITE_SUPABASE_URL/ANON_KEY; api-server commits a stale dist (restart rebuilds); full data needs SMM/AfribaPay/service-role creds.
 - [BizPanel SEO prerender](bizpanel-seo-prerender.md) — CSR SPA served empty body; homepage prerendered to static HTML at build via nix Chromium (not puppeteer's), non-fatal step in build-for-plesk.sh.
+- [Plesk proxy & rate limit](plesk-proxy-rate-limit.md) — Plesk = 2 proxy hops: trust private ranges or all visitors share one rate-limit bucket; mounted middleware must test req.originalUrl.
