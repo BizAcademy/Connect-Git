@@ -53400,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-07-17T18:56:48.625Z";
+var BUILD_TIME = "2026-07-18T18:28:30.962Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -58553,7 +58553,7 @@ var routes_default = router8;
 // src/app.ts
 init_logger();
 var app = (0, import_express9.default)();
-app.set("trust proxy", 1);
+app.set("trust proxy", ["loopback", "linklocal", "uniquelocal"]);
 app.use(
   (0, import_pino_http.default)({
     logger,
@@ -58577,7 +58577,7 @@ app.use((0, import_compression.default)());
 app.use((0, import_cors.default)());
 var apiLimiter = rate_limit_default({
   windowMs: 60 * 1e3,
-  max: 100,
+  max: 600,
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.path.startsWith("/api/payments/webhook"),

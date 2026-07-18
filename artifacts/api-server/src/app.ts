@@ -14,8 +14,16 @@ const app: Express = express();
 // Replit (preview/prod) et Plesk/Cybrancy mettent un reverse proxy devant Node.
 // Sans `trust proxy`, express-rate-limit identifie tous les clients par l'IP du
 // proxy → faux positifs massifs + warning ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
-// `1` = on fait confiance au premier hop seulement (sécurité contre le spoofing).
-app.set("trust proxy", 1);
+//
+// ⚠️ Plesk enchaîne DEUX proxys sur la même machine (nginx → Apache/Passenger).
+// Avec `trust proxy = 1`, Express ne remontait qu'un seul saut : tous les
+// visiteurs étaient identifiés par l'IP interne du proxy et PARTAGEAIENT le
+// même compteur de rate-limit → la liste des utilisateurs du panneau admin
+// (et d'autres requêtes) recevait des 429 dès que le site était un peu actif.
+// On fait donc confiance à tous les sauts en IP privée/loopback (les proxys
+// locaux de Plesk et de Replit), et l'IP client retenue est la première IP
+// publique de X-Forwarded-For — non falsifiable, car ajoutée par nginx.
+app.set("trust proxy", ["loopback", "linklocal", "uniquelocal"]);
 
 app.use(
   pinoHttp({
@@ -39,11 +47,17 @@ app.use(
 app.use(compression());
 app.use(cors());
 
-// Rate limiting — 100 requêtes/minute par IP sur toutes les routes /api
+// Rate limiting — 600 requêtes/minute par IP sur toutes les routes /api.
+// 100/min était trop serré : le panneau admin interroge plusieurs endpoints
+// en continu (solde total toutes les 15 s, listes, badges…), plusieurs onglets
+// ouverts multiplient les appels, et en Afrique francophone beaucoup
+// d'utilisateurs partagent la même IP publique (CGNAT des opérateurs mobiles).
+// 600/min ≈ 10 req/s par client : indolore pour un humain, bloque toujours
+// les inondations de requêtes automatisées.
 // Le webhook AfribaPay est exempté pour ne jamais bloquer les paiements entrants.
 const apiLimiter = rateLimit({
   windowMs: 60 * 1_000,
-  max: 100,
+  max: 600,
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.path.startsWith("/api/payments/webhook"),
