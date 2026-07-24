@@ -20501,27 +20501,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router9;
+    module.exports = Router10;
     module.exports.Route = Route;
-    function Router9(options) {
-      if (!(this instanceof Router9)) {
-        return new Router9(options);
+    function Router10(options) {
+      if (!(this instanceof Router10)) {
+        return new Router10(options);
       }
       const opts = options || {};
-      function router9(req, res, next) {
-        router9.handle(req, res, next);
+      function router10(req, res, next) {
+        router10.handle(req, res, next);
       }
-      Object.setPrototypeOf(router9, this);
-      router9.caseSensitive = opts.caseSensitive;
-      router9.mergeParams = opts.mergeParams;
-      router9.params = {};
-      router9.strict = opts.strict;
-      router9.stack = [];
-      return router9;
+      Object.setPrototypeOf(router10, this);
+      router10.caseSensitive = opts.caseSensitive;
+      router10.mergeParams = opts.mergeParams;
+      router10.params = {};
+      router10.strict = opts.strict;
+      router10.stack = [];
+      return router10;
     }
-    Router9.prototype = function() {
+    Router10.prototype = function() {
     };
-    Router9.prototype.param = function param(name, fn) {
+    Router10.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20541,7 +20541,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router9.prototype.handle = function handle(req, res, callback) {
+    Router10.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20668,7 +20668,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router9.prototype.use = function use(handler) {
+    Router10.prototype.use = function use(handler) {
       let offset = 0;
       let path7 = "/";
       if (typeof handler !== "function") {
@@ -20701,7 +20701,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router9.prototype.route = function route(path7) {
+    Router10.prototype.route = function route(path7) {
       const route2 = new Route(path7);
       const layer = new Layer(path7, {
         sensitive: this.caseSensitive,
@@ -20716,7 +20716,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router9.prototype[method] = function(path7) {
+      Router10.prototype[method] = function(path7) {
         const route = this.route(path7);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -20899,13 +20899,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router9 = require_router();
+    var Router10 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router9 = null;
+      var router10 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -20914,13 +20914,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router9 === null) {
-            router9 = new Router9({
+          if (router10 === null) {
+            router10 = new Router10({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router9;
+          return router10;
         }
       });
     };
@@ -20991,15 +20991,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router9 = this.router;
+      var router10 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router9.use(path7, fn2);
+          return router10.use(path7, fn2);
         }
         debug(".use app under %s", path7);
         fn2.mountpath = path7;
         fn2.parent = this;
-        router9.use(path7, function mounted_app(req, res, next) {
+        router10.use(path7, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23572,7 +23572,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router9 = require_router();
+    var Router10 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23594,8 +23594,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router9.Route;
-    exports.Router = Router9;
+    exports.Route = Router10.Route;
+    exports.Router = Router10;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -48548,7 +48548,7 @@ var require_multer = __commonJS({
 });
 
 // src/app.ts
-var import_express9 = __toESM(require_express2(), 1);
+var import_express10 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_compression = __toESM(require_compression(), 1);
 
@@ -49512,7 +49512,7 @@ import fs6 from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // src/routes/index.ts
-var import_express8 = __toESM(require_express2(), 1);
+var import_express9 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -53400,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-07-18T18:32:17.020Z";
+var BUILD_TIME = "2026-07-24T23:53:06.576Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -54753,37 +54753,262 @@ function toFcfa(localAmount, country) {
   return Math.round(localAmount * info.fcfaPerUnit);
 }
 
-// src/lib/deposits.ts
+// src/lib/referrals.ts
+init_logger();
 var SUPABASE_URL5 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_ANON_KEY3 = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
 var SUPABASE_SERVICE_ROLE_KEY4 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+function svcHeaders() {
+  const key2 = SUPABASE_SERVICE_ROLE_KEY4 || "";
+  return {
+    apikey: key2,
+    Authorization: `Bearer ${key2}`,
+    "Content-Type": "application/json"
+  };
+}
+var DEFAULT_CONFIG2 = { referrerPct: 5, referredPct: 2, minDepositFcfa: 2e3 };
+var CONFIG_TTL_MS = 6e4;
+var configCache = null;
+async function getReferralConfig() {
+  if (configCache && Date.now() - configCache.at < CONFIG_TTL_MS) return configCache.cfg;
+  const cfg = { ...DEFAULT_CONFIG2 };
+  if (SUPABASE_URL5 && SUPABASE_SERVICE_ROLE_KEY4) {
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL5}/rest/v1/settings?key=in.(referral_referrer_pct,referral_referred_pct,referral_min_deposit_fcfa)&select=key,value`,
+        { headers: svcHeaders() }
+      );
+      if (r.ok) {
+        const rows = await r.json();
+        for (const row of rows) {
+          const v = parseFloat(row.value);
+          if (!Number.isFinite(v) || v < 0) continue;
+          if (row.key === "referral_referrer_pct") cfg.referrerPct = v;
+          if (row.key === "referral_referred_pct") cfg.referredPct = v;
+          if (row.key === "referral_min_deposit_fcfa") cfg.minDepositFcfa = v;
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "getReferralConfig: settings read failed \u2014 using defaults");
+    }
+  }
+  configCache = { cfg, at: Date.now() };
+  return cfg;
+}
+var REFERRAL_SELECT = "id,referrer_user_id,referred_user_id,status,referrer_bonus_fcfa,referred_bonus_fcfa,referrer_credited_at,referred_credited_at";
+async function settleLeg(referral, leg) {
+  const flagCol = leg === "referrer" ? "referrer_credited_at" : "referred_credited_at";
+  if (referral[flagCol]) return true;
+  try {
+    const r = await fetch(`${SUPABASE_URL5}/rest/v1/rpc/award_referral_leg`, {
+      method: "POST",
+      headers: svcHeaders(),
+      body: JSON.stringify({ p_referral_id: referral.id, p_leg: leg })
+    });
+    if (!r.ok) {
+      const body = await r.text();
+      if (r.status === 404 || body.includes("42883")) {
+        logger.error(
+          { referralId: referral.id },
+          "award_referral_leg RPC absente \u2014 migration 020 incompl\xE8te (ex\xE9cutez la version \xE0 jour)"
+        );
+      } else {
+        logger.error(
+          { referralId: referral.id, leg, status: r.status, body: body.slice(0, 150) },
+          "referral leg RPC failed \u2014 recovery will retry"
+        );
+      }
+      return false;
+    }
+    const out = await r.json();
+    if (out.ok) {
+      if (!out.already) {
+        logger.info({ referralId: referral.id, leg, credited: out.credited }, "referral leg credited (atomic)");
+      }
+      if (out.paid) logger.info({ referralId: referral.id }, "referral fully paid");
+      return true;
+    }
+    if (out.status === "paid") return true;
+    logger.error({ referralId: referral.id, leg, error: out.error }, "referral leg refused by RPC");
+    return false;
+  } catch (err) {
+    logger.error({ err, referralId: referral.id, leg }, "referral leg RPC threw \u2014 recovery will retry");
+    return false;
+  }
+}
+async function settleReferral(referral) {
+  await settleLeg(referral, "referrer");
+  await settleLeg(referral, "referred");
+}
+async function maybeAwardReferralBonus(referredUserId, paymentId, amountFcfa) {
+  if (!SUPABASE_URL5 || !SUPABASE_SERVICE_ROLE_KEY4) return;
+  if (!Number.isFinite(amountFcfa) || amountFcfa <= 0) return;
+  const pr = await fetch(
+    `${SUPABASE_URL5}/rest/v1/referrals?referred_user_id=eq.${encodeURIComponent(referredUserId)}&status=in.(pending,processing)&select=${REFERRAL_SELECT}&limit=1`,
+    { headers: svcHeaders() }
+  );
+  if (!pr.ok) {
+    const body = await pr.text();
+    if (!body.includes("42P01")) {
+      logger.warn({ status: pr.status, body: body.slice(0, 150) }, "referral lookup failed");
+    }
+    return;
+  }
+  const found = await pr.json();
+  const referral = found[0];
+  if (!referral) return;
+  if (referral.status === "processing") {
+    await settleReferral(referral);
+    return;
+  }
+  const cfg = await getReferralConfig();
+  if (amountFcfa < cfg.minDepositFcfa) {
+    logger.info(
+      { referredUserId, paymentId, amountFcfa, min: cfg.minDepositFcfa },
+      "referral: deposit below threshold \u2014 bonus stays pending"
+    );
+    return;
+  }
+  const referrerBonus = Math.floor(amountFcfa * cfg.referrerPct / 100);
+  const referredBonus = Math.floor(amountFcfa * cfg.referredPct / 100);
+  const claim = await fetch(
+    `${SUPABASE_URL5}/rest/v1/referrals?id=eq.${encodeURIComponent(referral.id)}&status=eq.pending&select=${REFERRAL_SELECT}`,
+    {
+      method: "PATCH",
+      headers: { ...svcHeaders(), Prefer: "return=representation" },
+      body: JSON.stringify({
+        status: "processing",
+        qualifying_payment_id: paymentId,
+        qualifying_amount_fcfa: Math.round(amountFcfa),
+        referrer_bonus_fcfa: referrerBonus,
+        referred_bonus_fcfa: referredBonus
+      })
+    }
+  );
+  if (!claim.ok) {
+    logger.error({ referralId: referral.id, status: claim.status }, "referral claim PATCH failed");
+    return;
+  }
+  const claimed = await claim.json();
+  if (!claimed[0]) return;
+  logger.info(
+    { referralId: referral.id, paymentId, amountFcfa, referrerBonus, referredBonus },
+    "referral qualified deposit claimed \u2014 crediting bonuses"
+  );
+  await settleReferral(claimed[0]);
+}
+async function recoverStuckReferrals(limit = 10) {
+  if (!SUPABASE_URL5 || !SUPABASE_SERVICE_ROLE_KEY4) return;
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL5}/rest/v1/referrals?status=eq.processing&select=${REFERRAL_SELECT}&order=created_at.asc&limit=${limit}`,
+      { headers: svcHeaders() }
+    );
+    if (!r.ok) return;
+    const rows = await r.json();
+    for (const row of rows) {
+      logger.warn({ referralId: row.id }, "referral recovery: resuming stuck referral");
+      await settleReferral(row);
+    }
+  } catch (err) {
+    logger.warn({ err }, "referral recovery failed \u2014 will retry next scan");
+  }
+}
+var CODE_RE = /^[A-Z0-9]{4,20}$/;
+function normalizeCode(raw) {
+  if (typeof raw !== "string") return null;
+  const code = raw.trim().toUpperCase();
+  return CODE_RE.test(code) ? code : null;
+}
+async function findCodeOwner(code) {
+  if (!SUPABASE_URL5 || !SUPABASE_SERVICE_ROLE_KEY4) return null;
+  const r = await fetch(
+    `${SUPABASE_URL5}/rest/v1/profiles?referral_code=eq.${encodeURIComponent(code)}&select=user_id&limit=1`,
+    { headers: svcHeaders() }
+  );
+  if (!r.ok) return null;
+  const rows = await r.json();
+  return rows[0]?.user_id ?? null;
+}
+var CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function generateCodeJs() {
+  let out = "BB";
+  for (let i = 0; i < 6; i++) {
+    out += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+  }
+  return out;
+}
+async function ensureReferralCode(userId) {
+  if (!SUPABASE_URL5 || !SUPABASE_SERVICE_ROLE_KEY4) return null;
+  const read = await fetch(
+    `${SUPABASE_URL5}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=referral_code`,
+    { headers: svcHeaders() }
+  );
+  if (!read.ok) return null;
+  const rows = await read.json();
+  if (!rows[0]) return null;
+  if (rows[0].referral_code) return rows[0].referral_code;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = generateCodeJs();
+    const w = await fetch(
+      `${SUPABASE_URL5}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&referral_code=is.null`,
+      {
+        method: "PATCH",
+        headers: { ...svcHeaders(), Prefer: "return=representation" },
+        body: JSON.stringify({ referral_code: code })
+      }
+    );
+    if (w.ok) {
+      const updated = await w.json();
+      if (updated.length > 0) return updated[0].referral_code;
+      const re = await fetch(
+        `${SUPABASE_URL5}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=referral_code`,
+        { headers: svcHeaders() }
+      );
+      if (re.ok) {
+        const rrows = await re.json();
+        return rrows[0]?.referral_code ?? null;
+      }
+      return null;
+    }
+    if (w.status !== 409) {
+      logger.warn({ userId, status: w.status }, "ensureReferralCode: PATCH failed");
+      return null;
+    }
+  }
+  return null;
+}
+
+// src/lib/deposits.ts
+var SUPABASE_URL6 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_ANON_KEY3 = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
+var SUPABASE_SERVICE_ROLE_KEY5 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var BONUS_THRESHOLD_FCFA = 5e3;
 var BONUS_AMOUNT_FCFA = 200;
 function isEligibleForBonus(amount) {
   return Number.isFinite(amount) && amount >= BONUS_THRESHOLD_FCFA;
 }
 function writeHeaders(userToken) {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY4 || SUPABASE_ANON_KEY3;
+  const key2 = SUPABASE_SERVICE_ROLE_KEY5 || SUPABASE_ANON_KEY3;
   return {
     apikey: key2,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY4 ? key2 : userToken || key2}`,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY5 ? key2 : userToken || key2}`,
     "Content-Type": "application/json"
   };
 }
 function readHeaders(userToken) {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY4 || SUPABASE_ANON_KEY3;
+  const key2 = SUPABASE_SERVICE_ROLE_KEY5 || SUPABASE_ANON_KEY3;
   return {
     apikey: key2,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY4 ? key2 : userToken || key2}`
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY5 ? key2 : userToken || key2}`
   };
 }
 function hasServiceRoleKey() {
-  return Boolean(SUPABASE_SERVICE_ROLE_KEY4);
+  return Boolean(SUPABASE_SERVICE_ROLE_KEY5);
 }
 async function fetchPayment(paymentId, userToken) {
-  if (!SUPABASE_URL5) return null;
+  if (!SUPABASE_URL6) return null;
   const r = await fetch(
-    `${SUPABASE_URL5}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}&select=*`,
+    `${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}&select=*`,
     { headers: readHeaders(userToken) }
   );
   if (!r.ok) return null;
@@ -54791,9 +55016,9 @@ async function fetchPayment(paymentId, userToken) {
   return rows[0] || null;
 }
 async function getBalance(userId, userToken) {
-  if (!SUPABASE_URL5) return null;
+  if (!SUPABASE_URL6) return null;
   const r = await fetch(
-    `${SUPABASE_URL5}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=balance`,
+    `${SUPABASE_URL6}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=balance`,
     { headers: readHeaders(userToken) }
   );
   if (!r.ok) return null;
@@ -54802,7 +55027,7 @@ async function getBalance(userId, userToken) {
   return Number(rows[0].balance);
 }
 async function creditBalance(userId, amount, userToken) {
-  if (!SUPABASE_URL5 || amount <= 0) return null;
+  if (!SUPABASE_URL6 || amount <= 0) return null;
   const MAX_ATTEMPTS = 5;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const current = await getBalance(userId, userToken);
@@ -54811,7 +55036,7 @@ async function creditBalance(userId, amount, userToken) {
       return null;
     }
     const next = current + amount;
-    const url = `${SUPABASE_URL5}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&balance=eq.${current}`;
+    const url = `${SUPABASE_URL6}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&balance=eq.${current}`;
     const r = await fetch(url, {
       method: "PATCH",
       headers: { ...writeHeaders(userToken), Prefer: "return=representation" },
@@ -54830,11 +55055,11 @@ async function creditBalance(userId, amount, userToken) {
 }
 async function ensureRatesLoaded() {
   if (isRateCacheValid()) return;
-  if (!SUPABASE_URL5) return;
+  if (!SUPABASE_URL6) return;
   try {
-    const key2 = SUPABASE_SERVICE_ROLE_KEY4 || SUPABASE_ANON_KEY3;
+    const key2 = SUPABASE_SERVICE_ROLE_KEY5 || SUPABASE_ANON_KEY3;
     const r = await fetch(
-      `${SUPABASE_URL5}/rest/v1/settings?key=like.currency_rate_%25&select=key,value`,
+      `${SUPABASE_URL6}/rest/v1/settings?key=like.currency_rate_%25&select=key,value`,
       { headers: { apikey: key2, Authorization: `Bearer ${key2}` } }
     );
     if (!r.ok) return;
@@ -54855,10 +55080,10 @@ async function ensureRatesLoaded() {
   }
 }
 async function fetchUserCountry(userId) {
-  if (!SUPABASE_URL5) return null;
+  if (!SUPABASE_URL6) return null;
   try {
     const r = await fetch(
-      `${SUPABASE_URL5}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=country`,
+      `${SUPABASE_URL6}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=country`,
       { headers: readHeaders() }
     );
     if (!r.ok) return null;
@@ -54869,7 +55094,7 @@ async function fetchUserCountry(userId) {
   }
 }
 async function creditDeposit(paymentId, opts) {
-  if (!SUPABASE_URL5) return { ok: false, error: "Supabase non configur\xE9", status: 503 };
+  if (!SUPABASE_URL6) return { ok: false, error: "Supabase non configur\xE9", status: 503 };
   const userToken = opts?.userToken;
   const payment = await fetchPayment(paymentId, userToken);
   if (!payment) return { ok: false, error: "Paiement introuvable", status: 404 };
@@ -54903,7 +55128,7 @@ async function creditDeposit(paymentId, opts) {
   const eligible = isEligibleForBonus(amount);
   const bonus = eligible ? BONUS_AMOUNT_FCFA : 0;
   if (opts?.forceBonusCredit && payment.status === "completed" && eligible && payment.bonus_status !== "credited") {
-    const claimUrl2 = `${SUPABASE_URL5}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}&bonus_status=neq.credited`;
+    const claimUrl2 = `${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}&bonus_status=neq.credited`;
     const claim2 = await fetch(claimUrl2, {
       method: "PATCH",
       headers: { ...writeHeaders(userToken), Prefer: "return=representation" },
@@ -54925,7 +55150,7 @@ async function creditDeposit(paymentId, opts) {
     const newBalance2 = await creditBalance(payment.user_id, BONUS_AMOUNT_FCFA, userToken);
     if (newBalance2 === null) {
       logger.error({ paymentId }, "bonus credit failed AFTER claim \u2014 rolling back claim");
-      await fetch(`${SUPABASE_URL5}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
+      await fetch(`${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
         method: "PATCH",
         headers: writeHeaders(userToken),
         body: JSON.stringify({
@@ -54937,7 +55162,7 @@ async function creditDeposit(paymentId, opts) {
     }
     return { ok: true, alreadyCredited: false, amountCredited: 0, bonusCredited: BONUS_AMOUNT_FCFA, newBalance: newBalance2, payment: claimed2[0] };
   }
-  const claimUrl = `${SUPABASE_URL5}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}&credited_at=is.null`;
+  const claimUrl = `${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}&credited_at=is.null`;
   const nowIso = (/* @__PURE__ */ new Date()).toISOString();
   const patch = {
     status: "completed",
@@ -54964,7 +55189,7 @@ async function creditDeposit(paymentId, opts) {
   const newBalance = await creditBalance(payment.user_id, total, userToken);
   if (newBalance === null) {
     logger.error({ paymentId, userId: payment.user_id, total }, "creditDeposit: balance update FAILED after claim \u2014 rolling back claim");
-    const rollback = await fetch(`${SUPABASE_URL5}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
+    const rollback = await fetch(`${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
       method: "PATCH",
       headers: writeHeaders(userToken),
       body: JSON.stringify({
@@ -54984,7 +55209,7 @@ async function creditDeposit(paymentId, opts) {
     return { ok: false, error: "Cr\xE9dit du solde \xE9chou\xE9 (r\xE9essayez)", status: 500 };
   }
   try {
-    await fetch(`${SUPABASE_URL5}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
+    await fetch(`${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
       method: "PATCH",
       headers: writeHeaders(userToken),
       body: JSON.stringify({ balance_before: newBalance - total, balance_after: newBalance })
@@ -54993,10 +55218,15 @@ async function creditDeposit(paymentId, opts) {
     logger.warn({ err, paymentId }, "creditDeposit: could not record balance_before/after");
   }
   logger.info({ paymentId, userId: payment.user_id, amount, bonus, newBalance }, "deposit credited");
+  try {
+    await maybeAwardReferralBonus(payment.user_id, paymentId, amount);
+  } catch (err) {
+    logger.error({ err, paymentId }, "referral bonus hook failed (deposit credit unaffected)");
+  }
   return { ok: true, alreadyCredited: false, amountCredited: amount, bonusCredited: bonus, newBalance, payment: claimed[0] };
 }
 async function markPaymentStatus(paymentId, status, userToken) {
-  if (!SUPABASE_URL5) return { ok: false, error: "Supabase non configur\xE9", status: 503 };
+  if (!SUPABASE_URL6) return { ok: false, error: "Supabase non configur\xE9", status: 503 };
   const payment = await fetchPayment(paymentId, userToken);
   if (!payment) return { ok: false, error: "Paiement introuvable", status: 404 };
   if (payment.credited_at) {
@@ -55007,7 +55237,7 @@ async function markPaymentStatus(paymentId, status, userToken) {
     };
   }
   const r = await fetch(
-    `${SUPABASE_URL5}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}&credited_at=is.null`,
+    `${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}&credited_at=is.null`,
     {
       method: "PATCH",
       headers: { ...writeHeaders(userToken), Prefer: "return=representation" },
@@ -55420,14 +55650,14 @@ function isFailureStatus(s) {
 
 // src/lib/operator-logos.ts
 init_logger();
-var SUPABASE_URL6 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY5 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL7 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY6 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var KEY_PREFIX = "operator_logo_";
 var CACHE_TTL_MS2 = 3e4;
 function serviceRoleHeaders2() {
   return {
-    apikey: SUPABASE_SERVICE_ROLE_KEY5,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY5}`,
+    apikey: SUPABASE_SERVICE_ROLE_KEY6,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY6}`,
     "Content-Type": "application/json"
   };
 }
@@ -55437,10 +55667,10 @@ function bustOperatorLogosCache() {
 }
 async function fetchOperatorLogos() {
   if (cache2 && cache2.expiresAt > Date.now()) return cache2.value;
-  if (!SUPABASE_URL6 || !SUPABASE_SERVICE_ROLE_KEY5) return {};
+  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) return {};
   try {
     const r = await fetch(
-      `${SUPABASE_URL6}/rest/v1/settings?key=like.${encodeURIComponent(KEY_PREFIX + "*")}&select=key,value`,
+      `${SUPABASE_URL7}/rest/v1/settings?key=like.${encodeURIComponent(KEY_PREFIX + "*")}&select=key,value`,
       { headers: serviceRoleHeaders2() }
     );
     if (!r.ok) return {};
@@ -55458,11 +55688,11 @@ async function fetchOperatorLogos() {
   }
 }
 async function upsertOperatorLogo(operatorCode, logoUrl) {
-  if (!SUPABASE_URL6 || !SUPABASE_SERVICE_ROLE_KEY5) {
+  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
     throw new Error("Supabase service role not configured");
   }
   const key2 = KEY_PREFIX + operatorCode;
-  const r = await fetch(`${SUPABASE_URL6}/rest/v1/settings`, {
+  const r = await fetch(`${SUPABASE_URL7}/rest/v1/settings`, {
     method: "POST",
     headers: {
       ...serviceRoleHeaders2(),
@@ -55478,14 +55708,14 @@ async function upsertOperatorLogo(operatorCode, logoUrl) {
 }
 var STORAGE_BUCKET = "operator-logos";
 async function uploadOperatorLogoFile(operatorCode, fileBuffer, mimeType) {
-  if (!SUPABASE_URL6 || !SUPABASE_SERVICE_ROLE_KEY5) {
+  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
     throw new Error("Supabase service role not configured");
   }
   const storageHeaders2 = {
-    apikey: SUPABASE_SERVICE_ROLE_KEY5,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY5}`
+    apikey: SUPABASE_SERVICE_ROLE_KEY6,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY6}`
   };
-  await fetch(`${SUPABASE_URL6}/storage/v1/bucket`, {
+  await fetch(`${SUPABASE_URL7}/storage/v1/bucket`, {
     method: "POST",
     headers: { ...storageHeaders2, "Content-Type": "application/json" },
     body: JSON.stringify({ id: STORAGE_BUCKET, name: STORAGE_BUCKET, public: true })
@@ -55494,7 +55724,7 @@ async function uploadOperatorLogoFile(operatorCode, fileBuffer, mimeType) {
   const ext = mimeType.includes("svg") ? "svg" : mimeType.includes("png") ? "png" : "jpg";
   const objectPath = `${operatorCode}.${ext}`;
   const uploadRes = await fetch(
-    `${SUPABASE_URL6}/storage/v1/object/${STORAGE_BUCKET}/${objectPath}`,
+    `${SUPABASE_URL7}/storage/v1/object/${STORAGE_BUCKET}/${objectPath}`,
     {
       method: "POST",
       headers: {
@@ -55510,17 +55740,17 @@ async function uploadOperatorLogoFile(operatorCode, fileBuffer, mimeType) {
     const body = await uploadRes.text();
     throw new Error(`Storage upload failed (${uploadRes.status}): ${body.slice(0, 300)}`);
   }
-  const publicUrl = `${SUPABASE_URL6}/storage/v1/object/public/${STORAGE_BUCKET}/${objectPath}?t=${Date.now()}`;
+  const publicUrl = `${SUPABASE_URL7}/storage/v1/object/public/${STORAGE_BUCKET}/${objectPath}?t=${Date.now()}`;
   await upsertOperatorLogo(operatorCode, publicUrl);
   return publicUrl;
 }
 async function deleteOperatorLogo(operatorCode) {
-  if (!SUPABASE_URL6 || !SUPABASE_SERVICE_ROLE_KEY5) {
+  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
     throw new Error("Supabase service role not configured");
   }
   const key2 = KEY_PREFIX + operatorCode;
   const r = await fetch(
-    `${SUPABASE_URL6}/rest/v1/settings?key=eq.${encodeURIComponent(key2)}`,
+    `${SUPABASE_URL7}/rest/v1/settings?key=eq.${encodeURIComponent(key2)}`,
     { method: "DELETE", headers: serviceRoleHeaders2() }
   );
   if (!r.ok) {
@@ -55545,11 +55775,11 @@ var logoUpload = (0, import_multer.default)({
   }
 });
 var router3 = (0, import_express3.Router)();
-var SUPABASE_URL7 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_URL8 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
 var SUPABASE_ANON_KEY4 = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
-var SUPABASE_SERVICE_ROLE_KEY6 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_SERVICE_ROLE_KEY7 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 function serviceRoleHeaders3() {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY6;
+  const key2 = SUPABASE_SERVICE_ROLE_KEY7;
   return { apikey: key2, Authorization: `Bearer ${key2}`, "Content-Type": "application/json" };
 }
 var MAIN_ADMIN_EMAIL = (process.env["MAIN_ADMIN_EMAIL"] || "jude@gmail.com").toLowerCase();
@@ -55573,7 +55803,7 @@ async function fetchAdminIds() {
   const ids = /* @__PURE__ */ new Set();
   try {
     const r = await fetch(
-      `${SUPABASE_URL7}/rest/v1/user_roles?role=eq.admin&select=user_id&limit=1000`,
+      `${SUPABASE_URL8}/rest/v1/user_roles?role=eq.admin&select=user_id&limit=1000`,
       { headers: serviceRoleHeaders3() }
     );
     if (r.ok) {
@@ -55587,7 +55817,7 @@ async function fetchAdminIds() {
 async function fetchProfileEmail(userId) {
   try {
     const r = await fetch(
-      `${SUPABASE_URL7}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=email`,
+      `${SUPABASE_URL8}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=email`,
       { headers: serviceRoleHeaders3() }
     );
     if (!r.ok) return null;
@@ -55728,7 +55958,7 @@ router3.get("/admin/earnings", requireUser, requireAdmin, async (req, res) => {
   }
 });
 router3.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL7 || !SUPABASE_ANON_KEY4) {
+  if (!SUPABASE_URL8 || !SUPABASE_ANON_KEY4) {
     return res.status(503).json({ error: "Supabase non configur\xE9" });
   }
   const SERVICE_ROLE = process.env["SUPABASE_SERVICE_ROLE_KEY"];
@@ -55755,7 +55985,7 @@ router3.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req, 
         try {
           const recProvider = r.provider === 3 || r.provider === 4 || r.provider === 5 ? r.provider : 1;
           const patch = await fetch(
-            `${SUPABASE_URL7}/rest/v1/earnings?provider_order_id=eq.${encodeURIComponent(r.provider_order_id)}&provider=eq.${recProvider}`,
+            `${SUPABASE_URL8}/rest/v1/earnings?provider_order_id=eq.${encodeURIComponent(r.provider_order_id)}&provider=eq.${recProvider}`,
             {
               method: "PATCH",
               headers: headersSrv,
@@ -55782,7 +56012,7 @@ router3.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req, 
       const from = page * PAGE_SIZE3;
       const to = from + PAGE_SIZE3 - 1;
       const ordersRes = await fetch(
-        `${SUPABASE_URL7}/rest/v1/orders?select=id,user_id,external_order_id,price,quantity,service_name,created_at,provider&order=created_at.desc`,
+        `${SUPABASE_URL8}/rest/v1/orders?select=id,user_id,external_order_id,price,quantity,service_name,created_at,provider&order=created_at.desc`,
         {
           headers: {
             apikey: SUPABASE_ANON_KEY4,
@@ -56026,7 +56256,7 @@ function periodToFromIso(period) {
   }
 }
 router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
     return res.status(503).json({ error: "Configuration serveur manquante (SUPABASE_SERVICE_ROLE_KEY)" });
   }
   const q = req.query;
@@ -56053,7 +56283,7 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
     if (fromIso) p.append("created_at", `gte.${fromIso}`);
     if (toIso) p.append("created_at", `lte.${toIso}`);
     if (statusF && type === "order") p.append("status", `eq.${statusF}`);
-    return `${SUPABASE_URL7}/rest/v1/orders?${p.toString()}`;
+    return `${SUPABASE_URL8}/rest/v1/orders?${p.toString()}`;
   };
   const buildPayUrl = () => {
     const p = new URLSearchParams();
@@ -56065,7 +56295,7 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
     if (toIso) p.append("created_at", `lte.${toIso}`);
     if (statusF && (type === "deposit" || type === "adjustment")) p.append("status", `eq.${statusF}`);
     if (type === "adjustment") p.append("method", "eq.admin_adjustment");
-    return `${SUPABASE_URL7}/rest/v1/payments?${p.toString()}`;
+    return `${SUPABASE_URL8}/rest/v1/payments?${p.toString()}`;
   };
   try {
     const wantOrders = type === "all" || type === "order" || type === "refund";
@@ -56099,7 +56329,7 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
     const profiles = /* @__PURE__ */ new Map();
     if (userIds.length > 0) {
       const pr = await fetch(
-        `${SUPABASE_URL7}/rest/v1/profiles?user_id=in.(${userIds.join(",")})&select=user_id,username,email,country&limit=${userIds.length}`,
+        `${SUPABASE_URL8}/rest/v1/profiles?user_id=in.(${userIds.join(",")})&select=user_id,username,email,country&limit=${userIds.length}`,
         { headers }
       );
       if (pr.ok) {
@@ -56205,7 +56435,7 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
   }
 });
 router3.get("/admin/deposits", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL7 || !SUPABASE_ANON_KEY4) {
+  if (!SUPABASE_URL8 || !SUPABASE_ANON_KEY4) {
     return res.status(503).json({ error: "Supabase non configur\xE9" });
   }
   const q = req.query;
@@ -56219,7 +56449,7 @@ router3.get("/admin/deposits", requireUser, requireAdmin, async (req, res) => {
   if (cleanSearch) {
     try {
       const pr = await fetch(
-        `${SUPABASE_URL7}/rest/v1/profiles?select=user_id&or=(username.ilike.*${cleanSearch}*,email.ilike.*${cleanSearch}*)&limit=200`,
+        `${SUPABASE_URL8}/rest/v1/profiles?select=user_id&or=(username.ilike.*${cleanSearch}*,email.ilike.*${cleanSearch}*)&limit=200`,
         { headers }
       );
       if (pr.ok) {
@@ -56253,7 +56483,7 @@ router3.get("/admin/deposits", requireUser, requireAdmin, async (req, res) => {
     params.append("or", `(${orParts.join(",")})`);
   }
   try {
-    const r = await fetch(`${SUPABASE_URL7}/rest/v1/payments?${params.toString()}`, { headers });
+    const r = await fetch(`${SUPABASE_URL8}/rest/v1/payments?${params.toString()}`, { headers });
     if (!r.ok) {
       const body = await r.text();
       logger.error({ status: r.status, body: body.slice(0, 200) }, "admin/deposits fetch failed");
@@ -56266,7 +56496,7 @@ router3.get("/admin/deposits", requireUser, requireAdmin, async (req, res) => {
         const allUserIds = Array.from(new Set(rows.map((p) => p.user_id))).filter(Boolean);
         if (allUserIds.length) {
           const cr = await fetch(
-            `${SUPABASE_URL7}/rest/v1/payments?select=user_id&status=eq.completed&user_id=in.(${allUserIds.join(",")})&limit=10000`,
+            `${SUPABASE_URL8}/rest/v1/payments?select=user_id&status=eq.completed&user_id=in.(${allUserIds.join(",")})&limit=10000`,
             { headers }
           );
           if (cr.ok) {
@@ -56286,7 +56516,7 @@ router3.get("/admin/deposits", requireUser, requireAdmin, async (req, res) => {
     if (userIds.length) {
       try {
         const pr = await fetch(
-          `${SUPABASE_URL7}/rest/v1/profiles?select=user_id,username,email&user_id=in.(${userIds.join(",")})`,
+          `${SUPABASE_URL8}/rest/v1/profiles?select=user_id,username,email&user_id=in.(${userIds.join(",")})`,
           { headers }
         );
         if (pr.ok) {
@@ -56369,7 +56599,7 @@ router3.post("/admin/deposits/:id/credit-bonus", requireUser, requireAdmin, asyn
   });
 });
 async function fetchAuthUser(userId) {
-  const r = await fetch(`${SUPABASE_URL7}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+  const r = await fetch(`${SUPABASE_URL8}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
     headers: serviceRoleHeaders3()
   });
   if (!r.ok) return null;
@@ -56383,13 +56613,13 @@ async function fetchAuthUser(userId) {
   };
 }
 router3.get("/admin/users/total-balance", requireUser, requireAdmin, async (_req, res) => {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }
   try {
     const params = new URLSearchParams();
     params.set("select", "balance");
-    const r = await fetch(`${SUPABASE_URL7}/rest/v1/profiles?${params.toString()}`, {
+    const r = await fetch(`${SUPABASE_URL8}/rest/v1/profiles?${params.toString()}`, {
       headers: {
         ...serviceRoleHeaders3(),
         Range: "0-1000000",
@@ -56420,7 +56650,7 @@ router3.get("/admin/users/total-balance", requireUser, requireAdmin, async (_req
   }
 });
 router3.get("/admin/users", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }
   const q = req.query;
@@ -56434,7 +56664,7 @@ router3.get("/admin/users", requireUser, requireAdmin, async (req, res) => {
     const s = `*${search}*`;
     params.set("or", `(username.ilike.${s},email.ilike.${s},phone.ilike.${s})`);
   }
-  const r = await fetch(`${SUPABASE_URL7}/rest/v1/profiles?${params.toString()}`, {
+  const r = await fetch(`${SUPABASE_URL8}/rest/v1/profiles?${params.toString()}`, {
     headers: {
       ...serviceRoleHeaders3(),
       Range: `${offset}-${offset + limit - 1}`,
@@ -56484,7 +56714,7 @@ router3.get("/admin/users", requireUser, requireAdmin, async (req, res) => {
   res.json({ users: rows, total_count: totalCount, has_more: rows.length === limit, requester_is_main_admin: requesterIsMain });
 });
 router3.patch("/admin/users/:userId", requireUser, requireAdmin, requireActionCode, async (req, res) => {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }
   const userId = req.params["userId"];
@@ -56513,7 +56743,7 @@ router3.patch("/admin/users/:userId", requireUser, requireAdmin, requireActionCo
   }
   if (newEmail) {
     const r = await fetch(
-      `${SUPABASE_URL7}/auth/v1/admin/users/${encodeURIComponent(userId)}`,
+      `${SUPABASE_URL8}/auth/v1/admin/users/${encodeURIComponent(userId)}`,
       {
         method: "PUT",
         headers: serviceRoleHeaders3(),
@@ -56532,7 +56762,7 @@ router3.patch("/admin/users/:userId", requireUser, requireAdmin, requireActionCo
   if (wantsBalanceChange) {
     try {
       const r = await fetch(
-        `${SUPABASE_URL7}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=balance`,
+        `${SUPABASE_URL8}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=balance`,
         { headers: serviceRoleHeaders3() }
       );
       if (r.ok) {
@@ -56545,7 +56775,7 @@ router3.patch("/admin/users/:userId", requireUser, requireAdmin, requireActionCo
   }
   if (Object.keys(profilePatch).length > 0) {
     const r = await fetch(
-      `${SUPABASE_URL7}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}`,
+      `${SUPABASE_URL8}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}`,
       {
         method: "PATCH",
         headers: { ...serviceRoleHeaders3(), Prefer: "return=representation" },
@@ -56564,7 +56794,7 @@ router3.patch("/admin/users/:userId", requireUser, requireAdmin, requireActionCo
     if (delta !== 0) {
       try {
         const nowIso = (/* @__PURE__ */ new Date()).toISOString();
-        const ins = await fetch(`${SUPABASE_URL7}/rest/v1/payments`, {
+        const ins = await fetch(`${SUPABASE_URL8}/rest/v1/payments`, {
           method: "POST",
           headers: serviceRoleHeaders3(),
           body: JSON.stringify({
@@ -56591,7 +56821,7 @@ router3.patch("/admin/users/:userId", requireUser, requireAdmin, requireActionCo
   res.json({ ok: true });
 });
 router3.post("/admin/users/:userId/password", requireUser, requireAdmin, requireActionCode, async (req, res) => {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }
   const userId = req.params["userId"];
@@ -56606,7 +56836,7 @@ router3.post("/admin/users/:userId/password", requireUser, requireAdmin, require
     return res.status(400).json({ error: "Mot de passe trop long" });
   }
   const r = await fetch(
-    `${SUPABASE_URL7}/auth/v1/admin/users/${encodeURIComponent(userId)}`,
+    `${SUPABASE_URL8}/auth/v1/admin/users/${encodeURIComponent(userId)}`,
     {
       method: "PUT",
       headers: serviceRoleHeaders3(),
@@ -56635,12 +56865,12 @@ router3.post("/admin/operators/health/clear", requireUser, requireAdmin, (req, r
   res.json({ ok: true, cleared });
 });
 async function fetchCurrencyRateSettings() {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) return {};
+  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) return {};
   try {
     const keys = NON_CFA_COUNTRIES_INFO.map((c) => `currency_rate_${c.code}`);
     const filter = keys.map((k) => `key=eq.${encodeURIComponent(k)}`).join(",");
     const r = await fetch(
-      `${SUPABASE_URL7}/rest/v1/settings?or=(${filter})&select=key,value`,
+      `${SUPABASE_URL8}/rest/v1/settings?or=(${filter})&select=key,value`,
       { headers: serviceRoleHeaders3() }
     );
     if (!r.ok) return {};
@@ -56676,7 +56906,7 @@ router3.get("/admin/currencies", requireUser, requireAdmin, async (_req, res) =>
   res.json({ rates });
 });
 router3.put("/admin/currencies", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }
   const country = req.body?.country;
@@ -56695,7 +56925,7 @@ router3.put("/admin/currencies", requireUser, requireAdmin, async (req, res) => 
   }
   const settingKey = `currency_rate_${upperCountry}`;
   const r = await fetch(
-    `${SUPABASE_URL7}/rest/v1/settings?on_conflict=key`,
+    `${SUPABASE_URL8}/rest/v1/settings?on_conflict=key`,
     {
       method: "POST",
       headers: { ...serviceRoleHeaders3(), Prefer: "resolution=merge-duplicates,return=representation" },
@@ -56713,7 +56943,7 @@ router3.put("/admin/currencies", requireUser, requireAdmin, async (req, res) => 
   res.json({ ok: true, country: upperCountry, fcfaPerUnit: rate });
 });
 router3.delete("/admin/currencies/:country", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }
   const upperCountry = String(req.params["country"] ?? "").toUpperCase();
@@ -56723,7 +56953,7 @@ router3.delete("/admin/currencies/:country", requireUser, requireAdmin, async (r
   }
   const settingKey = `currency_rate_${upperCountry}`;
   const r = await fetch(
-    `${SUPABASE_URL7}/rest/v1/settings?key=eq.${encodeURIComponent(settingKey)}`,
+    `${SUPABASE_URL8}/rest/v1/settings?key=eq.${encodeURIComponent(settingKey)}`,
     { method: "DELETE", headers: serviceRoleHeaders3() }
   );
   if (!r.ok) {
@@ -56736,10 +56966,10 @@ router3.delete("/admin/currencies/:country", requireUser, requireAdmin, async (r
 });
 var USD_RATES_SETTINGS_KEY = "smm_usd_rates";
 async function fetchUsdRatesFromSettings() {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) return null;
+  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) return null;
   try {
     const r = await fetch(
-      `${SUPABASE_URL7}/rest/v1/settings?key=eq.${encodeURIComponent(USD_RATES_SETTINGS_KEY)}&select=value`,
+      `${SUPABASE_URL8}/rest/v1/settings?key=eq.${encodeURIComponent(USD_RATES_SETTINGS_KEY)}&select=value`,
       { headers: serviceRoleHeaders3() }
     );
     if (!r.ok) return null;
@@ -56769,7 +56999,7 @@ router3.get("/admin/usd-rates", requireUser, requireAdmin, async (_req, res) => 
   res.json({ rates, defaults: USD_TO_LOCAL_RATES });
 });
 router3.put("/admin/usd-rates", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }
   const body = req.body?.rates;
@@ -56781,7 +57011,7 @@ router3.put("/admin/usd-rates", requireUser, requireAdmin, async (req, res) => {
     return res.status(400).json({ error: "Tous les taux doivent \xEAtre des nombres positifs" });
   }
   const r = await fetch(
-    `${SUPABASE_URL7}/rest/v1/settings?on_conflict=key`,
+    `${SUPABASE_URL8}/rest/v1/settings?on_conflict=key`,
     {
       method: "POST",
       headers: { ...serviceRoleHeaders3(), "Prefer": "resolution=merge-duplicates,return=representation" },
@@ -56798,11 +57028,11 @@ router3.put("/admin/usd-rates", requireUser, requireAdmin, async (req, res) => {
   res.json({ ok: true, rates: body });
 });
 router3.delete("/admin/usd-rates", requireUser, requireAdmin, async (_req, res) => {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }
   const r = await fetch(
-    `${SUPABASE_URL7}/rest/v1/settings?key=eq.${encodeURIComponent(USD_RATES_SETTINGS_KEY)}`,
+    `${SUPABASE_URL8}/rest/v1/settings?key=eq.${encodeURIComponent(USD_RATES_SETTINGS_KEY)}`,
     { method: "DELETE", headers: serviceRoleHeaders3() }
   );
   if (!r.ok) return res.status(502).json({ error: "R\xE9initialisation impossible" });
@@ -56847,7 +57077,7 @@ router3.put("/admin/operator-logos/:code", requireUser, requireAdmin, async (req
   if (!/^https?:\/\/.{5,}/.test(logoUrl)) {
     return res.status(400).json({ error: "URL invalide \u2014 doit commencer par http:// ou https://" });
   }
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }
   try {
@@ -56862,7 +57092,7 @@ router3.put("/admin/operator-logos/:code", requireUser, requireAdmin, async (req
 router3.delete("/admin/operator-logos/:code", requireUser, requireAdmin, async (req, res) => {
   const code = String(req.params["code"] ?? "").trim();
   if (!code) return res.status(400).json({ error: "Code op\xE9rateur requis" });
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
     return res.status(503).json({ error: "Configuration serveur manquante" });
   }
   try {
@@ -56883,7 +57113,7 @@ router3.post(
     const code = String(req.params["code"] ?? "").trim();
     if (!code) return res.status(400).json({ error: "Code op\xE9rateur requis" });
     if (!req.file) return res.status(400).json({ error: "Fichier image requis" });
-    if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
+    if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
       return res.status(503).json({ error: "Configuration serveur manquante" });
     }
     try {
@@ -57018,20 +57248,20 @@ var ALLOWED_EXT = /* @__PURE__ */ new Set(["jpg", "jpeg", "png", "webp", "gif"])
 var MAX_BYTES = 5 * 1024 * 1024;
 var MAX_IMAGES_PER_USER = 20;
 var MAX_GLOBAL_UPLOADS_BYTES = 500 * 1024 * 1024;
-var SUPABASE_URL8 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY7 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL9 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY8 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var STORAGE_BUCKET2 = "support-uploads";
 function hasStorage() {
-  return !!(SUPABASE_URL8 && SUPABASE_SERVICE_ROLE_KEY7);
+  return !!(SUPABASE_URL9 && SUPABASE_SERVICE_ROLE_KEY8);
 }
 function storageHeaders() {
   return {
-    apikey: SUPABASE_SERVICE_ROLE_KEY7,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY7}`
+    apikey: SUPABASE_SERVICE_ROLE_KEY8,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY8}`
   };
 }
 async function uploadToStorage(filename, buf, contentType) {
-  const url = `${SUPABASE_URL8}/storage/v1/object/${STORAGE_BUCKET2}/${encodeURIComponent(filename)}`;
+  const url = `${SUPABASE_URL9}/storage/v1/object/${STORAGE_BUCKET2}/${encodeURIComponent(filename)}`;
   const r = await fetch(url, {
     method: "POST",
     headers: { ...storageHeaders(), "Content-Type": contentType, "x-upsert": "false" },
@@ -57045,7 +57275,7 @@ async function uploadToStorage(filename, buf, contentType) {
 }
 async function downloadFromStorage(filename) {
   if (!hasStorage()) return null;
-  const url = `${SUPABASE_URL8}/storage/v1/object/${STORAGE_BUCKET2}/${encodeURIComponent(filename)}`;
+  const url = `${SUPABASE_URL9}/storage/v1/object/${STORAGE_BUCKET2}/${encodeURIComponent(filename)}`;
   const r = await fetch(url, { headers: storageHeaders() });
   if (!r.ok) return null;
   const ct = r.headers.get("content-type") || "image/jpeg";
@@ -57058,7 +57288,7 @@ async function getStorageBucketSize() {
 async function countUserImages(userId) {
   if (!hasStorage()) return 0;
   const safe = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-  const url = `${SUPABASE_URL8}/storage/v1/object/list/${STORAGE_BUCKET2}`;
+  const url = `${SUPABASE_URL9}/storage/v1/object/list/${STORAGE_BUCKET2}`;
   const r = await fetch(url, {
     method: "POST",
     headers: { ...storageHeaders(), "Content-Type": "application/json" },
@@ -57162,7 +57392,7 @@ async function cleanupExpired() {
   }
   if (hasStorage()) {
     try {
-      const listUrl = `${SUPABASE_URL8}/storage/v1/object/list/${STORAGE_BUCKET2}`;
+      const listUrl = `${SUPABASE_URL9}/storage/v1/object/list/${STORAGE_BUCKET2}`;
       const orphans = [];
       let offset = 0;
       const PAGE = 1e3;
@@ -57187,7 +57417,7 @@ async function cleanupExpired() {
       }
       for (let i = 0; i < orphans.length; i += 100) {
         const batch = orphans.slice(i, i + 100);
-        const delUrl = `${SUPABASE_URL8}/storage/v1/object/${STORAGE_BUCKET2}`;
+        const delUrl = `${SUPABASE_URL9}/storage/v1/object/${STORAGE_BUCKET2}`;
         const dr = await fetch(delUrl, {
           method: "DELETE",
           headers: { ...storageHeaders(), "Content-Type": "application/json" },
@@ -57294,12 +57524,12 @@ router4.get("/support/uploads/:filename", requireUser, async (req, res) => {
   if (!fp) return res.status(400).end();
   if (!isOwnedBy(fname, req.userId)) {
     try {
-      const SUPABASE_URL17 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+      const SUPABASE_URL19 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
       const SUPABASE_ANON_KEY6 = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
-      if (!SUPABASE_URL17 || !SUPABASE_ANON_KEY6) {
+      if (!SUPABASE_URL19 || !SUPABASE_ANON_KEY6) {
         throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY environment variables must be set");
       }
-      const r = await fetch(`${SUPABASE_URL17}/rest/v1/rpc/has_role`, {
+      const r = await fetch(`${SUPABASE_URL19}/rest/v1/rpc/has_role`, {
         method: "POST",
         headers: {
           apikey: SUPABASE_ANON_KEY6,
@@ -57394,8 +57624,8 @@ var support_default = router4;
 var import_express5 = __toESM(require_express2(), 1);
 init_logger();
 var router5 = (0, import_express5.Router)();
-var SUPABASE_URL9 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY8 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL10 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY9 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SUPABASE_ANON_KEY5 = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
 var PUBLIC_URL = process.env["PUBLIC_API_URL"] || (process.env["REPLIT_DEV_DOMAIN"] ? `https://${process.env["REPLIT_DEV_DOMAIN"]}` : "");
 if (!isAfribapayConfigured()) {
@@ -57409,7 +57639,7 @@ if (!hasServiceRoleKey()) {
   );
 }
 function serverHeaders() {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY8 || SUPABASE_ANON_KEY5;
+  const key2 = SUPABASE_SERVICE_ROLE_KEY9 || SUPABASE_ANON_KEY5;
   return {
     apikey: key2,
     Authorization: `Bearer ${key2}`,
@@ -57417,7 +57647,7 @@ function serverHeaders() {
   };
 }
 async function insertPayment(args) {
-  const r = await fetch(`${SUPABASE_URL9}/rest/v1/payments`, {
+  const r = await fetch(`${SUPABASE_URL10}/rest/v1/payments`, {
     method: "POST",
     headers: {
       ...serverHeaders(),
@@ -57446,7 +57676,7 @@ async function insertPayment(args) {
 }
 async function patchPayment(paymentId, patch, userToken) {
   const headers = userToken ? { ...serverHeaders(), Authorization: `Bearer ${userToken}` } : serverHeaders();
-  await fetch(`${SUPABASE_URL9}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
+  await fetch(`${SUPABASE_URL10}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
     method: "PATCH",
     headers,
     body: JSON.stringify(patch)
@@ -57454,7 +57684,7 @@ async function patchPayment(paymentId, patch, userToken) {
 }
 async function findPaymentByOrderId(orderId) {
   const r = await fetch(
-    `${SUPABASE_URL9}/rest/v1/payments?order_id=eq.${encodeURIComponent(orderId)}&select=id,status,user_id,transaction_id&limit=1`,
+    `${SUPABASE_URL10}/rest/v1/payments?order_id=eq.${encodeURIComponent(orderId)}&select=id,status,user_id,transaction_id&limit=1`,
     { headers: serverHeaders() }
   );
   if (!r.ok) return null;
@@ -57752,7 +57982,7 @@ router5.post("/payments/webhook", async (req, res) => {
 });
 function requireServiceRole(req, res, next) {
   const provided = req.headers["x-service-role-key"];
-  if (!SUPABASE_SERVICE_ROLE_KEY8 || provided !== SUPABASE_SERVICE_ROLE_KEY8) {
+  if (!SUPABASE_SERVICE_ROLE_KEY9 || provided !== SUPABASE_SERVICE_ROLE_KEY9) {
     return res.status(403).json({ error: "Forbidden" });
   }
   return next();
@@ -57792,15 +58022,15 @@ var TicketError = class extends Error {
     this.name = "TicketError";
   }
 };
-var SUPABASE_URL10 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY9 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL11 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY10 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 function supabaseEnabled2() {
-  return !!(SUPABASE_URL10 && SUPABASE_SERVICE_ROLE_KEY9);
+  return !!(SUPABASE_URL11 && SUPABASE_SERVICE_ROLE_KEY10);
 }
 function serviceRoleHeaders4() {
   return {
-    apikey: SUPABASE_SERVICE_ROLE_KEY9,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY9}`,
+    apikey: SUPABASE_SERVICE_ROLE_KEY10,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY10}`,
     "Content-Type": "application/json",
     Prefer: "return=representation"
   };
@@ -57844,7 +58074,7 @@ async function supabaseInsertTicket(ticket) {
       message: ticket.message,
       status: ticket.status
     };
-    const r = await fetch(`${SUPABASE_URL10}/rest/v1/tickets`, {
+    const r = await fetch(`${SUPABASE_URL11}/rest/v1/tickets`, {
       method: "POST",
       headers: serviceRoleHeaders4(),
       body: JSON.stringify(body)
@@ -57864,7 +58094,7 @@ async function supabaseInsertTicket(ticket) {
 async function supabaseListAllTickets() {
   try {
     const r = await fetch(
-      `${SUPABASE_URL10}/rest/v1/tickets?order=status.asc,ts.desc&limit=500`,
+      `${SUPABASE_URL11}/rest/v1/tickets?order=status.asc,ts.desc&limit=500`,
       { headers: serviceRoleHeaders4() }
     );
     if (!r.ok) return null;
@@ -57883,7 +58113,7 @@ async function supabaseListAllTickets() {
 async function supabaseListUserTickets(userId) {
   try {
     const r = await fetch(
-      `${SUPABASE_URL10}/rest/v1/tickets?user_id=eq.${encodeURIComponent(userId)}&order=ts.desc&limit=100`,
+      `${SUPABASE_URL11}/rest/v1/tickets?user_id=eq.${encodeURIComponent(userId)}&order=ts.desc&limit=100`,
       { headers: serviceRoleHeaders4() }
     );
     if (!r.ok) return null;
@@ -57897,7 +58127,7 @@ async function supabaseListUserTickets(userId) {
 async function supabaseGetTicket(ticketId) {
   try {
     const r = await fetch(
-      `${SUPABASE_URL10}/rest/v1/tickets?id=eq.${encodeURIComponent(ticketId)}&limit=1`,
+      `${SUPABASE_URL11}/rest/v1/tickets?id=eq.${encodeURIComponent(ticketId)}&limit=1`,
       { headers: serviceRoleHeaders4() }
     );
     if (!r.ok) return null;
@@ -57914,7 +58144,7 @@ async function supabaseUpdateTicket(ticketId, patch) {
   try {
     const body = { ...patch, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
     const r = await fetch(
-      `${SUPABASE_URL10}/rest/v1/tickets?id=eq.${encodeURIComponent(ticketId)}`,
+      `${SUPABASE_URL11}/rest/v1/tickets?id=eq.${encodeURIComponent(ticketId)}`,
       {
         method: "PATCH",
         headers: serviceRoleHeaders4(),
@@ -57936,7 +58166,7 @@ async function supabaseUpdateTicket(ticketId, patch) {
 async function supabaseCountOpen() {
   try {
     const r = await fetch(
-      `${SUPABASE_URL10}/rest/v1/tickets?status=in.("open","in_progress")&select=id`,
+      `${SUPABASE_URL11}/rest/v1/tickets?status=in.("open","in_progress")&select=id`,
       {
         headers: {
           ...serviceRoleHeaders4(),
@@ -58123,15 +58353,15 @@ async function countOpenTickets() {
 
 // src/routes/tickets.ts
 var router6 = (0, import_express6.Router)();
-var SUPABASE_URL11 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY10 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL12 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY11 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 async function resolveOrderForUser(orderLocalId, userId) {
-  if (!SUPABASE_URL11 || !SUPABASE_SERVICE_ROLE_KEY10) return null;
-  const url = `${SUPABASE_URL11}/rest/v1/orders?id=eq.${encodeURIComponent(orderLocalId)}&user_id=eq.${encodeURIComponent(userId)}&select=id,user_id,external_order_id,provider,service_name&limit=1`;
+  if (!SUPABASE_URL12 || !SUPABASE_SERVICE_ROLE_KEY11) return null;
+  const url = `${SUPABASE_URL12}/rest/v1/orders?id=eq.${encodeURIComponent(orderLocalId)}&user_id=eq.${encodeURIComponent(userId)}&select=id,user_id,external_order_id,provider,service_name&limit=1`;
   const r = await fetch(url, {
     headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY10,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY10}`
+      apikey: SUPABASE_SERVICE_ROLE_KEY11,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY11}`
     }
   });
   if (!r.ok) return null;
@@ -58277,25 +58507,25 @@ var import_express7 = __toESM(require_express2(), 1);
 init_logger();
 import crypto4 from "node:crypto";
 var router7 = (0, import_express7.Router)();
-var SUPABASE_URL12 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY11 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL13 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY12 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var BUCKET = "avatars";
 var MAX_BYTES2 = 2 * 1024 * 1024;
 var ALLOWED = /* @__PURE__ */ new Set(["jpg", "jpeg", "png", "webp"]);
 function serviceHeaders() {
   return {
-    apikey: SUPABASE_SERVICE_ROLE_KEY11,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY11}`
+    apikey: SUPABASE_SERVICE_ROLE_KEY12,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY12}`
   };
 }
 function hasStorage2() {
-  return !!(SUPABASE_URL12 && SUPABASE_SERVICE_ROLE_KEY11);
+  return !!(SUPABASE_URL13 && SUPABASE_SERVICE_ROLE_KEY12);
 }
 async function fetchUserEmail(userToken) {
   if (!userToken) return "";
   try {
-    const r = await fetch(`${SUPABASE_URL12}/auth/v1/user`, {
-      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY11, Authorization: `Bearer ${userToken}` }
+    const r = await fetch(`${SUPABASE_URL13}/auth/v1/user`, {
+      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY12, Authorization: `Bearer ${userToken}` }
     });
     if (r.ok) {
       const u = await r.json();
@@ -58308,7 +58538,7 @@ async function fetchUserEmail(userToken) {
 async function profileExists(userId) {
   try {
     const r = await fetch(
-      `${SUPABASE_URL12}/rest/v1/profiles?user_id=eq.${userId}&select=user_id&limit=1`,
+      `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}&select=user_id&limit=1`,
       { headers: serviceHeaders() }
     );
     if (!r.ok) return false;
@@ -58327,7 +58557,7 @@ async function ensureProfileRow(userId, userToken, country = "", currency = null
     const body = { user_id: userId, username, email };
     if (country) body.country = country;
     if (currency) body.currency = currency;
-    const insRes = await fetch(`${SUPABASE_URL12}/rest/v1/profiles`, {
+    const insRes = await fetch(`${SUPABASE_URL13}/rest/v1/profiles`, {
       method: "POST",
       headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=representation" },
       body: JSON.stringify(body)
@@ -58362,7 +58592,7 @@ router7.post("/profile/avatar", requireUser, async (req, res) => {
   const filename = `${safe}-${crypto4.randomBytes(6).toString("hex")}.${ext}`;
   try {
     const oldRes = await fetch(
-      `${SUPABASE_URL12}/rest/v1/profiles?user_id=eq.${userId}&select=avatar_url`,
+      `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}&select=avatar_url`,
       { headers: { ...serviceHeaders(), Accept: "application/json" } }
     );
     if (oldRes.ok) {
@@ -58371,7 +58601,7 @@ router7.post("/profile/avatar", requireUser, async (req, res) => {
       if (oldUrl) {
         const oldName = oldUrl.split(`/${BUCKET}/`)[1];
         if (oldName) {
-          await fetch(`${SUPABASE_URL12}/storage/v1/object/${BUCKET}/${encodeURIComponent(oldName)}`, {
+          await fetch(`${SUPABASE_URL13}/storage/v1/object/${BUCKET}/${encodeURIComponent(oldName)}`, {
             method: "DELETE",
             headers: serviceHeaders()
           }).catch(() => {
@@ -58380,7 +58610,7 @@ router7.post("/profile/avatar", requireUser, async (req, res) => {
       }
     }
     const uploadRes = await fetch(
-      `${SUPABASE_URL12}/storage/v1/object/${BUCKET}/${encodeURIComponent(filename)}`,
+      `${SUPABASE_URL13}/storage/v1/object/${BUCKET}/${encodeURIComponent(filename)}`,
       {
         method: "POST",
         headers: { ...serviceHeaders(), "Content-Type": contentType, "x-upsert": "false" },
@@ -58392,9 +58622,9 @@ router7.post("/profile/avatar", requireUser, async (req, res) => {
       logger.error({ status: uploadRes.status, detail }, "avatar upload failed");
       return res.status(502).json({ error: "\xC9chec de l'upload" });
     }
-    const avatarUrl = `${SUPABASE_URL12}/storage/v1/object/public/${BUCKET}/${encodeURIComponent(filename)}`;
+    const avatarUrl = `${SUPABASE_URL13}/storage/v1/object/public/${BUCKET}/${encodeURIComponent(filename)}`;
     const patchRes = await fetch(
-      `${SUPABASE_URL12}/rest/v1/profiles?user_id=eq.${userId}`,
+      `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}`,
       {
         method: "PATCH",
         headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=minimal" },
@@ -58416,7 +58646,7 @@ router7.delete("/profile/avatar", requireUser, async (req, res) => {
   const userId = req.userId;
   try {
     const oldRes = await fetch(
-      `${SUPABASE_URL12}/rest/v1/profiles?user_id=eq.${userId}&select=avatar_url`,
+      `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}&select=avatar_url`,
       { headers: { ...serviceHeaders(), Accept: "application/json" } }
     );
     if (oldRes.ok) {
@@ -58425,7 +58655,7 @@ router7.delete("/profile/avatar", requireUser, async (req, res) => {
       if (oldUrl) {
         const oldName = oldUrl.split(`/${BUCKET}/`)[1];
         if (oldName) {
-          await fetch(`${SUPABASE_URL12}/storage/v1/object/${BUCKET}/${encodeURIComponent(oldName)}`, {
+          await fetch(`${SUPABASE_URL13}/storage/v1/object/${BUCKET}/${encodeURIComponent(oldName)}`, {
             method: "DELETE",
             headers: serviceHeaders()
           }).catch(() => {
@@ -58434,7 +58664,7 @@ router7.delete("/profile/avatar", requireUser, async (req, res) => {
       }
     }
     await fetch(
-      `${SUPABASE_URL12}/rest/v1/profiles?user_id=eq.${userId}`,
+      `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}`,
       {
         method: "PATCH",
         headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=minimal" },
@@ -58448,7 +58678,7 @@ router7.delete("/profile/avatar", requireUser, async (req, res) => {
   }
 });
 router7.post("/profile/country", requireUser, async (req, res) => {
-  if (!SUPABASE_URL12 || !SUPABASE_SERVICE_ROLE_KEY11) {
+  if (!SUPABASE_URL13 || !SUPABASE_SERVICE_ROLE_KEY12) {
     return res.status(503).json({ error: "Service non configur\xE9" });
   }
   const country = String(req.body?.country || "").toUpperCase().trim();
@@ -58462,7 +58692,7 @@ router7.post("/profile/country", requireUser, async (req, res) => {
   const userId = req.userId;
   try {
     const patchRes = await fetch(
-      `${SUPABASE_URL12}/rest/v1/profiles?user_id=eq.${userId}`,
+      `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}`,
       {
         method: "PATCH",
         headers: {
@@ -58487,7 +58717,7 @@ router7.post("/profile/country", requireUser, async (req, res) => {
     for (let attempt = 0; attempt < 3 && !upserted; attempt++) {
       await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
       const retryRes = await fetch(
-        `${SUPABASE_URL12}/rest/v1/profiles?user_id=eq.${userId}`,
+        `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}`,
         {
           method: "PATCH",
           headers: {
@@ -58510,7 +58740,7 @@ router7.post("/profile/country", requireUser, async (req, res) => {
       if (!ensured) {
         return res.status(503).json({ error: "Profil non encore disponible, r\xE9essayez dans quelques secondes" });
       }
-      await fetch(`${SUPABASE_URL12}/rest/v1/profiles?user_id=eq.${userId}`, {
+      await fetch(`${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}`, {
         method: "PATCH",
         headers: { ...serviceHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ country, currency: info.currency })
@@ -58525,7 +58755,7 @@ router7.post("/profile/country", requireUser, async (req, res) => {
   }
 });
 router7.post("/profile/ensure", requireUser, async (req, res) => {
-  if (!SUPABASE_URL12 || !SUPABASE_SERVICE_ROLE_KEY11) {
+  if (!SUPABASE_URL13 || !SUPABASE_SERVICE_ROLE_KEY12) {
     return res.status(503).json({ error: "Service non configur\xE9" });
   }
   try {
@@ -58539,20 +58769,168 @@ router7.post("/profile/ensure", requireUser, async (req, res) => {
 });
 var profile_default = router7;
 
-// src/routes/index.ts
+// src/routes/referrals.ts
+var import_express8 = __toESM(require_express2(), 1);
+init_logger();
+var SUPABASE_URL14 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY13 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+function svcHeaders2() {
+  const key2 = SUPABASE_SERVICE_ROLE_KEY13 || "";
+  return {
+    apikey: key2,
+    Authorization: `Bearer ${key2}`,
+    "Content-Type": "application/json"
+  };
+}
 var router8 = (0, import_express8.Router)();
-router8.use(health_default);
-router8.use(smm_default);
-router8.use(admin_default);
-router8.use(support_default);
-router8.use(payments_default);
-router8.use(tickets_default);
-router8.use(profile_default);
-var routes_default = router8;
+router8.get("/referrals/config", async (_req, res) => {
+  const cfg = await getReferralConfig();
+  res.json({
+    referrer_pct: cfg.referrerPct,
+    referred_pct: cfg.referredPct,
+    min_deposit_fcfa: cfg.minDepositFcfa
+  });
+});
+router8.get("/referrals/check/:code", async (req, res) => {
+  const code = normalizeCode(req.params["code"]);
+  if (!code) {
+    res.json({ valid: false });
+    return;
+  }
+  try {
+    const owner = await findCodeOwner(code);
+    res.json({ valid: owner !== null });
+  } catch (err) {
+    logger.warn({ err }, "referrals/check failed");
+    res.status(503).json({ valid: false, error: "V\xE9rification indisponible" });
+  }
+});
+router8.post("/referrals/visit", async (req, res) => {
+  res.status(204).end();
+  try {
+    const code = normalizeCode(req.body?.["code"]);
+    if (!code || !SUPABASE_URL14 || !SUPABASE_SERVICE_ROLE_KEY13) return;
+    const rawKey = req.body?.["visitor_key"];
+    const visitorKey = typeof rawKey === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(rawKey) ? rawKey : null;
+    const owner = await findCodeOwner(code);
+    if (!owner) return;
+    const r = await fetch(
+      `${SUPABASE_URL14}/rest/v1/referral_visits?on_conflict=code,visitor_key`,
+      {
+        method: "POST",
+        headers: { ...svcHeaders2(), Prefer: "resolution=ignore-duplicates" },
+        body: JSON.stringify({ code, visitor_key: visitorKey })
+      }
+    );
+    if (!r.ok) {
+      const body = await r.text();
+      if (!body.includes("42P01")) {
+        logger.warn({ status: r.status, body: body.slice(0, 150) }, "referral visit insert failed");
+      }
+    }
+  } catch (err) {
+    logger.warn({ err }, "referral visit processing failed");
+  }
+});
+router8.get("/referrals/me", requireUser, async (req, res) => {
+  if (!SUPABASE_URL14 || !SUPABASE_SERVICE_ROLE_KEY13) {
+    res.status(503).json({ error: "Service non configur\xE9" });
+    return;
+  }
+  const userId = req.userId;
+  try {
+    const pr = await fetch(
+      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=referral_code,affiliate_earnings`,
+      { headers: svcHeaders2() }
+    );
+    if (!pr.ok) {
+      const body = await pr.text();
+      if (body.includes("42703")) {
+        res.status(503).json({ error: "Migration 020 requise (colonnes de parrainage absentes)" });
+        return;
+      }
+      logger.error({ status: pr.status, body: body.slice(0, 200) }, "referrals/me profile read failed");
+      res.status(502).json({ error: "Lecture du profil impossible" });
+      return;
+    }
+    const profiles = await pr.json();
+    if (!profiles[0]) {
+      res.status(404).json({ error: "Profil introuvable" });
+      return;
+    }
+    let code = profiles[0].referral_code;
+    if (!code) {
+      code = await ensureReferralCode(userId);
+      if (!code) {
+        res.status(500).json({ error: "Impossible de g\xE9n\xE9rer votre code de parrainage" });
+        return;
+      }
+    }
+    const [visitsRes, refsRes, cfg] = await Promise.all([
+      fetch(
+        `${SUPABASE_URL14}/rest/v1/referral_visits?code=eq.${encodeURIComponent(code)}&select=id&limit=1`,
+        { headers: { ...svcHeaders2(), Prefer: "count=exact", Range: "0-0", "Range-Unit": "items" } }
+      ),
+      fetch(
+        `${SUPABASE_URL14}/rest/v1/referrals?referrer_user_id=eq.${encodeURIComponent(userId)}&select=status,qualifying_amount_fcfa,referrer_bonus_fcfa`,
+        { headers: svcHeaders2() }
+      ),
+      getReferralConfig()
+    ]);
+    let visits = 0;
+    if (visitsRes.ok || visitsRes.status === 206) {
+      const cr = visitsRes.headers.get("content-range");
+      const m = cr ? /\/(\d+)$/.exec(cr) : null;
+      if (m) visits = parseInt(m[1], 10);
+    }
+    let signups = 0;
+    let paidCount = 0;
+    let qualifiedTotal = 0;
+    if (refsRes.ok) {
+      const rows = await refsRes.json();
+      signups = rows.length;
+      for (const row of rows) {
+        if (row.status === "paid") {
+          paidCount += 1;
+          qualifiedTotal += Number(row.qualifying_amount_fcfa || 0);
+        }
+      }
+    }
+    res.json({
+      code,
+      referrer_pct: cfg.referrerPct,
+      referred_pct: cfg.referredPct,
+      min_deposit_fcfa: cfg.minDepositFcfa,
+      stats: {
+        visits,
+        signups,
+        paid_referrals: paidCount,
+        first_deposits_total_fcfa: qualifiedTotal,
+        earned_fcfa: Number(profiles[0].affiliate_earnings || 0)
+      }
+    });
+  } catch (err) {
+    logger.error({ err }, "referrals/me failed");
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+var referrals_default = router8;
+
+// src/routes/index.ts
+var router9 = (0, import_express9.Router)();
+router9.use(health_default);
+router9.use(smm_default);
+router9.use(admin_default);
+router9.use(support_default);
+router9.use(payments_default);
+router9.use(tickets_default);
+router9.use(profile_default);
+router9.use(referrals_default);
+var routes_default = router9;
 
 // src/app.ts
 init_logger();
-var app = (0, import_express9.default)();
+var app = (0, import_express10.default)();
 app.set("trust proxy", ["loopback", "linklocal", "uniquelocal"]);
 app.use(
   (0, import_pino_http.default)({
@@ -58593,8 +58971,8 @@ function captureRawBody(req, _res, buf) {
     req.rawBody = buf.toString("utf8");
   }
 }
-app.use(import_express9.default.json({ limit: "8mb", verify: captureRawBody }));
-app.use(import_express9.default.urlencoded({ extended: true, limit: "8mb" }));
+app.use(import_express10.default.json({ limit: "8mb", verify: captureRawBody }));
+app.use(import_express10.default.urlencoded({ extended: true, limit: "8mb" }));
 app.use("/api", apiLimiter, routes_default);
 if (process.env["NODE_ENV"] === "production") {
   const scriptDir = path6.dirname(fileURLToPath(import.meta.url));
@@ -58610,7 +58988,7 @@ if (process.env["NODE_ENV"] === "production") {
   if (frontendDist) {
     logger.info({ frontendDist }, "serving frontend static files");
     app.use(
-      import_express9.default.static(frontendDist, {
+      import_express10.default.static(frontendDist, {
         index: false,
         maxAge: "1y",
         setHeaders: (res, filePath) => {
@@ -58640,15 +59018,15 @@ init_logger();
 
 // src/lib/settings-cleanup.ts
 init_logger();
-var SUPABASE_URL13 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY12 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL15 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY14 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SENSITIVE_SETTING_KEYS = [
   "soleaspay_api_key",
   "soleaspay_merchant_id",
   "soleaspay_callback_url"
 ];
 async function purgeSensitiveSettingRows() {
-  if (!SUPABASE_URL13 || !SUPABASE_SERVICE_ROLE_KEY12) {
+  if (!SUPABASE_URL15 || !SUPABASE_SERVICE_ROLE_KEY14) {
     logger.warn(
       "SUPABASE_SERVICE_ROLE_KEY not set \u2014 cannot purge sensitive setting rows. Apply the SQL migration in migrations/001_settings_rls.sql manually."
     );
@@ -58657,12 +59035,12 @@ async function purgeSensitiveSettingRows() {
   try {
     const keysFilter = SENSITIVE_SETTING_KEYS.map((k) => `key.eq.${k}`).join(",");
     const r = await fetch(
-      `${SUPABASE_URL13}/rest/v1/settings?or=(${encodeURIComponent(keysFilter)})`,
+      `${SUPABASE_URL15}/rest/v1/settings?or=(${encodeURIComponent(keysFilter)})`,
       {
         method: "DELETE",
         headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY12,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY12}`,
+          apikey: SUPABASE_SERVICE_ROLE_KEY14,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY14}`,
           Prefer: "return=minimal"
         }
       }
@@ -58680,8 +59058,8 @@ async function purgeSensitiveSettingRows() {
 
 // src/lib/order-status-poller.ts
 init_logger();
-var SUPABASE_URL14 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY13 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL16 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY15 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SMM_API_KEY = process.env["SMM_PANEL_API_KEY"];
 var SMM_API_URL = process.env["SMM_PANEL_API_URL"];
 var POLL_INTERVAL_MS = 6e4;
@@ -58703,11 +59081,11 @@ var tickInFlight = false;
 async function fetchPendingOrders() {
   const since = new Date(Date.now() - WINDOW_DAYS * 864e5).toISOString();
   const notIn = `(${FINAL_STATUSES.map((s) => `"${s}"`).join(",")})`;
-  const url = `${SUPABASE_URL14}/rest/v1/orders?select=id,external_order_id,status,user_id,provider&external_order_id=not.is.null&status=not.in.${encodeURIComponent(notIn)}&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${BATCH_LIMIT}`;
+  const url = `${SUPABASE_URL16}/rest/v1/orders?select=id,external_order_id,status,user_id,provider&external_order_id=not.is.null&status=not.in.${encodeURIComponent(notIn)}&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${BATCH_LIMIT}`;
   const r = await fetch(url, {
     headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY13,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY13}`
+      apikey: SUPABASE_SERVICE_ROLE_KEY15,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY15}`
     }
   });
   if (!r.ok) {
@@ -58816,7 +59194,7 @@ async function tickOnce(syncFn) {
 }
 function startOrderStatusPoller(syncFn) {
   if (started) return;
-  if (!SUPABASE_URL14 || !SUPABASE_SERVICE_ROLE_KEY13) {
+  if (!SUPABASE_URL16 || !SUPABASE_SERVICE_ROLE_KEY15) {
     logger.warn("order-poller: SUPABASE_URL/SERVICE_ROLE_KEY missing \u2014 poller disabled");
     return;
   }
@@ -58852,8 +59230,8 @@ function startOrderStatusPoller(syncFn) {
 
 // src/lib/missed-refund-scanner.ts
 init_logger();
-var SUPABASE_URL15 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY14 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL17 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY16 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SCAN_INTERVAL_MS = 5 * 6e4;
 var WINDOW_DAYS2 = 90;
 var PAGE_SIZE = 200;
@@ -58861,7 +59239,7 @@ var timer2 = null;
 var scanInFlight = false;
 var started2 = false;
 function serviceRoleHeaders5() {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY14;
+  const key2 = SUPABASE_SERVICE_ROLE_KEY16;
   return {
     apikey: key2,
     Authorization: `Bearer ${key2}`,
@@ -58869,10 +59247,10 @@ function serviceRoleHeaders5() {
   };
 }
 async function fetchUnrefundedOrders() {
-  if (!SUPABASE_URL15 || !SUPABASE_SERVICE_ROLE_KEY14) return [];
+  if (!SUPABASE_URL17 || !SUPABASE_SERVICE_ROLE_KEY16) return [];
   const since = new Date(Date.now() - WINDOW_DAYS2 * 864e5).toISOString();
   const finalNegative = encodeURIComponent('("canceled","cancelled","failed","refunded")');
-  const url = `${SUPABASE_URL15}/rest/v1/orders?select=id,user_id,price,status,external_order_id&status=in.${finalNegative}&refunded_at=is.null&price=gt.0&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${PAGE_SIZE}`;
+  const url = `${SUPABASE_URL17}/rest/v1/orders?select=id,user_id,price,status,external_order_id&status=in.${finalNegative}&refunded_at=is.null&price=gt.0&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${PAGE_SIZE}`;
   try {
     const r = await fetch(url, { headers: serviceRoleHeaders5() });
     if (!r.ok) {
@@ -58890,7 +59268,7 @@ async function applyRefund(order) {
   const amount = Math.round(Number(order.price));
   if (amount <= 0) return false;
   try {
-    const rpcRes = await fetch(`${SUPABASE_URL15}/rest/v1/rpc/smm_refund_order`, {
+    const rpcRes = await fetch(`${SUPABASE_URL17}/rest/v1/rpc/smm_refund_order`, {
       method: "POST",
       headers: serviceRoleHeaders5(),
       body: JSON.stringify({ p_order_id: order.id, p_amount: amount })
@@ -58936,7 +59314,7 @@ async function scanOnce() {
 }
 function startMissedRefundScanner() {
   if (started2) return;
-  if (!SUPABASE_URL15 || !SUPABASE_SERVICE_ROLE_KEY14) {
+  if (!SUPABASE_URL17 || !SUPABASE_SERVICE_ROLE_KEY16) {
     logger.warn("missed-refund-scanner: Supabase secrets missing \u2014 scanner disabled");
     return;
   }
@@ -58963,7 +59341,7 @@ function startMissedRefundScanner() {
 
 // src/lib/pending-payment-scanner.ts
 init_logger();
-var SUPABASE_URL16 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_URL18 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
 var SERVICE_ROLE_KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SCAN_INTERVAL_MS2 = 3 * 6e4;
 var MIN_AGE_MS = 2 * 6e4;
@@ -58973,16 +59351,16 @@ var PAGE_SIZE2 = 50;
 var timer3 = null;
 var inFlight = false;
 var started3 = false;
-function svcHeaders() {
+function svcHeaders3() {
   const key2 = SERVICE_ROLE_KEY;
   return { apikey: key2, Authorization: `Bearer ${key2}`, "Content-Type": "application/json" };
 }
 async function fetchPendingPayments() {
-  if (!SUPABASE_URL16 || !SERVICE_ROLE_KEY) return [];
+  if (!SUPABASE_URL18 || !SERVICE_ROLE_KEY) return [];
   const cutoff = new Date(Date.now() - MIN_AGE_MS).toISOString();
-  const url = `${SUPABASE_URL16}/rest/v1/payments?select=id,user_id,order_id,created_at,amount&status=eq.pending&credited_at=is.null&order_id=not.is.null&created_at=lt.${encodeURIComponent(cutoff)}&order=created_at.asc&limit=${PAGE_SIZE2}`;
+  const url = `${SUPABASE_URL18}/rest/v1/payments?select=id,user_id,order_id,created_at,amount&status=eq.pending&credited_at=is.null&order_id=not.is.null&created_at=lt.${encodeURIComponent(cutoff)}&order=created_at.asc&limit=${PAGE_SIZE2}`;
   try {
-    const r = await fetch(url, { headers: svcHeaders() });
+    const r = await fetch(url, { headers: svcHeaders3() });
     if (!r.ok) return [];
     return await r.json();
   } catch {
@@ -59050,7 +59428,7 @@ async function scanOnce2() {
 }
 function startPendingPaymentScanner() {
   if (started3) return;
-  if (!SUPABASE_URL16 || !SERVICE_ROLE_KEY) {
+  if (!SUPABASE_URL18 || !SERVICE_ROLE_KEY) {
     logger.warn("pending-payment-scanner: Supabase secrets missing \u2014 scanner disabled");
     return;
   }
@@ -59064,6 +59442,11 @@ function startPendingPaymentScanner() {
       logger.error({ err }, "pending-payment-scanner: scan threw");
     } finally {
       inFlight = false;
+    }
+    try {
+      await recoverStuckReferrals(10);
+    } catch (err) {
+      logger.error({ err }, "referral recovery threw");
     }
   };
   setTimeout(() => {

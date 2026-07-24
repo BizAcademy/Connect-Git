@@ -6,7 +6,7 @@ import { fetchUnreadCount } from "@/lib/support";
 import { fetchTicketReplyUnread } from "@/lib/tickets";
 import {
   LayoutDashboard, ShoppingCart, Clock, Wallet, CreditCard, Receipt,
-  LogOut, Menu, X, ChevronRight, Headphones, MessageCircle, RotateCcw
+  LogOut, Menu, X, ChevronRight, Headphones, MessageCircle, RotateCcw, Gift
 } from "lucide-react";
 import logoImg from "@/assets/logo-buzzbooster.png";
 import { LogoLoader } from "@/components/ui/LogoLoader";
@@ -23,6 +23,7 @@ const menuItems = [
   { label: "Historique paiements", href: "/dashboard/payments", icon: CreditCard, key: "payments" },
   { label: "Transactions", href: "/dashboard/transactions", icon: Receipt, key: "transactions" },
   { label: "Remboursements", href: "/dashboard/refunds", icon: RotateCcw, key: "refunds" },
+  { label: "Affiliation", href: "/dashboard/affiliation", icon: Gift, key: "affiliation" },
   { label: "Support", href: "/dashboard/support", icon: Headphones, key: "support" },
 ];
 

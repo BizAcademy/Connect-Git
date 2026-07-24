@@ -12,6 +12,7 @@
 
 import { logger } from "./logger";
 import { creditDeposit, markPaymentStatus, fetchPayment } from "./deposits";
+import { recoverStuckReferrals } from "./referrals";
 import { getStatus, isSuccessStatus, isFailureStatus, isAfribapayConfigured } from "./afribapay";
 
 const SUPABASE_URL        = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
@@ -150,6 +151,10 @@ export function startPendingPaymentScanner(): void {
     try { await scanOnce(); }
     catch (err) { logger.error({ err }, "pending-payment-scanner: scan threw"); }
     finally { inFlight = false; }
+    // Reprise des bonus de parrainage interrompus (referrals bloqués en
+    // processing). Indépendant d'AfribaPay — tourne aussi sans ses clés.
+    try { await recoverStuckReferrals(10); }
+    catch (err) { logger.error({ err }, "referral recovery threw"); }
   };
 
   // First scan: 5 min after boot (avoids token rate-limit pressure right after restart)

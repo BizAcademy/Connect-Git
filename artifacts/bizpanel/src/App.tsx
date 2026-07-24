@@ -19,6 +19,7 @@ import Deposit from "./pages/dashboard/Deposit";
 import PaymentHistory from "./pages/dashboard/PaymentHistory";
 import Transactions from "./pages/dashboard/Transactions";
 import Refunds from "./pages/dashboard/Refunds";
+import Affiliation from "./pages/dashboard/Affiliation";
 import Support from "./pages/dashboard/Support";
 import CancelOrder from "./pages/dashboard/CancelOrder";
 
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="payments" element={<PaymentHistory />} />
               <Route path="transactions" element={<Transactions />} />
               <Route path="refunds" element={<Refunds />} />
+              <Route path="affiliation" element={<Affiliation />} />
               <Route path="support" element={<Support />} />
             </Route>
 

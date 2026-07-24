@@ -1,5 +1,6 @@
 import { logger } from "./logger";
 import { toFcfa, toFcfaByCurrency, setRateOverrides, isRateCacheValid } from "./currency";
+import { maybeAwardReferralBonus } from "./referrals";
 
 const SUPABASE_URL = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
 const SUPABASE_ANON_KEY = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
@@ -357,6 +358,15 @@ export async function creditDeposit(
   }
 
   logger.info({ paymentId, userId: payment.user_id, amount, bonus, newBalance }, "deposit credited");
+
+  // Bonus de parrainage : déclenché sur le premier dépôt qualifié (≥ seuil,
+  // montant FCFA converti). Ne doit JAMAIS faire échouer le crédit du dépôt.
+  try {
+    await maybeAwardReferralBonus(payment.user_id, paymentId, amount);
+  } catch (err) {
+    logger.error({ err, paymentId }, "referral bonus hook failed (deposit credit unaffected)");
+  }
+
   return { ok: true, alreadyCredited: false, amountCredited: amount, bonusCredited: bonus, newBalance, payment: claimed[0] };
 }
 

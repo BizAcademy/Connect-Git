@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Eye, EyeOff, User, Lock, Mail, CheckCircle2, Zap, Shield, Clock, Globe, ChevronDown } from "lucide-react";
+import { Eye, EyeOff, User, Lock, Mail, CheckCircle2, Zap, Shield, Clock, Globe, ChevronDown, Gift } from "lucide-react";
 import logoImg from "@/assets/logo-buzzbooster.png";
 import defaultCommunityImg from "@assets/6044021293859933661_1778088768929.jpg";
 import { useSiteContent } from "@/hooks/useSiteContent";
 import { SIGNUP_COUNTRIES } from "@/lib/currency";
 import { authedFetch } from "@/lib/authFetch";
+import { REF_CODE_RE, checkRefCode, getStoredRefCode, recordRefVisit, storeRefCode } from "@/lib/referral";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -19,7 +20,8 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   // Initial tab respects ?tab=signup so Inscription buttons land directly on the signup form.
-  const initialTab = searchParams.get("tab") === "signup" ? "signup" : "login";
+  // Un lien de parrainage (?ref=CODE) ouvre aussi directement l'inscription.
+  const initialTab = searchParams.get("tab") === "signup" || searchParams.has("ref") ? "signup" : "login";
   const [tab, setTab] = useState<"login" | "signup">(initialTab);
 
   const [loginEmail, setLoginEmail] = useState("");
@@ -31,6 +33,39 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [signupCountry, setSignupCountry] = useState("");
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  // true = code appliqué via un lien de parrainage → champ gelé (non modifiable)
+  const [refLocked, setRefLocked] = useState(false);
+
+  // Applique le code parrain venu du lien (?ref=CODE) et le gèle pour 30 jours
+  // (cookie + localStorage). Sans paramètre ?ref, restaure un éventuel code
+  // gelé précédemment — il survit à la fermeture de l'onglet/du navigateur.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const fromUrl = (searchParams.get("ref") || "").trim().toUpperCase();
+      if (fromUrl && REF_CODE_RE.test(fromUrl)) {
+        const valid = await checkRefCode(fromUrl);
+        if (cancelled) return;
+        // valid === null (API injoignable) : on applique quand même — le
+        // serveur revalidera le code au moment de l'inscription.
+        if (valid !== false) {
+          storeRefCode(fromUrl);
+          setReferralCode(fromUrl);
+          setRefLocked(true);
+          if (valid === true) recordRefVisit(fromUrl);
+          return;
+        }
+      }
+      const stored = getStoredRefCode();
+      if (stored && !cancelled) {
+        setReferralCode(stored);
+        setRefLocked(true);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [forgotEmail, setForgotEmail] = useState("");
   const [showForgot, setShowForgot] = useState(false);
@@ -53,12 +88,30 @@ const Auth = () => {
     if (signupPassword.length < 6) { toast.error("Le mot de passe doit contenir au moins 6 caractères"); return; }
     if (!username.trim()) { toast.error("Le nom d'utilisateur est requis"); return; }
     if (!signupCountry) { toast.error("Veuillez sélectionner votre pays"); return; }
+    const refCode = referralCode.trim().toUpperCase();
+    if (refCode && !REF_CODE_RE.test(refCode)) {
+      toast.error("Code parrain invalide — vérifiez-le ou laissez le champ vide.");
+      return;
+    }
     setLoading(true);
+    // Code saisi manuellement : on vérifie qu'il existe (les codes venus d'un
+    // lien ont déjà été validés). API injoignable → on n'empêche pas l'inscription.
+    if (refCode && !refLocked) {
+      const valid = await checkRefCode(refCode);
+      if (valid === false) {
+        setLoading(false);
+        toast.error("Ce code parrain n'existe pas — vérifiez-le ou laissez le champ vide.");
+        return;
+      }
+    }
     const { data, error } = await supabase.auth.signUp({
       email: signupEmail,
       password: signupPassword,
-      // Pass country in metadata so any trigger/function has access to it
-      options: { emailRedirectTo: window.location.origin, data: { username, country: signupCountry } },
+      // Pass country + referral code in metadata so the DB trigger can use them
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: { username, country: signupCountry, ...(refCode ? { referral_code: refCode } : {}) },
+      },
     });
     if (error) { setLoading(false); toast.error(error.message); return; }
 
@@ -432,6 +485,32 @@ const Auth = () => {
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={15} />
               </div>
+
+              {/* Code parrain */}
+              <div className="relative">
+                <Gift className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                <input
+                  type="text"
+                  value={referralCode}
+                  onChange={e => { if (!refLocked) setReferralCode(e.target.value.toUpperCase()); }}
+                  readOnly={refLocked}
+                  placeholder="Code parrain (optionnel)"
+                  className={`w-full pl-9 py-3 rounded-xl border text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm shadow-sm ${
+                    refLocked
+                      ? "pr-9 bg-orange-50 border-orange-300 cursor-default tracking-widest font-semibold"
+                      : "pr-4 bg-white border-gray-300"
+                  }`}
+                />
+                {refLocked && (
+                  <Lock className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-400" size={15} />
+                )}
+              </div>
+              {refLocked && (
+                <p className="flex items-center gap-1.5 text-xs text-emerald-600 -mt-1">
+                  <CheckCircle2 size={12} />
+                  Code parrain appliqué via votre lien d'invitation
+                </p>
+              )}
 
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="relative">
