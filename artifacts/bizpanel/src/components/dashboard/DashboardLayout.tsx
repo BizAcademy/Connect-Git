@@ -318,6 +318,18 @@ export const DashboardLayout = () => {
             </p>
           </div>
 
+          {/* Cadeau → page Affiliation */}
+          <button
+            onClick={() => navigate("/dashboard/affiliation")}
+            className="relative flex-shrink-0 w-9 h-9 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center hover:bg-orange-100 active:scale-95 transition"
+            aria-label="Affiliation — Nouveau"
+          >
+            <Gift size={17} className="text-orange-500 animate-bounce" />
+            <span className="absolute -top-1 -right-1.5 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[8px] font-black uppercase tracking-wide rounded-full px-1.5 py-px animate-pulse leading-tight shadow-sm">
+              New
+            </span>
+          </button>
+
           {/* Recharge button */}
           <Button
             size="sm"
