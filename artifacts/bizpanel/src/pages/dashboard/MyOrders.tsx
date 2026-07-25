@@ -8,7 +8,7 @@ import { RefreshCw, ShoppingCart, Search, Copy, Check, XCircle } from "lucide-re
 import { useNavigate } from "react-router-dom";
 import { syncOrdersStatusWithRefunds, FINAL_STATUSES, type SyncRefundEvent } from "@/lib/orderSync";
 import { fetchSmmOrderStatus } from "@/lib/smm";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/lib/toast";
 import { fetchMyTickets } from "@/lib/tickets";
 import { formatBalance } from "@/lib/currency";
 import { getAuthHeaders } from "@/lib/authFetch";

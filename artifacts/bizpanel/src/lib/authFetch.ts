@@ -12,7 +12,7 @@
 // and bounce the user to /login with a clear toast.
 
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 const REFRESH_SAFETY_WINDOW_MS = 60_000;
 

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Camera, Trash2, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { authedFetch } from "@/lib/authFetch";
 
 interface AvatarUploadProps {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Eye, EyeOff, User, Lock, Mail, CheckCircle2, Zap, Shield, Clock, Globe, ChevronDown, Gift } from "lucide-react";
 import logoImg from "@/assets/logo-buzzbooster.png";
 import defaultCommunityImg from "@assets/6044021293859933661_1778088768929.jpg";

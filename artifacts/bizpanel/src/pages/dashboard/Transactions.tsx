@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { syncOrdersStatusWithRefunds } from "@/lib/orderSync";
 import { fetchSmmProviders } from "@/lib/smm";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { InvoiceModal, type InvoiceData } from "@/components/dashboard/InvoiceModal";
 import { formatPaymentMethod } from "@/lib/paymentMethod";
 import { formatBalance, getCurrencyInfo } from "@/lib/currency";

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Send, Image as ImageIcon, X, Loader2, Clock, Headphones, TicketCheck, ChevronDown, ChevronUp } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   fetchMyThread,
   sendMyMessage,

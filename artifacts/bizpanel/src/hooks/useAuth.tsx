@@ -115,7 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } finally {
         if (typeof window !== "undefined") {
           try {
-            const { toast } = await import("sonner");
+            const { toast } = await import("@/lib/toast");
             toast.info("Vous avez été déconnecté pour inactivité (60 min).");
           } catch {}
           window.location.href = "/auth";

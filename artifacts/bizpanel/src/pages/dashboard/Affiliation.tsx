@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Copy, Check, Gift, Share2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { authedFetch } from "@/lib/authFetch";

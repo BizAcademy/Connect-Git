@@ -9,7 +9,7 @@ import { syncOrdersStatusWithRefunds } from "@/lib/orderSync";
 import { formatBalance } from "@/lib/currency";
 import { getAuthHeaders } from "@/lib/authFetch";
 import { fetchSmmProviders } from "@/lib/smm";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { InvoiceModal, type InvoiceData } from "@/components/dashboard/InvoiceModal";
 
 type RefundRow = {

@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { getAuthHeaders, authedFetch } from "@/lib/authFetch";
 import { invalidateSiteContentCache } from "@/hooks/useSiteContent";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Globe, Loader2, ChevronDown } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { authedFetch } from "@/lib/authFetch";
 import { SIGNUP_COUNTRIES } from "@/lib/currency";
 

@@ -10,7 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Send, Info, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/lib/toast";
 import { createTicket, type TicketActionType } from "@/lib/tickets";
 
 const ACTION_LABELS: Record<TicketActionType, string> = {

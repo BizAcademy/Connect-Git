@@ -4,7 +4,7 @@ import { fetchSmmProviders, prefetchSmmServices, type SmmProviderPublic } from "
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Server, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 export default function OrderProviderSelect() {
   const navigate = useNavigate();
