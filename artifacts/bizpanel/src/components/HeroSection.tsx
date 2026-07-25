@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSiteContent } from "@/hooks/useSiteContent";
-import defaultCommunityImg from "@assets/6044021293859933661_1778088768929.jpg";
+import defaultCommunityImg from "@assets/hero-person.jpg";
 
 // Liste fixe des marques affichées dans le slider de la landing.
 // Les codes correspondent à ceux gérés dans le panneau admin (onglet "Logos accueil").
