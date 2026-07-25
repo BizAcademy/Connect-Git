@@ -751,13 +751,27 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
     if (type === "adjustment") p.append("method", "eq.admin_adjustment");
     return `${SUPABASE_URL}/rest/v1/payments?${p.toString()}`;
   };
+  // Parrainages avec au moins une jambe créditée → lignes « commission ».
+  // Les filtres de dates s'appliquent en mémoire sur la date de crédit de
+  // chaque jambe (chaque jambe devient une ligne de journal indépendante).
+  const buildRefUrl = () => {
+    const p = new URLSearchParams();
+    p.set("select", "id,referrer_user_id,referred_user_id,referrer_bonus_fcfa,referred_bonus_fcfa,referrer_credited_at,referred_credited_at");
+    p.set("order", "created_at.desc");
+    p.set("limit", String(FETCH));
+    p.append("or", "(referrer_credited_at.not.is.null,referred_credited_at.not.is.null)");
+    if (userIdF) p.append("or", `(referrer_user_id.eq.${userIdF},referred_user_id.eq.${userIdF})`);
+    return `${SUPABASE_URL}/rest/v1/referrals?${p.toString()}`;
+  };
 
   try {
     const wantOrders = type === "all" || type === "order" || type === "refund";
     const wantPays = type === "all" || type === "deposit" || type === "adjustment";
-    const [ordRes, payRes] = await Promise.all([
+    const wantComs = type === "all" || type === "commission";
+    const [ordRes, payRes, refRes] = await Promise.all([
       wantOrders ? fetch(buildOrderUrl(), { headers }) : Promise.resolve(null as any),
       wantPays ? fetch(buildPayUrl(), { headers }) : Promise.resolve(null as any),
+      wantComs ? fetch(buildRefUrl(), { headers }) : Promise.resolve(null as any),
     ]);
     let orders: any[] = [];
     let pays: any[] = [];
@@ -777,11 +791,24 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
         logger.error({ status: payRes.status, body: errBody.slice(0, 400) }, "admin/transactions: payments query failed — possible missing column in DB");
       }
     }
+    let refs: any[] = [];
+    if (refRes) {
+      if (refRes.ok) {
+        refs = await refRes.json();
+      } else {
+        const errBody = await refRes.text().catch(() => "");
+        // 42P01 = table referrals absente (migration 020 non appliquée) — silencieux.
+        if (!errBody.includes("42P01")) {
+          logger.error({ status: refRes.status, body: errBody.slice(0, 400) }, "admin/transactions: referrals query failed");
+        }
+      }
+    }
 
     // Resolve user labels in one query
     const userIds = Array.from(new Set([
       ...orders.map((o) => o.user_id),
       ...pays.map((p) => p.user_id),
+      ...refs.flatMap((c) => [c.referrer_user_id, c.referred_user_id]),
     ].filter(Boolean)));
     const profiles = new Map<string, { username?: string; email?: string; country?: string }>();
     if (userIds.length > 0) {
@@ -799,7 +826,7 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
     const countryFor = (uid: string) => profiles.get(uid)?.country || null;
 
     type TxRow = {
-      id: string; kind: "deposit" | "order" | "refund" | "adjustment"; created_at: string;
+      id: string; kind: "deposit" | "order" | "refund" | "adjustment" | "commission"; created_at: string;
       amount: number; status: string; user_id: string;
       user_label: string; user_email?: string;
       detail: string; reference: string | null;
@@ -871,6 +898,42 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req: AuthedR
           balance_before: p.balance_before ?? null,
           balance_after: p.balance_after ?? null,
         });
+      }
+    }
+
+    if (wantComs) {
+      const shortRef = (id: string) => String(id).replace(/-/g, "").slice(0, 8).toUpperCase();
+      const inRange = (iso: string) => {
+        const t = new Date(iso).getTime();
+        if (fromIso && t < new Date(fromIso).getTime()) return false;
+        if (toIso && t > new Date(toIso).getTime()) return false;
+        return true;
+      };
+      for (const c of refs) {
+        const legs = [
+          {
+            at: c.referrer_credited_at as string | null, uid: c.referrer_user_id as string,
+            amt: Number(c.referrer_bonus_fcfa || 0), suffix: "r",
+            detail: `Commission parrainage · filleul ${labelFor(c.referred_user_id)}`,
+          },
+          {
+            at: c.referred_credited_at as string | null, uid: c.referred_user_id as string,
+            amt: Number(c.referred_bonus_fcfa || 0), suffix: "f",
+            detail: `Bonus de bienvenue parrainage · via ${labelFor(c.referrer_user_id)}`,
+          },
+        ];
+        for (const leg of legs) {
+          if (!leg.at || leg.amt <= 0) continue;
+          if (userIdF && leg.uid !== userIdF) continue;
+          if (!inRange(leg.at)) continue;
+          all.push({
+            id: `c-${c.id}-${leg.suffix}`, kind: "commission", created_at: leg.at,
+            amount: leg.amt, status: "completed", user_id: leg.uid,
+            user_label: labelFor(leg.uid), user_email: profiles.get(leg.uid)?.email,
+            detail: leg.detail, reference: `PAR-${shortRef(c.id)}`,
+            country: countryFor(leg.uid), currency: null,
+          });
+        }
       }
     }
 

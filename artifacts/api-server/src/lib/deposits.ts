@@ -149,7 +149,7 @@ export type CreditOutcome =
  * If the cache is still valid this is a no-op (no Supabase call made).
  * Failures are logged and silently ignored — the hardcoded defaults remain.
  */
-async function ensureRatesLoaded(): Promise<void> {
+export async function ensureRatesLoaded(): Promise<void> {
   if (isRateCacheValid()) return;
   if (!SUPABASE_URL) return;
   try {

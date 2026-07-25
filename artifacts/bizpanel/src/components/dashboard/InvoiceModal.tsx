@@ -6,7 +6,7 @@ import { formatBalance } from "@/lib/currency";
 export interface InvoiceData {
   number: string;             // e.g. "BP-2026-000123"
   date: string;               // ISO string
-  type: "deposit" | "order" | "refund";
+  type: "deposit" | "order" | "refund" | "commission";
   customer: { name?: string; email?: string };
   amount: number;             // stored amount (FCFA for orders/refunds, native currency for deposits)
   status: string;
@@ -20,6 +20,7 @@ const typeLabel: Record<InvoiceData["type"], string> = {
   deposit: "Reçu de dépôt",
   order: "Facture de commande",
   refund: "Avis de remboursement",
+  commission: "Reçu de commission",
 };
 
 export function InvoiceModal({ data, onClose }: { data: InvoiceData; onClose: () => void }) {

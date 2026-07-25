@@ -10,6 +10,9 @@ interface ReferralData {
   referrer_pct: number;
   referred_pct: number;
   min_deposit_fcfa: number;
+  /** Seuil converti dans la devise de l'utilisateur, calculé côté serveur avec les taux réels. */
+  min_deposit_local?: number;
+  currency?: string;
   stats: {
     visits: number;
     signups: number;
@@ -91,6 +94,11 @@ const Affiliation = () => {
 
   const { stats } = data;
   const conversion = stats.visits > 0 ? (stats.signups / stats.visits) * 100 : 0;
+  // Seuil affiché : la conversion serveur (taux réels, identiques à ceux
+  // appliqués au crédit des dépôts) prime sur la conversion statique locale.
+  const minDepositLabel = data.min_deposit_local && data.currency
+    ? `${data.min_deposit_local.toLocaleString("fr-FR")} ${data.currency}`
+    : formatBalance(data.min_deposit_fcfa, country);
 
   return (
     <div className="space-y-5">
@@ -149,7 +157,7 @@ const Affiliation = () => {
                   <span className="font-black">{data.referrer_pct}%</span>{" "}
                   <span className="text-xs text-gray-400">(+{data.referred_pct}% pour le filleul)</span>
                 </td>
-                <td className={`${tdClass} font-bold`}>{formatBalance(data.min_deposit_fcfa, country)}</td>
+                <td className={`${tdClass} font-bold`}>{minDepositLabel}</td>
               </tr>
             </tbody>
           </table>
@@ -200,7 +208,7 @@ const Affiliation = () => {
 
       {/* Note explicative */}
       <p className="text-xs text-gray-400 leading-relaxed">
-        Dès qu'un filleul effectue un premier dépôt d'au moins {formatBalance(data.min_deposit_fcfa, country)},
+        Dès qu'un filleul effectue un premier dépôt d'au moins {minDepositLabel},
         vous recevez {data.referrer_pct}% du montant et lui {data.referred_pct}% — crédités automatiquement
         sur vos soldes.
       </p>

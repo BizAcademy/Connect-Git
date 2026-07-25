@@ -11,4 +11,5 @@ Rule: any multi-beneficiary money payout (e.g. referral bonuses to referrer + re
 - State machine on `referrals.status`: `pending` → `processing` (single CAS PATCH claim, amounts frozen at claim time) → `paid` (set by the RPC itself).
 - Recovery: `recoverStuckReferrals()` swept by the pending-payment scanner + every new deposit of the referred user resumes `processing` rows with the FROZEN amounts (current deposit/threshold not re-tested).
 - Business rule "bonus reporté": a deposit below the minimum does NOT consume the referral — the row stays `pending`.
+- Journals (user + admin) surface commissions by READING credited legs (`*_credited_at` + frozen amounts) as derived "commission" rows — never insert separate transaction rows; the projection cannot desync from the credit.
 - Any new SECURITY INVOKER RPC called with the service key needs `REVOKE ALL FROM PUBLIC, anon, authenticated` + `GRANT EXECUTE TO service_role` (house pattern, cf. `smm_refund_order` in migrations 005/019) — REVOKE without the GRANT breaks the API call itself.

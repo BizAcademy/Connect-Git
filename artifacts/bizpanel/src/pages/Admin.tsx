@@ -178,7 +178,7 @@ function fmtDepositAmount(
  */
 function fmtTxAmount(
   amount: number,
-  type: "order" | "deposit" | "refund",
+  type: TxRow["type"],
   country?: string | null,
   currency?: string | null,
   rateOverrides?: Record<string, number>,
@@ -443,7 +443,7 @@ const AdminSupport = () => {
 
 type TxRow = {
   id: string;
-  type: "order" | "deposit" | "refund" | "adjustment";
+  type: "order" | "deposit" | "refund" | "adjustment" | "commission";
   created_at: string;
   amount: number;
   status: string; // raw
@@ -501,7 +501,7 @@ const AdminTransactions = () => {
   const [period, setPeriod] = useState<"today" | "month" | "total" | "custom">("month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [type, setType] = useState<"all" | "order" | "deposit" | "refund" | "adjustment">("all");
+  const [type, setType] = useState<"all" | "order" | "deposit" | "refund" | "adjustment" | "commission">("all");
   const [status, setStatus] = useState<"all" | "completed" | "pending" | "rejected" | "processing">("all");
   const [search, setSearch] = useState("");
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
@@ -737,6 +737,7 @@ const AdminTransactions = () => {
             { key: "deposit", label: "Dépôts", icon: ArrowDownCircle },
             { key: "refund", label: "Remboursements", icon: RotateCcw },
             { key: "adjustment", label: "Ajustements", icon: Wallet },
+            { key: "commission", label: "Commissions", icon: Gift },
           ].map((t) => (
             <button
               key={t.key}
@@ -804,6 +805,7 @@ const AdminTransactions = () => {
                   const colorClass =
                     r.type === "order" ? "text-red-600" :
                     r.type === "refund" ? "text-purple-600" :
+                    r.type === "commission" ? "text-emerald-600" :
                     r.type === "adjustment" ? (r.amount < 0 ? "text-red-600" : "text-blue-600") : "text-green-600";
                   // Force refund is shown when an order is in a final unsuccessful
                   // status, has not been refunded yet, and has an external id.
@@ -832,6 +834,10 @@ const AdminTransactions = () => {
                       ) : r.type === "adjustment" ? (
                         <span className="inline-flex items-center gap-1 text-blue-600">
                           <Wallet size={12} /> Ajustement administrateur
+                        </span>
+                      ) : r.type === "commission" ? (
+                        <span className="inline-flex items-center gap-1 text-emerald-600">
+                          <Gift size={12} /> Commission parrainage
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-green-600">
@@ -951,6 +957,24 @@ function buildAdminInvoice(r: TxRow): InvoiceData {
         { label: "Référence", value: p.reference || "—" },
         { label: "Utilisateur", value: r.user_label },
       ],
+    };
+  }
+  if (r.type === "commission") {
+    // Les lignes commission sont dérivées de la table referrals : pas de
+    // « raw » sous-jacent, la facture se construit depuis la ligne elle-même.
+    return {
+      number: `BP-COM-${String(r.reference || "").replace("PAR-", "") || shortAdminId(String(r.id))}`,
+      date: r.created_at,
+      type: "commission",
+      customer,
+      amount: Number(r.amount),
+      status: "Créditée",
+      details: [
+        { label: "Nature", value: r.detail },
+        { label: "Référence", value: r.reference || "—" },
+        { label: "Utilisateur", value: r.user_label },
+      ],
+      note: "Commission du programme d'affiliation, créditée automatiquement sur le solde de l'utilisateur.",
     };
   }
   if (r.type === "refund") {
@@ -1603,7 +1627,7 @@ async function adminApiFetch(path: string, init: RequestInit = {}) {
 const UserTransactionsDialog = ({ user, onClose }: { user: AdminUserRow; onClose: () => void }) => {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [type, setType] = useState<"all" | "deposit" | "order" | "refund" | "adjustment">("all");
+  const [type, setType] = useState<"all" | "deposit" | "order" | "refund" | "adjustment" | "commission">("all");
   const [period, setPeriod] = useState<"total" | "today" | "month" | "custom">("total");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -1655,6 +1679,8 @@ const UserTransactionsDialog = ({ user, onClose }: { user: AdminUserRow; onClose
       <span className="inline-flex items-center gap-1 text-purple-600"><RotateCcw size={12} /> Remboursement</span>
     ) : k === "adjustment" ? (
       <span className={`inline-flex items-center gap-1 ${amount < 0 ? "text-red-600" : "text-blue-600"}`}><Wallet size={12} /> Ajustement administrateur</span>
+    ) : k === "commission" ? (
+      <span className="inline-flex items-center gap-1 text-emerald-600"><Gift size={12} /> Commission parrainage</span>
     ) : (
       <span className="inline-flex items-center gap-1 text-green-600"><ArrowDownCircle size={12} /> Dépôt</span>
     );
@@ -1705,6 +1731,7 @@ const UserTransactionsDialog = ({ user, onClose }: { user: AdminUserRow; onClose
             { key: "order", label: "Commandes" },
             { key: "refund", label: "Remboursements" },
             { key: "adjustment", label: "Ajustements" },
+            { key: "commission", label: "Commissions" },
           ].map((t) => (
             <button
               key={t.key}
@@ -1767,6 +1794,7 @@ const UserTransactionsDialog = ({ user, onClose }: { user: AdminUserRow; onClose
                     const colorClass =
                       isOrder ? "text-red-600" :
                       r.kind === "refund" ? "text-purple-600" :
+                      r.kind === "commission" ? "text-emerald-600" :
                       r.kind === "adjustment" ? (Number(r.amount) < 0 ? "text-red-600" : "text-blue-600") : "text-green-600";
                     return (
                       <tr key={r.id} className="border-t hover:bg-muted/30">
@@ -1784,7 +1812,7 @@ const UserTransactionsDialog = ({ user, onClose }: { user: AdminUserRow; onClose
                           {r.detail}
                         </td>
                         <td className={`px-3 py-2 text-right font-semibold whitespace-nowrap ${colorClass}`}>
-                          {sign}{Math.abs(Number(r.amount)).toLocaleString("fr-FR")} {r.kind === "deposit" && r.currency ? r.currency : "XAF"}
+                          {sign}{r.kind === "deposit" && r.currency ? `${Math.abs(Number(r.amount)).toLocaleString("fr-FR")} ${r.currency}` : fmtTxAmount(Math.abs(Number(r.amount)), r.kind, r.country, r.currency)}
                         </td>
                         <td className="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">
                           {r.balance_before != null ? `${Number(r.balance_before).toLocaleString("fr-FR")} XAF` : "—"}

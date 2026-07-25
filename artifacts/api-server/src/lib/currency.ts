@@ -141,6 +141,17 @@ const COUNTRY_TO_CURRENCY: Record<string, string> = {
  */
 export function toFcfaByCurrency(localAmount: number, currencyCode: string | null | undefined): number {
   if (!currencyCode) return localAmount;
+  return Math.round(localAmount * getEffectiveRateByCurrency(currencyCode));
+}
+
+/**
+ * Effective fcfaPerUnit rate for an ISO 4217 currency code — the EXACT same
+ * resolution path as toFcfaByCurrency (admin overrides first, then static
+ * defaults). Use this to display thresholds in local currency so that what
+ * the user sees always matches what the deposit flow enforces.
+ */
+export function getEffectiveRateByCurrency(currencyCode: string | null | undefined): number {
+  if (!currencyCode) return 1;
   const upper = currencyCode.toUpperCase();
 
   // Apply admin-configured override when cache is valid
@@ -148,12 +159,10 @@ export function toFcfaByCurrency(localAmount: number, currencyCode: string | nul
     // Overrides are keyed by country code; translate currency → country first
     const countryForCurrency = Object.entries(COUNTRY_TO_CURRENCY).find(([, c]) => c === upper)?.[0];
     if (countryForCurrency && _rateOverrides[countryForCurrency] !== undefined) {
-      return Math.round(localAmount * _rateOverrides[countryForCurrency]!);
+      return _rateOverrides[countryForCurrency]!;
     }
   }
-
-  const rate = CURRENCY_DEFAULT_RATE[upper] ?? 1;
-  return Math.round(localAmount * rate);
+  return CURRENCY_DEFAULT_RATE[upper] ?? 1;
 }
 
 /**

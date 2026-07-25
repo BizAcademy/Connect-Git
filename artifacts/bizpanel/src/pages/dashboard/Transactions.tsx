@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  RefreshCw, Search, Receipt, ArrowDownCircle, ArrowUpCircle, RotateCcw, FileText,
+  RefreshCw, Search, Receipt, ArrowDownCircle, ArrowUpCircle, RotateCcw, FileText, Gift,
 } from "lucide-react";
 import { syncOrdersStatusWithRefunds } from "@/lib/orderSync";
 import { fetchSmmProviders } from "@/lib/smm";
@@ -15,7 +15,7 @@ import { formatPaymentMethod } from "@/lib/paymentMethod";
 import { formatBalance, getCurrencyInfo } from "@/lib/currency";
 import { getAuthHeaders } from "@/lib/authFetch";
 
-type TxKind = "deposit" | "order" | "refund";
+type TxKind = "deposit" | "order" | "refund" | "commission";
 type TxRow = {
   id: string;
   kind: TxKind;
@@ -34,6 +34,7 @@ const kindMeta: Record<TxKind, { label: string; sign: "+" | "−"; color: string
   deposit: { label: "Dépôt",        sign: "+", color: "text-green-600",  icon: ArrowDownCircle },
   order:   { label: "Commande",     sign: "−", color: "text-red-600",    icon: ArrowUpCircle },
   refund:  { label: "Remboursement", sign: "+", color: "text-purple-600", icon: RotateCcw },
+  commission: { label: "Commission", sign: "+", color: "text-emerald-600", icon: Gift },
 };
 
 const orderStatusMap: Record<string, { label: string; color: string }> = {
@@ -59,6 +60,7 @@ export default function Transactions() {
   const { user, profile } = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
+  const [commissions, setCommissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<"all" | "today" | "month" | "year">("all");
   const [kindF, setKindF] = useState<"all" | TxKind>("all");
@@ -89,13 +91,15 @@ export default function Transactions() {
     setLoading(true);
     try {
       const hdrs = await getAuthHeaders();
-      const [ordRes, payRes] = await Promise.all([
+      const [ordRes, payRes, comRes] = await Promise.all([
         fetch("/api/smm/user-orders", { headers: hdrs }).then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
         fetch("/api/smm/user-payments", { headers: hdrs }).then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
+        fetch("/api/referrals/transactions", { headers: hdrs }).then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
       ]);
       const initial: any[] = Array.isArray(ordRes) ? ordRes : [];
       setOrders(initial);
       setPayments(Array.isArray(payRes) ? payRes : []);
+      setCommissions(Array.isArray(comRes) ? comRes : []);
       setLoading(false);
 
       // Background sync: may trigger automatic refunds.
@@ -145,6 +149,20 @@ export default function Transactions() {
         raw: p,
       });
     }
+    for (const c of commissions) {
+      out.push({
+        id: `c-${c.id}`,
+        kind: "commission",
+        date: c.created_at,
+        amount: Number(c.amount_fcfa),
+        status: "completed",
+        status_label: "Créditée",
+        status_color: "bg-emerald-100 text-emerald-800 border-emerald-200",
+        detail: c.detail,
+        reference: c.reference || null,
+        raw: c,
+      });
+    }
     for (const o of orders) {
       const status = (o.status || "").toLowerCase();
       const m = orderStatusMap[status] || { label: o.status, color: "bg-gray-100 text-gray-800 border-gray-200" };
@@ -176,7 +194,7 @@ export default function Transactions() {
       }
     }
     return out.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [orders, payments]);
+  }, [orders, payments, commissions]);
 
   const filtered = useMemo(() => {
     const now = new Date();
@@ -260,6 +278,23 @@ export default function Transactions() {
         country: profile?.country,
       };
     }
+    if (r.kind === "commission") {
+      const c = r.raw;
+      return {
+        number: `BP-COM-${shortId(String(c.id))}`,
+        date: c.created_at,
+        type: "commission",
+        customer,
+        amount: Number(c.amount_fcfa),
+        status: "Créditée",
+        details: [
+          { label: "Nature", value: c.detail },
+          { label: "Référence", value: c.reference || "—" },
+        ],
+        note: "Commission du programme d'affiliation, créditée automatiquement sur votre solde BUZZ BOOSTER.",
+        country: profile?.country,
+      };
+    }
     // refund
     const o = r.raw.order;
     return {
@@ -327,7 +362,7 @@ export default function Transactions() {
             ))}
           </div>
           <div className="flex flex-wrap gap-2">
-            {([["all","Tous"],["deposit","Dépôts"],["order","Commandes"],["refund","Remboursements"]] as const).map(([k,l]) => (
+            {([["all","Tous"],["deposit","Dépôts"],["order","Commandes"],["refund","Remboursements"],["commission","Commissions"]] as const).map(([k,l]) => (
               <button key={k} onClick={() => setKindF(k as any)}
                 className={`px-3 py-1.5 rounded-md text-xs border ${kindF === k ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground hover:bg-muted"}`}>
                 {l}

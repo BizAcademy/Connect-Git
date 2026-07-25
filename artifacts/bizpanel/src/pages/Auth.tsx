@@ -4,9 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/toast";
 import { Eye, EyeOff, User, Lock, Mail, CheckCircle2, Zap, Shield, Clock, Globe, ChevronDown, Gift } from "lucide-react";
 import logoImg from "@/assets/logo-buzzbooster.png";
-import loginHeroImg from "@assets/auth-person.jpg";
-import signupHeroImg from "@assets/signup-person.jpg";
+import loginHeroImg from "@assets/auth-person.webp";
+import signupHeroImg from "@assets/signup-person.webp";
 import { useSiteContent } from "@/hooks/useSiteContent";
+import { prefetchImage } from "@/lib/imagePreload";
+
+// Mise en cache anticipée (arrière-plan, priorité minimale) : les visuels sont
+// déjà dans le cache du navigateur quand l'utilisateur arrive sur la page.
+prefetchImage(loginHeroImg);
+prefetchImage(signupHeroImg);
 import { SIGNUP_COUNTRIES } from "@/lib/currency";
 import { authedFetch } from "@/lib/authFetch";
 import { REF_CODE_RE, checkRefCode, getStoredRefCode, recordRefVisit, storeRefCode } from "@/lib/referral";
@@ -242,7 +248,7 @@ const Auth = () => {
                     style={{ background: "radial-gradient(circle at 30% 30%, hsl(25, 100%, 60%) 0%, hsl(215, 85%, 55%) 80%, transparent 100%)" }}
                   />
                   <div className="relative rounded-2xl overflow-hidden shadow-lg bg-white">
-                    <img src={loginImg} alt="Communauté BUZZ BOOSTER" className="w-full h-auto block" loading="eager" decoding="async" />
+                    <img src={loginImg} alt="Communauté BUZZ BOOSTER" width={800} height={794} className="w-full h-auto block" loading="eager" decoding="async" />
                   </div>
                 </div>
               </div>
@@ -351,6 +357,8 @@ const Auth = () => {
                   <img
                     src={loginImg}
                     alt="Communauté BUZZ BOOSTER"
+                    width={800}
+                    height={794}
                     className="w-full h-auto block"
                     loading="eager"
                     decoding="async"
@@ -412,7 +420,7 @@ const Auth = () => {
                   style={{ background: "radial-gradient(circle at 70% 30%, hsl(215, 85%, 55%) 0%, hsl(25, 100%, 60%) 80%, transparent 100%)" }}
                 />
                 <div className="relative rounded-2xl overflow-hidden shadow-lg bg-white">
-                  <img src={signupImg} alt="Rejoignez la communauté BUZZ BOOSTER" className="w-full h-auto block" loading="eager" decoding="async" />
+                  <img src={signupImg} alt="Rejoignez la communauté BUZZ BOOSTER" width={800} height={931} className="w-full h-auto block" loading="eager" decoding="async" />
                 </div>
               </div>
             </div>
@@ -604,6 +612,8 @@ const Auth = () => {
                 <img
                   src={signupImg}
                   alt="Rejoignez la communauté BUZZ BOOSTER"
+                  width={800}
+                  height={931}
                   className="w-full h-auto block"
                   loading="eager"
                   decoding="async"

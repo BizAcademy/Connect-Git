@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSiteContent } from "@/hooks/useSiteContent";
-import defaultCommunityImg from "@assets/hero-person.jpg";
+import defaultCommunityImg from "@assets/hero-person.webp";
+import { preloadImage } from "@/lib/imagePreload";
+
+// Précharge le visuel principal dès l'évaluation du bundle, avant le premier
+// rendu React — l'image est déjà en cours de téléchargement quand la page s'affiche.
+preloadImage(defaultCommunityImg);
 
 // Liste fixe des marques affichées dans le slider de la landing.
 // Les codes correspondent à ceux gérés dans le panneau admin (onglet "Logos accueil").
@@ -75,6 +80,8 @@ const HeroSection = () => {
                 <img
                   src={communityImg}
                   alt="BUZZ BOOSTER — Croissance réseaux sociaux en Afrique"
+                  width={800}
+                  height={798}
                   className="w-full h-auto block"
                   loading="eager"
                   decoding="async"
@@ -170,7 +177,7 @@ const HeroSection = () => {
                             style={{ width: "100%", height: "100%", objectFit: "contain" }}
                             loading={isFirstOccurrence ? "eager" : "lazy"}
                             decoding="async"
-                            {...(isFirstOccurrence ? { fetchpriority: "high" as const } : {})}
+                            {...(isFirstOccurrence ? { fetchPriority: "high" as const } : {})}
                           />
                         ) : (
                           <span
