@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Check, Eye, UserPlus, Wallet, TrendingUp, Gift, Share2 } from "lucide-react";
+import { Copy, Check, Gift, Share2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { authedFetch } from "@/lib/authFetch";
 import { formatBalance } from "@/lib/currency";
@@ -18,6 +18,9 @@ interface ReferralData {
     earned_fcfa: number;
   };
 }
+
+const thClass = "px-4 py-3 text-left text-xs font-bold text-gray-500 whitespace-nowrap";
+const tdClass = "px-4 py-4 text-sm text-gray-800 whitespace-nowrap";
 
 const Affiliation = () => {
   const { profile } = useAuth();
@@ -64,12 +67,9 @@ const Affiliation = () => {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-8 w-48 bg-gray-200 rounded-lg animate-pulse" />
-        <div className="h-28 bg-gray-200 rounded-2xl animate-pulse" />
-        <div className="h-40 bg-gray-100 rounded-2xl animate-pulse" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[0, 1, 2, 3].map(i => <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />)}
-        </div>
+        <div className="h-8 w-56 bg-gray-200 rounded-lg animate-pulse" />
+        <div className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
+        <div className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
       </div>
     );
   }
@@ -90,115 +90,120 @@ const Affiliation = () => {
   }
 
   const { stats } = data;
+  const conversion = stats.visits > 0 ? (stats.signups / stats.visits) * 100 : 0;
 
   return (
     <div className="space-y-5">
       {/* En-tête */}
       <div>
-        <h1 className="text-2xl font-black text-gray-800">Affiliation</h1>
-        <p className="text-sm text-gray-500">Invitez vos amis et gagnez de l'argent sur leur premier dépôt</p>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-black text-gray-800">Affiliation</h1>
+          <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] font-black uppercase tracking-wider rounded-full px-2.5 py-1 animate-pulse shadow-sm">
+            Nouveau
+          </span>
+        </div>
+        <p className="text-sm text-gray-500 mt-0.5">
+          Invitez vos amis et gagnez {data.referrer_pct}% de leur premier dépôt
+        </p>
       </div>
 
-      {/* Bandeau commission */}
-      <div className="rounded-2xl bg-gradient-to-r from-orange-500 to-blue-600 text-white p-5 sm:p-6 shadow-lg">
-        <div className="flex items-start gap-4">
-          <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-white/20 items-center justify-center flex-shrink-0">
-            <Gift size={22} />
+      {/* Tableau 1 : lien, code, commission, dépôt minimum */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[680px]">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className={thClass}>Lien de parrainage</th>
+                <th className={thClass}>Code</th>
+                <th className={thClass}>Taux de commission</th>
+                <th className={thClass}>Dépôt minimum</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className={tdClass}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-700 truncate max-w-[300px]" title={link}>{link}</span>
+                    <button
+                      onClick={() => copy(link, "link")}
+                      className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition flex-shrink-0"
+                      aria-label="Copier le lien"
+                    >
+                      {copied === "link" ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                    </button>
+                  </div>
+                </td>
+                <td className={tdClass}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-black text-orange-600 tracking-widest">{data.code}</span>
+                    <button
+                      onClick={() => copy(data.code, "code")}
+                      className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition flex-shrink-0"
+                      aria-label="Copier le code"
+                    >
+                      {copied === "code" ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                    </button>
+                  </div>
+                </td>
+                <td className={tdClass}>
+                  <span className="font-black">{data.referrer_pct}%</span>{" "}
+                  <span className="text-xs text-gray-400">(+{data.referred_pct}% pour le filleul)</span>
+                </td>
+                <td className={`${tdClass} font-bold`}>{formatBalance(data.min_deposit_fcfa, country)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        {typeof navigator.share === "function" && (
+          <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50/50 flex justify-end">
+            <button
+              onClick={() => navigator.share({
+                title: "BUZZ BOOSTER",
+                text: "Inscris-toi sur BUZZ BOOSTER avec mon lien et reçois un bonus sur ton premier dépôt !",
+                url: link,
+              }).catch(() => {})}
+              className="px-3 py-1.5 rounded-lg border border-orange-300 text-orange-600 bg-orange-50 hover:bg-orange-100 transition flex items-center gap-1.5 text-xs font-semibold"
+            >
+              <Share2 size={13} /> Partager
+            </button>
           </div>
-          <div>
-            <p className="text-lg sm:text-xl font-black leading-snug">
-              Gagnez {data.referrer_pct}% du premier dépôt de chaque filleul
-            </p>
-            <p className="text-sm text-white/90 mt-1">
-              Votre filleul reçoit aussi un bonus de {data.referred_pct}% •
-              Dépôt minimum requis : <span className="font-bold">{formatBalance(data.min_deposit_fcfa, country)}</span>
-            </p>
-          </div>
+        )}
+      </div>
+
+      {/* Tableau 2 : statistiques */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px]">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className={thClass}>Visites</th>
+                <th className={thClass}>Inscriptions</th>
+                <th className={thClass}>Filleuls ayant déposé</th>
+                <th className={thClass}>Taux de conversion</th>
+                <th className={thClass}>Premiers dépôts cumulés</th>
+                <th className={thClass}>Total gagné</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className={`${tdClass} font-bold`}>{stats.visits}</td>
+                <td className={`${tdClass} font-bold`}>{stats.signups}</td>
+                <td className={`${tdClass} font-bold`}>{stats.paid_referrals}</td>
+                <td className={`${tdClass} font-bold`}>{conversion.toFixed(2)}%</td>
+                <td className={`${tdClass} font-bold`}>{formatBalance(stats.first_deposits_total_fcfa, country)}</td>
+                <td className={`${tdClass} font-black text-emerald-600`}>{formatBalance(stats.earned_fcfa, country)}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Lien + code */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-        <div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Votre lien de parrainage</p>
-          <div className="flex gap-2">
-            <input
-              readOnly
-              value={link}
-              onFocus={e => e.target.select()}
-              className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
-            />
-            <button
-              onClick={() => copy(link, "link")}
-              className="px-3.5 py-2.5 rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition flex items-center gap-1.5 text-sm font-semibold flex-shrink-0"
-            >
-              {copied === "link" ? <Check size={15} /> : <Copy size={15} />}
-              <span className="hidden sm:inline">Copier</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
-          <div className="flex items-center gap-3">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Votre code</p>
-            <span className="font-mono text-lg font-black text-orange-600 bg-orange-50 border border-orange-200 rounded-lg px-3 py-1 tracking-widest">
-              {data.code}
-            </span>
-            <button
-              onClick={() => copy(data.code, "code")}
-              className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition"
-              aria-label="Copier le code"
-            >
-              {copied === "code" ? <Check size={14} /> : <Copy size={14} />}
-            </button>
-          </div>
-          {typeof navigator.share === "function" && (
-            <button
-              onClick={() => navigator.share({ title: "BUZZ BOOSTER", text: `Inscris-toi sur BUZZ BOOSTER avec mon lien et reçois un bonus sur ton premier dépôt !`, url: link }).catch(() => {})}
-              className="sm:ml-auto px-3.5 py-2 rounded-xl border border-orange-300 text-orange-600 bg-orange-50 hover:bg-orange-100 transition flex items-center justify-center gap-1.5 text-sm font-semibold"
-            >
-              <Share2 size={14} /> Partager
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Statistiques */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: "Visites du lien", value: String(stats.visits), icon: Eye, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Inscriptions", value: String(stats.signups), icon: UserPlus, color: "text-amber-600", bg: "bg-amber-50" },
-          { label: "Premiers dépôts cumulés", value: formatBalance(stats.first_deposits_total_fcfa, country), icon: Wallet, color: "text-violet-600", bg: "bg-violet-50" },
-          { label: "Total gagné", value: formatBalance(stats.earned_fcfa, country), icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col gap-2">
-            <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}>
-              <Icon size={16} className={color} />
-            </div>
-            <p className="text-lg font-black text-gray-800 leading-tight break-words">{value}</p>
-            <p className="text-[11px] text-gray-400 font-medium leading-tight">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Comment ça marche */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <p className="text-sm font-bold text-gray-800 mb-3">Comment ça marche ?</p>
-        <ol className="space-y-2.5">
-          {[
-            "Partagez votre lien (ou votre code) avec vos amis.",
-            "Votre ami s'inscrit — le code parrain est appliqué automatiquement via le lien.",
-            `Dès son premier dépôt d'au moins ${formatBalance(data.min_deposit_fcfa, country)}, vous recevez ${data.referrer_pct}% du montant et lui ${data.referred_pct}% — crédités directement sur vos soldes.`,
-          ].map((step, i) => (
-            <li key={i} className="flex items-start gap-3 text-sm text-gray-600">
-              <span className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">
-                {i + 1}
-              </span>
-              {step}
-            </li>
-          ))}
-        </ol>
-      </div>
+      {/* Note explicative */}
+      <p className="text-xs text-gray-400 leading-relaxed">
+        Dès qu'un filleul effectue un premier dépôt d'au moins {formatBalance(data.min_deposit_fcfa, country)},
+        vous recevez {data.referrer_pct}% du montant et lui {data.referred_pct}% — crédités automatiquement
+        sur vos soldes.
+      </p>
     </div>
   );
 };

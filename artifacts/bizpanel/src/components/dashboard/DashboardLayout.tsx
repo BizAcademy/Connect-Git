@@ -15,7 +15,9 @@ import { CountrySelectModal } from "@/components/ui/CountrySelectModal";
 import { formatBalance } from "@/lib/currency";
 import { authedFetch } from "@/lib/authFetch";
 
-const menuItems = [
+const menuItems: {
+  label: string; href: string; icon: typeof LayoutDashboard; key: string; isNew?: boolean;
+}[] = [
   { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard, key: "home" },
   { label: "Nouvelle commande", href: "/dashboard/order", icon: ShoppingCart, key: "order" },
   { label: "Ordres", href: "/dashboard/orders", icon: Clock, key: "orders" },
@@ -23,7 +25,7 @@ const menuItems = [
   { label: "Historique paiements", href: "/dashboard/payments", icon: CreditCard, key: "payments" },
   { label: "Transactions", href: "/dashboard/transactions", icon: Receipt, key: "transactions" },
   { label: "Remboursements", href: "/dashboard/refunds", icon: RotateCcw, key: "refunds" },
-  { label: "Affiliation", href: "/dashboard/affiliation", icon: Gift, key: "affiliation" },
+  { label: "Affiliation", href: "/dashboard/affiliation", icon: Gift, key: "affiliation", isNew: true },
   { label: "Support", href: "/dashboard/support", icon: Headphones, key: "support" },
 ];
 
@@ -194,9 +196,16 @@ export const DashboardLayout = () => {
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
-            <item.icon size={16} className="shrink-0" />
+            <item.icon
+              size={16}
+              className={`shrink-0 ${item.isNew ? "animate-bounce text-orange-500" : ""}`}
+            />
             <span className="truncate text-left flex-1">{item.label}</span>
-            {item.key === "support" && unreadSupport > 0 ? (
+            {item.isNew ? (
+              <span className="ml-auto shrink-0 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[9px] font-black uppercase tracking-wide rounded-full px-2 py-0.5 animate-pulse">
+                Nouveau
+              </span>
+            ) : item.key === "support" && unreadSupport > 0 ? (
               <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full min-w-5 h-5 px-1.5 inline-flex items-center justify-center shrink-0">
                 {unreadSupport}
               </span>
