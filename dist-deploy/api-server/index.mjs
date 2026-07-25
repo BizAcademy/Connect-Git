@@ -53400,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-07-25T00:41:43.618Z";
+var BUILD_TIME = "2026-07-25T00:47:05.128Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -58814,17 +58814,14 @@ router8.post("/referrals/visit", async (req, res) => {
     const visitorKey = typeof rawKey === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(rawKey) ? rawKey : null;
     const owner = await findCodeOwner(code);
     if (!owner) return;
-    const r = await fetch(
-      `${SUPABASE_URL14}/rest/v1/referral_visits?on_conflict=code,visitor_key`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders2(), Prefer: "resolution=ignore-duplicates" },
-        body: JSON.stringify({ code, visitor_key: visitorKey })
-      }
-    );
-    if (!r.ok) {
+    const r = await fetch(`${SUPABASE_URL14}/rest/v1/referral_visits`, {
+      method: "POST",
+      headers: svcHeaders2(),
+      body: JSON.stringify({ code, visitor_key: visitorKey })
+    });
+    if (!r.ok && r.status !== 409) {
       const body = await r.text();
-      if (!body.includes("42P01")) {
+      if (!body.includes("42P01") && !body.includes("23505")) {
         logger.warn({ status: r.status, body: body.slice(0, 150) }, "referral visit insert failed");
       }
     }

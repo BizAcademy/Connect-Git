@@ -74,17 +74,17 @@ router.post("/referrals/visit", async (req, res: Response) => {
     const owner = await findCodeOwner(code);
     if (!owner) return;
 
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/referral_visits?on_conflict=code,visitor_key`,
-      {
-        method: "POST",
-        headers: { ...svcHeaders(), Prefer: "resolution=ignore-duplicates" },
-        body: JSON.stringify({ code, visitor_key: visitorKey }),
-      },
-    );
-    if (!r.ok) {
+    // Insertion simple : l'index unique partiel (code, visitor_key) fait le
+    // dédoublonnage. PostgREST ne peut pas cibler un index partiel via
+    // `on_conflict` (42P10), donc un doublon renvoie 409/23505 = déjà comptée.
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/referral_visits`, {
+      method: "POST",
+      headers: svcHeaders(),
+      body: JSON.stringify({ code, visitor_key: visitorKey }),
+    });
+    if (!r.ok && r.status !== 409) {
       const body = await r.text();
-      if (!body.includes("42P01")) {
+      if (!body.includes("42P01") && !body.includes("23505")) {
         logger.warn({ status: r.status, body: body.slice(0, 150) }, "referral visit insert failed");
       }
     }
