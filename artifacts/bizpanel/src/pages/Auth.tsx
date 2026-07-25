@@ -4,8 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/toast";
 import { Eye, EyeOff, User, Lock, Mail, CheckCircle2, Zap, Shield, Clock, Globe, ChevronDown, Gift } from "lucide-react";
 import logoImg from "@/assets/logo-buzzbooster.png";
-import defaultCommunityImg from "@assets/6044021293859933661_1778088768929.jpg";
 import loginHeroImg from "@assets/auth-person.jpg";
+import signupHeroImg from "@assets/signup-person.jpg";
 import { useSiteContent } from "@/hooks/useSiteContent";
 import { SIGNUP_COUNTRIES } from "@/lib/currency";
 import { authedFetch } from "@/lib/authFetch";
@@ -16,7 +16,7 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const { get } = useSiteContent();
   const loginImg = get("auth_login_image") || loginHeroImg;
-  const signupImg = get("auth_signup_image") || defaultCommunityImg;
+  const signupImg = get("auth_signup_image") || signupHeroImg;
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
