@@ -4842,7 +4842,12 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
   const [response, setResponse] = useState("");
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<"open" | "all">("open");
+  const [search, setSearch] = useState("");
+  const [orderStatusMap, setOrderStatusMap] = useState<Record<string, string>>({});
   const [usernames, setUsernames] = useState<Record<string, string>>({});
+
+  // Order statuses that make a ticket irrelevant — the action has already been handled.
+  const TERMINAL_ORDER_STATUSES = new Set(["completed", "cancelled", "partial", "refunded"]);
 
   const resolveUsernames = async (list: SupportTicket[]) => {
     const ids = Array.from(new Set(list.map((t) => t.user_id).filter(Boolean)));
@@ -4860,11 +4865,59 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
     }
   };
 
+  /**
+   * Fetch the status of every order referenced by the ticket list so we can
+   * exclude tickets whose order is already in a terminal state (completed,
+   * cancelled, partial, refunded).
+   * Uses two lookup strategies:
+   *   • `local:` keyed by order_local_id (internal UUID) — preferred
+   *   • `ext:`   keyed by order_external_id — fallback when local id absent
+   */
+  const resolveOrderStatuses = async (list: SupportTicket[]) => {
+    const localIds = [
+      ...new Set(list.map((t) => t.order_local_id).filter((id): id is string => !!id)),
+    ];
+    const extIds = [
+      ...new Set(
+        list
+          .filter((t) => !t.order_local_id)
+          .map((t) => t.order_external_id)
+          .filter((id): id is string => !!id),
+      ),
+    ];
+
+    const map: Record<string, string> = {};
+
+    try {
+      for (let i = 0; i < localIds.length; i += 500) {
+        const chunk = localIds.slice(i, i + 500);
+        const { data } = await supabase.from("orders").select("id, status").in("id", chunk);
+        for (const row of data || []) map[`local:${row.id}`] = row.status;
+      }
+      for (let i = 0; i < extIds.length; i += 500) {
+        const chunk = extIds.slice(i, i + 500);
+        const { data } = await supabase
+          .from("orders")
+          .select("external_order_id, status")
+          .in("external_order_id", chunk as any);
+        for (const row of data || []) {
+          const extId = (row as any).external_order_id as string | null;
+          if (extId) map[`ext:${extId}`] = (row as any).status as string;
+        }
+      }
+    } catch {
+      /* non-fatal — worst case tickets remain visible */
+    }
+
+    setOrderStatusMap(map);
+  };
+
   const refresh = async () => {
     try {
       const list = await fetchAdminTickets();
       setTickets(list);
       void resolveUsernames(list);
+      void resolveOrderStatuses(list);
       onChanged?.();
     } catch (err: any) {
       toast.error(err?.message || "Échec du chargement des tickets");
@@ -4895,10 +4948,34 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
   }, []);
 
   const filteredTickets = useMemo(() => {
-    return filter === "open"
-      ? tickets.filter((t) => t.status === "open" || t.status === "in_progress")
-      : tickets;
-  }, [tickets, filter]);
+    let list =
+      filter === "open"
+        ? tickets.filter((t) => t.status === "open" || t.status === "in_progress")
+        : tickets;
+
+    // Hide tickets whose linked order has already been handled (terminal status).
+    list = list.filter((t) => {
+      const key = t.order_local_id
+        ? `local:${t.order_local_id}`
+        : t.order_external_id
+        ? `ext:${t.order_external_id}`
+        : null;
+      const orderStatus = key ? orderStatusMap[key] : null;
+      return !orderStatus || !TERMINAL_ORDER_STATUSES.has(orderStatus);
+    });
+
+    // Search by ticket short-code or order external ID.
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (t) =>
+          t.short_code.toLowerCase().includes(q) ||
+          (t.order_external_id || "").toLowerCase().includes(q),
+      );
+    }
+
+    return list;
+  }, [tickets, filter, search, orderStatusMap]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const active = useMemo(
     () => tickets.find((t) => t.id === activeId) || null,
@@ -4986,28 +5063,41 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
     <div className="grid grid-cols-[120px_1fr] sm:grid-cols-[200px_1fr] md:grid-cols-[320px_1fr] gap-2 md:gap-4 h-[75vh]">
       {/* Left: list */}
       <Card className="flex flex-col overflow-hidden">
-        <div className="p-1.5 sm:p-2 border-b flex flex-wrap gap-1">
-          {(["open", "all"] as const).map((k) => (
-            <button
-              key={k}
-              onClick={() => setFilter(k)}
-              className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                filter === k
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/70"
-              }`}
-            >
-              {k === "open" ? "À traiter" : "Tous"}
-              <span className="ml-1.5 text-[10px] opacity-70">
-                {k === "open"
-                  ? tickets.filter((t) => t.status === "open" || t.status === "in_progress").length
-                  : tickets.length}
-              </span>
-            </button>
-          ))}
-          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={refresh}>
-            <RefreshCw size={12} />
-          </Button>
+        <div className="p-1.5 sm:p-2 border-b space-y-1.5">
+          <div className="flex flex-wrap gap-1">
+            {(["open", "all"] as const).map((k) => (
+              <button
+                key={k}
+                onClick={() => setFilter(k)}
+                className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                  filter === k
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/70"
+                }`}
+              >
+                {k === "open" ? "À traiter" : "Tous"}
+                <span className="ml-1.5 text-[10px] opacity-70">
+                  {k === "open"
+                    ? tickets.filter((t) => t.status === "open" || t.status === "in_progress").length
+                    : tickets.length}
+                </span>
+              </button>
+            ))}
+            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={refresh}>
+              <RefreshCw size={12} />
+            </Button>
+          </div>
+          {/* Search by ticket code or order number */}
+          <div className="relative">
+            <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="N° ticket ou commande…"
+              className="w-full pl-6 pr-2 py-1 text-[11px] rounded border bg-background focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+            />
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           {loading ? (

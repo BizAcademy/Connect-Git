@@ -53400,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-08-14T23:18:31.036Z";
+var BUILD_TIME = "2026-08-14T23:38:03.689Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -58175,14 +58175,23 @@ async function supabaseInsertTicket(ticket) {
   }
 }
 async function supabaseListAllTickets() {
+  const PAGE = 1e3;
+  const all = [];
   try {
-    const r = await fetch(
-      `${SUPABASE_URL11}/rest/v1/tickets?order=status.asc,ts.desc&limit=500`,
-      { headers: serviceRoleHeaders4() }
-    );
-    if (!r.ok) return null;
-    const rows = await r.json();
-    return rows.map(rowToTicket).sort((a, b) => {
+    for (let offset = 0; ; offset += PAGE) {
+      const r = await fetch(
+        `${SUPABASE_URL11}/rest/v1/tickets?order=ts.desc&limit=${PAGE}&offset=${offset}`,
+        { headers: serviceRoleHeaders4() }
+      );
+      if (!r.ok) {
+        if (all.length) break;
+        return null;
+      }
+      const rows = await r.json();
+      all.push(...rows.map(rowToTicket));
+      if (rows.length < PAGE) break;
+    }
+    return all.sort((a, b) => {
       const ao = a.status === "resolved" || a.status === "closed" ? 1 : 0;
       const bo = b.status === "resolved" || b.status === "closed" ? 1 : 0;
       if (ao !== bo) return ao - bo;

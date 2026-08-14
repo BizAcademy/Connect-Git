@@ -121,15 +121,24 @@ async function supabaseInsertTicket(ticket: Ticket): Promise<Ticket | null> {
 }
 
 async function supabaseListAllTickets(): Promise<Ticket[] | null> {
+  const PAGE = 1000;
+  const all: Ticket[] = [];
   try {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/tickets?order=status.asc,ts.desc&limit=500`,
-      { headers: serviceRoleHeaders() },
-    );
-    if (!r.ok) return null;
-    const rows = (await r.json()) as Array<Record<string, unknown>>;
-    // Open/in_progress first, then resolved/closed
-    return rows.map(rowToTicket).sort((a, b) => {
+    for (let offset = 0; ; offset += PAGE) {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/tickets?order=ts.desc&limit=${PAGE}&offset=${offset}`,
+        { headers: serviceRoleHeaders() },
+      );
+      if (!r.ok) {
+        if (all.length) break; // return what we already have
+        return null;
+      }
+      const rows = (await r.json()) as Array<Record<string, unknown>>;
+      all.push(...rows.map(rowToTicket));
+      if (rows.length < PAGE) break;
+    }
+    // Open/in_progress first, then resolved/closed, newest first within each group
+    return all.sort((a, b) => {
       const ao = a.status === "resolved" || a.status === "closed" ? 1 : 0;
       const bo = b.status === "resolved" || b.status === "closed" ? 1 : 0;
       if (ao !== bo) return ao - bo;
