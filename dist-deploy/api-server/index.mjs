@@ -53400,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-07-25T18:18:57.566Z";
+var BUILD_TIME = "2026-08-14T23:18:31.036Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -55785,6 +55785,35 @@ function serviceRoleHeaders3() {
   const key2 = SUPABASE_SERVICE_ROLE_KEY7;
   return { apikey: key2, Authorization: `Bearer ${key2}`, "Content-Type": "application/json" };
 }
+var SUPABASE_PAGE_SIZE = 1e3;
+async function fetchAllRestRows(buildUrl, headers, label, isOptionalMissingResource = (body) => false) {
+  const rows = [];
+  for (let offset = 0; ; offset += SUPABASE_PAGE_SIZE) {
+    try {
+      const response = await fetch(buildUrl(offset), { headers });
+      if (!response.ok && response.status !== 206) {
+        const body = await response.text().catch(() => "");
+        if (!isOptionalMissingResource(body)) {
+          logger.error(
+            { status: response.status, body: body.slice(0, 400), offset },
+            `admin: ${label} query failed`
+          );
+        }
+        return isOptionalMissingResource(body) ? [] : null;
+      }
+      const page = await response.json();
+      if (!Array.isArray(page)) {
+        logger.error({ offset }, `admin: ${label} query returned an invalid payload`);
+        return null;
+      }
+      rows.push(...page);
+      if (page.length < SUPABASE_PAGE_SIZE) return rows;
+    } catch (err) {
+      logger.error({ err, offset }, `admin: ${label} query threw`);
+      return null;
+    }
+  }
+}
 var MAIN_ADMIN_EMAIL = (process.env["MAIN_ADMIN_EMAIL"] || "jude@gmail.com").toLowerCase();
 function requireActionCode(req, res, next) {
   const expected = process.env["ADMIN_ACTION_CODE"] || "";
@@ -56267,7 +56296,8 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
   const statusF = (q.status || "").toLowerCase();
   const userIdF = (q.user_id || "").trim();
   const search = (q.search || "").replace(/[%,()]/g, "").trim();
-  const limit = Math.min(Math.max(parseInt(q.limit || "200", 10) || 200, 1), 1e3);
+  const requestedAll = (q.limit || "").toLowerCase() === "all";
+  const limit = requestedAll ? Number.MAX_SAFE_INTEGER : Math.min(Math.max(parseInt(q.limit || "200", 10) || 200, 1), 1e3);
   const offset = Math.max(parseInt(q.offset || "0", 10) || 0, 0);
   const fromIso = q.from ? new Date(q.from).toISOString() : null;
   const toIso = q.to ? (() => {
@@ -56276,23 +56306,24 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
     return d.toISOString();
   })() : null;
   const headers = serviceRoleHeaders3();
-  const FETCH = Math.min(limit + offset + 200, 2e3);
-  const buildOrderUrl = () => {
+  const buildOrderUrl = (pageOffset) => {
     const p = new URLSearchParams();
     p.set("select", "id,user_id,created_at,price,status,service_name,service_category,link,external_order_id,quantity,refunded_at,refunded_amount,provider,balance_before,balance_after");
     p.set("order", "created_at.desc");
-    p.set("limit", String(FETCH));
+    p.set("limit", String(SUPABASE_PAGE_SIZE));
+    p.set("offset", String(pageOffset));
     if (userIdF) p.append("user_id", `eq.${userIdF}`);
     if (fromIso) p.append("created_at", `gte.${fromIso}`);
     if (toIso) p.append("created_at", `lte.${toIso}`);
     if (statusF && type === "order") p.append("status", `eq.${statusF}`);
     return `${SUPABASE_URL8}/rest/v1/orders?${p.toString()}`;
   };
-  const buildPayUrl = () => {
+  const buildPayUrl = (pageOffset) => {
     const p = new URLSearchParams();
     p.set("select", "id,user_id,created_at,amount,status,method,reference,operator,country,phone_number,transaction_id,order_id,currency,balance_before,balance_after");
     p.set("order", "created_at.desc");
-    p.set("limit", String(FETCH));
+    p.set("limit", String(SUPABASE_PAGE_SIZE));
+    p.set("offset", String(pageOffset));
     if (userIdF) p.append("user_id", `eq.${userIdF}`);
     if (fromIso) p.append("created_at", `gte.${fromIso}`);
     if (toIso) p.append("created_at", `lte.${toIso}`);
@@ -56300,11 +56331,12 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
     if (type === "adjustment") p.append("method", "eq.admin_adjustment");
     return `${SUPABASE_URL8}/rest/v1/payments?${p.toString()}`;
   };
-  const buildRefUrl = () => {
+  const buildRefUrl = (pageOffset) => {
     const p = new URLSearchParams();
     p.set("select", "id,referrer_user_id,referred_user_id,referrer_bonus_fcfa,referred_bonus_fcfa,referrer_credited_at,referred_credited_at");
     p.set("order", "created_at.desc");
-    p.set("limit", String(FETCH));
+    p.set("limit", String(SUPABASE_PAGE_SIZE));
+    p.set("offset", String(pageOffset));
     p.append("or", "(referrer_credited_at.not.is.null,referred_credited_at.not.is.null)");
     if (userIdF) p.append("or", `(referrer_user_id.eq.${userIdF},referred_user_id.eq.${userIdF})`);
     return `${SUPABASE_URL8}/rest/v1/referrals?${p.toString()}`;
@@ -56313,40 +56345,19 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
     const wantOrders = type === "all" || type === "order" || type === "refund";
     const wantPays = type === "all" || type === "deposit" || type === "adjustment";
     const wantComs = type === "all" || type === "commission";
-    const [ordRes, payRes, refRes] = await Promise.all([
-      wantOrders ? fetch(buildOrderUrl(), { headers }) : Promise.resolve(null),
-      wantPays ? fetch(buildPayUrl(), { headers }) : Promise.resolve(null),
-      wantComs ? fetch(buildRefUrl(), { headers }) : Promise.resolve(null)
+    const [orderRows, paymentRows, referralRows] = await Promise.all([
+      wantOrders ? fetchAllRestRows(buildOrderUrl, headers, "orders") : Promise.resolve([]),
+      wantPays ? fetchAllRestRows(buildPayUrl, headers, "payments") : Promise.resolve([]),
+      wantComs ? fetchAllRestRows(
+        buildRefUrl,
+        headers,
+        "referrals",
+        (body) => body.includes("42P01")
+      ) : Promise.resolve([])
     ]);
-    let orders = [];
-    let pays = [];
-    if (ordRes) {
-      if (ordRes.ok) {
-        orders = await ordRes.json();
-      } else {
-        const errBody = await ordRes.text().catch(() => "");
-        logger.error({ status: ordRes.status, body: errBody.slice(0, 400) }, "admin/transactions: orders query failed \u2014 possible missing column in DB");
-      }
-    }
-    if (payRes) {
-      if (payRes.ok) {
-        pays = await payRes.json();
-      } else {
-        const errBody = await payRes.text().catch(() => "");
-        logger.error({ status: payRes.status, body: errBody.slice(0, 400) }, "admin/transactions: payments query failed \u2014 possible missing column in DB");
-      }
-    }
-    let refs = [];
-    if (refRes) {
-      if (refRes.ok) {
-        refs = await refRes.json();
-      } else {
-        const errBody = await refRes.text().catch(() => "");
-        if (!errBody.includes("42P01")) {
-          logger.error({ status: refRes.status, body: errBody.slice(0, 400) }, "admin/transactions: referrals query failed");
-        }
-      }
-    }
+    const orders = orderRows || [];
+    const pays = paymentRows || [];
+    const refs = referralRows || [];
     const userIds = Array.from(new Set([
       ...orders.map((o) => o.user_id),
       ...pays.map((p) => p.user_id),

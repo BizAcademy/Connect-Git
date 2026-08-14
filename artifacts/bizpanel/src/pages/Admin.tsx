@@ -512,7 +512,7 @@ const AdminTransactions = () => {
     try {
       // Source the unified journal from the server (service-role, RLS-bypass).
       const headers = await getAuthHeaders();
-      const r = await authedFetch("/api/admin/transactions?limit=500", {
+      const r = await authedFetch("/api/admin/transactions?limit=all", {
         headers,
       });
       if (!r.ok) {
@@ -2379,17 +2379,44 @@ const AdminOrders = () => {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(500);
-    const list = data || [];
-    setOrders(list);
-    setLoading(false);
+    try {
+      // Supabase/PostgREST caps a single response at its page size. Walk all
+      // ranges so older orders remain available to the admin search.
+      const pageSize = 1000;
+      const list: any[] = [];
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await supabase
+          .from("orders")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        const page = data || [];
+        list.push(...page);
+        if (page.length < pageSize) break;
+      }
+      setOrders(list);
 
-    const ids = Array.from(new Set(list.map((o: any) => o.user_id).filter(Boolean)));
-    if (ids.length) {
-      const { data: profs } = await supabase.from("profiles").select("user_id, username, email").in("user_id", ids);
+      const ids = Array.from(new Set(list.map((o: any) => o.user_id).filter(Boolean)));
       const map: Record<string, string> = {};
-      for (const p of profs || []) map[p.user_id] = p.username || p.email || p.user_id.slice(0, 8);
+      for (let i = 0; i < ids.length; i += 500) {
+        const chunk = ids.slice(i, i + 500);
+        const { data: profs, error } = await supabase
+          .from("profiles")
+          .select("user_id, username, email")
+          .in("user_id", chunk);
+        if (error) throw error;
+        for (const p of profs || []) {
+          map[p.user_id] = p.username || p.email || p.user_id.slice(0, 8);
+        }
+      }
       setUsernames(map);
+    } catch (err) {
+      setOrders([]);
+      setUsernames({});
+      toast.error(`Impossible de charger toutes les commandes : ${(err as Error).message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
