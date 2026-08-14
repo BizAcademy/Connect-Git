@@ -53400,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-08-14T23:38:03.689Z";
+var BUILD_TIME = "2026-08-14T23:51:35.515Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -57607,12 +57607,12 @@ router4.get("/support/uploads/:filename", requireUser, async (req, res) => {
   if (!fp) return res.status(400).end();
   if (!isOwnedBy(fname, req.userId)) {
     try {
-      const SUPABASE_URL19 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+      const SUPABASE_URL20 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
       const SUPABASE_ANON_KEY6 = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
-      if (!SUPABASE_URL19 || !SUPABASE_ANON_KEY6) {
+      if (!SUPABASE_URL20 || !SUPABASE_ANON_KEY6) {
         throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY environment variables must be set");
       }
-      const r = await fetch(`${SUPABASE_URL19}/rest/v1/rpc/has_role`, {
+      const r = await fetch(`${SUPABASE_URL20}/rest/v1/rpc/has_role`, {
         method: "POST",
         headers: {
           apikey: SUPABASE_ANON_KEY6,
@@ -58443,17 +58443,28 @@ async function countOpenTickets() {
   return all.filter((t) => t.status === "open" || t.status === "in_progress").length;
 }
 
-// src/routes/tickets.ts
-var router6 = (0, import_express6.Router)();
+// src/lib/ticket-auto-closer.ts
+init_logger();
 var SUPABASE_URL12 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
 var SUPABASE_SERVICE_ROLE_KEY11 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var TERMINAL_ORDER_STATUSES = /* @__PURE__ */ new Set([
+  "completed",
+  "cancelled",
+  "partial",
+  "refunded"
+]);
+
+// src/routes/tickets.ts
+var router6 = (0, import_express6.Router)();
+var SUPABASE_URL13 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY12 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 async function resolveOrderForUser(orderLocalId, userId) {
-  if (!SUPABASE_URL12 || !SUPABASE_SERVICE_ROLE_KEY11) return null;
-  const url = `${SUPABASE_URL12}/rest/v1/orders?id=eq.${encodeURIComponent(orderLocalId)}&user_id=eq.${encodeURIComponent(userId)}&select=id,user_id,external_order_id,provider,service_name&limit=1`;
+  if (!SUPABASE_URL13 || !SUPABASE_SERVICE_ROLE_KEY12) return null;
+  const url = `${SUPABASE_URL13}/rest/v1/orders?id=eq.${encodeURIComponent(orderLocalId)}&user_id=eq.${encodeURIComponent(userId)}&select=id,user_id,external_order_id,provider,service_name&limit=1`;
   const r = await fetch(url, {
     headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY11,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY11}`
+      apikey: SUPABASE_SERVICE_ROLE_KEY12,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY12}`
     }
   });
   if (!r.ok) return null;
@@ -58503,6 +58514,30 @@ router6.post("/tickets", requireUser, async (req, res) => {
       order_external_id = order.external_order_id;
       provider_id = order.provider;
       service_name = order.service_name ? String(order.service_name).slice(0, 200) : null;
+      if (order.status && TERMINAL_ORDER_STATUSES.has(order.status)) {
+        const label = {
+          completed: "termin\xE9e",
+          cancelled: "annul\xE9e",
+          partial: "partiellement livr\xE9e",
+          refunded: "rembours\xE9e"
+        };
+        const t2 = await createTicket({
+          user_id: req.userId,
+          order_external_id,
+          order_local_id,
+          provider_id,
+          service_name,
+          action_type,
+          message
+        });
+        const closed = await updateTicket(t2.id, {
+          status: "closed",
+          admin_response: `Ticket ferm\xE9 automatiquement : la commande li\xE9e est ${label[order.status] ?? order.status}. Aucune intervention n'est n\xE9cessaire. Si vous avez d'autres questions, ouvrez un nouveau ticket.`,
+          resolved_at: (/* @__PURE__ */ new Date()).toISOString(),
+          resolved_by: "system"
+        });
+        return res.json({ ticket: closed ?? t2 });
+      }
     }
     const t = await createTicket({
       user_id: req.userId,
@@ -58599,25 +58634,25 @@ var import_express7 = __toESM(require_express2(), 1);
 init_logger();
 import crypto4 from "node:crypto";
 var router7 = (0, import_express7.Router)();
-var SUPABASE_URL13 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY12 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL14 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY13 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var BUCKET = "avatars";
 var MAX_BYTES2 = 2 * 1024 * 1024;
 var ALLOWED = /* @__PURE__ */ new Set(["jpg", "jpeg", "png", "webp"]);
 function serviceHeaders() {
   return {
-    apikey: SUPABASE_SERVICE_ROLE_KEY12,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY12}`
+    apikey: SUPABASE_SERVICE_ROLE_KEY13,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY13}`
   };
 }
 function hasStorage2() {
-  return !!(SUPABASE_URL13 && SUPABASE_SERVICE_ROLE_KEY12);
+  return !!(SUPABASE_URL14 && SUPABASE_SERVICE_ROLE_KEY13);
 }
 async function fetchUserEmail(userToken) {
   if (!userToken) return "";
   try {
-    const r = await fetch(`${SUPABASE_URL13}/auth/v1/user`, {
-      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY12, Authorization: `Bearer ${userToken}` }
+    const r = await fetch(`${SUPABASE_URL14}/auth/v1/user`, {
+      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY13, Authorization: `Bearer ${userToken}` }
     });
     if (r.ok) {
       const u = await r.json();
@@ -58630,7 +58665,7 @@ async function fetchUserEmail(userToken) {
 async function profileExists(userId) {
   try {
     const r = await fetch(
-      `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}&select=user_id&limit=1`,
+      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}&select=user_id&limit=1`,
       { headers: serviceHeaders() }
     );
     if (!r.ok) return false;
@@ -58649,7 +58684,7 @@ async function ensureProfileRow(userId, userToken, country = "", currency = null
     const body = { user_id: userId, username, email };
     if (country) body.country = country;
     if (currency) body.currency = currency;
-    const insRes = await fetch(`${SUPABASE_URL13}/rest/v1/profiles`, {
+    const insRes = await fetch(`${SUPABASE_URL14}/rest/v1/profiles`, {
       method: "POST",
       headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=representation" },
       body: JSON.stringify(body)
@@ -58684,7 +58719,7 @@ router7.post("/profile/avatar", requireUser, async (req, res) => {
   const filename = `${safe}-${crypto4.randomBytes(6).toString("hex")}.${ext}`;
   try {
     const oldRes = await fetch(
-      `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}&select=avatar_url`,
+      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}&select=avatar_url`,
       { headers: { ...serviceHeaders(), Accept: "application/json" } }
     );
     if (oldRes.ok) {
@@ -58693,7 +58728,7 @@ router7.post("/profile/avatar", requireUser, async (req, res) => {
       if (oldUrl) {
         const oldName = oldUrl.split(`/${BUCKET}/`)[1];
         if (oldName) {
-          await fetch(`${SUPABASE_URL13}/storage/v1/object/${BUCKET}/${encodeURIComponent(oldName)}`, {
+          await fetch(`${SUPABASE_URL14}/storage/v1/object/${BUCKET}/${encodeURIComponent(oldName)}`, {
             method: "DELETE",
             headers: serviceHeaders()
           }).catch(() => {
@@ -58702,7 +58737,7 @@ router7.post("/profile/avatar", requireUser, async (req, res) => {
       }
     }
     const uploadRes = await fetch(
-      `${SUPABASE_URL13}/storage/v1/object/${BUCKET}/${encodeURIComponent(filename)}`,
+      `${SUPABASE_URL14}/storage/v1/object/${BUCKET}/${encodeURIComponent(filename)}`,
       {
         method: "POST",
         headers: { ...serviceHeaders(), "Content-Type": contentType, "x-upsert": "false" },
@@ -58714,9 +58749,9 @@ router7.post("/profile/avatar", requireUser, async (req, res) => {
       logger.error({ status: uploadRes.status, detail }, "avatar upload failed");
       return res.status(502).json({ error: "\xC9chec de l'upload" });
     }
-    const avatarUrl = `${SUPABASE_URL13}/storage/v1/object/public/${BUCKET}/${encodeURIComponent(filename)}`;
+    const avatarUrl = `${SUPABASE_URL14}/storage/v1/object/public/${BUCKET}/${encodeURIComponent(filename)}`;
     const patchRes = await fetch(
-      `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}`,
+      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}`,
       {
         method: "PATCH",
         headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=minimal" },
@@ -58738,7 +58773,7 @@ router7.delete("/profile/avatar", requireUser, async (req, res) => {
   const userId = req.userId;
   try {
     const oldRes = await fetch(
-      `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}&select=avatar_url`,
+      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}&select=avatar_url`,
       { headers: { ...serviceHeaders(), Accept: "application/json" } }
     );
     if (oldRes.ok) {
@@ -58747,7 +58782,7 @@ router7.delete("/profile/avatar", requireUser, async (req, res) => {
       if (oldUrl) {
         const oldName = oldUrl.split(`/${BUCKET}/`)[1];
         if (oldName) {
-          await fetch(`${SUPABASE_URL13}/storage/v1/object/${BUCKET}/${encodeURIComponent(oldName)}`, {
+          await fetch(`${SUPABASE_URL14}/storage/v1/object/${BUCKET}/${encodeURIComponent(oldName)}`, {
             method: "DELETE",
             headers: serviceHeaders()
           }).catch(() => {
@@ -58756,7 +58791,7 @@ router7.delete("/profile/avatar", requireUser, async (req, res) => {
       }
     }
     await fetch(
-      `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}`,
+      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}`,
       {
         method: "PATCH",
         headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=minimal" },
@@ -58770,7 +58805,7 @@ router7.delete("/profile/avatar", requireUser, async (req, res) => {
   }
 });
 router7.post("/profile/country", requireUser, async (req, res) => {
-  if (!SUPABASE_URL13 || !SUPABASE_SERVICE_ROLE_KEY12) {
+  if (!SUPABASE_URL14 || !SUPABASE_SERVICE_ROLE_KEY13) {
     return res.status(503).json({ error: "Service non configur\xE9" });
   }
   const country = String(req.body?.country || "").toUpperCase().trim();
@@ -58784,7 +58819,7 @@ router7.post("/profile/country", requireUser, async (req, res) => {
   const userId = req.userId;
   try {
     const patchRes = await fetch(
-      `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}`,
+      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}`,
       {
         method: "PATCH",
         headers: {
@@ -58809,7 +58844,7 @@ router7.post("/profile/country", requireUser, async (req, res) => {
     for (let attempt = 0; attempt < 3 && !upserted; attempt++) {
       await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
       const retryRes = await fetch(
-        `${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}`,
+        `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}`,
         {
           method: "PATCH",
           headers: {
@@ -58832,7 +58867,7 @@ router7.post("/profile/country", requireUser, async (req, res) => {
       if (!ensured) {
         return res.status(503).json({ error: "Profil non encore disponible, r\xE9essayez dans quelques secondes" });
       }
-      await fetch(`${SUPABASE_URL13}/rest/v1/profiles?user_id=eq.${userId}`, {
+      await fetch(`${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}`, {
         method: "PATCH",
         headers: { ...serviceHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ country, currency: info.currency })
@@ -58847,7 +58882,7 @@ router7.post("/profile/country", requireUser, async (req, res) => {
   }
 });
 router7.post("/profile/ensure", requireUser, async (req, res) => {
-  if (!SUPABASE_URL13 || !SUPABASE_SERVICE_ROLE_KEY12) {
+  if (!SUPABASE_URL14 || !SUPABASE_SERVICE_ROLE_KEY13) {
     return res.status(503).json({ error: "Service non configur\xE9" });
   }
   try {
@@ -58864,10 +58899,10 @@ var profile_default = router7;
 // src/routes/referrals.ts
 var import_express8 = __toESM(require_express2(), 1);
 init_logger();
-var SUPABASE_URL14 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY13 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL15 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY14 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 function svcHeaders2() {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY13 || "";
+  const key2 = SUPABASE_SERVICE_ROLE_KEY14 || "";
   return {
     apikey: key2,
     Authorization: `Bearer ${key2}`,
@@ -58901,12 +58936,12 @@ router8.post("/referrals/visit", async (req, res) => {
   res.status(204).end();
   try {
     const code = normalizeCode(req.body?.["code"]);
-    if (!code || !SUPABASE_URL14 || !SUPABASE_SERVICE_ROLE_KEY13) return;
+    if (!code || !SUPABASE_URL15 || !SUPABASE_SERVICE_ROLE_KEY14) return;
     const rawKey = req.body?.["visitor_key"];
     const visitorKey = typeof rawKey === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(rawKey) ? rawKey : null;
     const owner = await findCodeOwner(code);
     if (!owner) return;
-    const r = await fetch(`${SUPABASE_URL14}/rest/v1/referral_visits`, {
+    const r = await fetch(`${SUPABASE_URL15}/rest/v1/referral_visits`, {
       method: "POST",
       headers: svcHeaders2(),
       body: JSON.stringify({ code, visitor_key: visitorKey })
@@ -58922,14 +58957,14 @@ router8.post("/referrals/visit", async (req, res) => {
   }
 });
 router8.get("/referrals/me", requireUser, async (req, res) => {
-  if (!SUPABASE_URL14 || !SUPABASE_SERVICE_ROLE_KEY13) {
+  if (!SUPABASE_URL15 || !SUPABASE_SERVICE_ROLE_KEY14) {
     res.status(503).json({ error: "Service non configur\xE9" });
     return;
   }
   const userId = req.userId;
   try {
     const pr = await fetch(
-      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=referral_code,affiliate_earnings,country,currency`,
+      `${SUPABASE_URL15}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=referral_code,affiliate_earnings,country,currency`,
       { headers: svcHeaders2() }
     );
     if (!pr.ok) {
@@ -58957,11 +58992,11 @@ router8.get("/referrals/me", requireUser, async (req, res) => {
     }
     const [visitsRes, refsRes, cfg] = await Promise.all([
       fetch(
-        `${SUPABASE_URL14}/rest/v1/referral_visits?code=eq.${encodeURIComponent(code)}&select=id&limit=1`,
+        `${SUPABASE_URL15}/rest/v1/referral_visits?code=eq.${encodeURIComponent(code)}&select=id&limit=1`,
         { headers: { ...svcHeaders2(), Prefer: "count=exact", Range: "0-0", "Range-Unit": "items" } }
       ),
       fetch(
-        `${SUPABASE_URL14}/rest/v1/referrals?referrer_user_id=eq.${encodeURIComponent(userId)}&select=status,qualifying_amount_fcfa,referrer_bonus_fcfa`,
+        `${SUPABASE_URL15}/rest/v1/referrals?referrer_user_id=eq.${encodeURIComponent(userId)}&select=status,qualifying_amount_fcfa,referrer_bonus_fcfa`,
         { headers: svcHeaders2() }
       ),
       getReferralConfig()
@@ -59010,7 +59045,7 @@ router8.get("/referrals/me", requireUser, async (req, res) => {
   }
 });
 router8.get("/referrals/transactions", requireUser, async (req, res) => {
-  if (!SUPABASE_URL14 || !SUPABASE_SERVICE_ROLE_KEY13) {
+  if (!SUPABASE_URL15 || !SUPABASE_SERVICE_ROLE_KEY14) {
     res.json([]);
     return;
   }
@@ -59019,11 +59054,11 @@ router8.get("/referrals/transactions", requireUser, async (req, res) => {
     const enc = encodeURIComponent(userId);
     const [asReferrerRes, asReferredRes] = await Promise.all([
       fetch(
-        `${SUPABASE_URL14}/rest/v1/referrals?referrer_user_id=eq.${enc}&referrer_credited_at=not.is.null&select=id,referred_user_id,referrer_bonus_fcfa,referrer_credited_at&order=referrer_credited_at.desc&limit=200`,
+        `${SUPABASE_URL15}/rest/v1/referrals?referrer_user_id=eq.${enc}&referrer_credited_at=not.is.null&select=id,referred_user_id,referrer_bonus_fcfa,referrer_credited_at&order=referrer_credited_at.desc&limit=200`,
         { headers: svcHeaders2() }
       ),
       fetch(
-        `${SUPABASE_URL14}/rest/v1/referrals?referred_user_id=eq.${enc}&referred_credited_at=not.is.null&select=id,referrer_user_id,referred_bonus_fcfa,referred_credited_at&limit=5`,
+        `${SUPABASE_URL15}/rest/v1/referrals?referred_user_id=eq.${enc}&referred_credited_at=not.is.null&select=id,referrer_user_id,referred_bonus_fcfa,referred_credited_at&limit=5`,
         { headers: svcHeaders2() }
       )
     ]);
@@ -59036,7 +59071,7 @@ router8.get("/referrals/transactions", requireUser, async (req, res) => {
     const names = /* @__PURE__ */ new Map();
     if (otherIds.length > 0) {
       const pr2 = await fetch(
-        `${SUPABASE_URL14}/rest/v1/profiles?user_id=in.(${otherIds.join(",")})&select=user_id,username`,
+        `${SUPABASE_URL15}/rest/v1/profiles?user_id=in.(${otherIds.join(",")})&select=user_id,username`,
         { headers: svcHeaders2() }
       );
       if (pr2.ok) {
@@ -59184,15 +59219,15 @@ init_logger();
 
 // src/lib/settings-cleanup.ts
 init_logger();
-var SUPABASE_URL15 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY14 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL16 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY15 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SENSITIVE_SETTING_KEYS = [
   "soleaspay_api_key",
   "soleaspay_merchant_id",
   "soleaspay_callback_url"
 ];
 async function purgeSensitiveSettingRows() {
-  if (!SUPABASE_URL15 || !SUPABASE_SERVICE_ROLE_KEY14) {
+  if (!SUPABASE_URL16 || !SUPABASE_SERVICE_ROLE_KEY15) {
     logger.warn(
       "SUPABASE_SERVICE_ROLE_KEY not set \u2014 cannot purge sensitive setting rows. Apply the SQL migration in migrations/001_settings_rls.sql manually."
     );
@@ -59201,12 +59236,12 @@ async function purgeSensitiveSettingRows() {
   try {
     const keysFilter = SENSITIVE_SETTING_KEYS.map((k) => `key.eq.${k}`).join(",");
     const r = await fetch(
-      `${SUPABASE_URL15}/rest/v1/settings?or=(${encodeURIComponent(keysFilter)})`,
+      `${SUPABASE_URL16}/rest/v1/settings?or=(${encodeURIComponent(keysFilter)})`,
       {
         method: "DELETE",
         headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY14,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY14}`,
+          apikey: SUPABASE_SERVICE_ROLE_KEY15,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY15}`,
           Prefer: "return=minimal"
         }
       }
@@ -59224,8 +59259,8 @@ async function purgeSensitiveSettingRows() {
 
 // src/lib/order-status-poller.ts
 init_logger();
-var SUPABASE_URL16 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY15 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL17 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY16 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SMM_API_KEY = process.env["SMM_PANEL_API_KEY"];
 var SMM_API_URL = process.env["SMM_PANEL_API_URL"];
 var POLL_INTERVAL_MS = 6e4;
@@ -59247,11 +59282,11 @@ var tickInFlight = false;
 async function fetchPendingOrders() {
   const since = new Date(Date.now() - WINDOW_DAYS * 864e5).toISOString();
   const notIn = `(${FINAL_STATUSES.map((s) => `"${s}"`).join(",")})`;
-  const url = `${SUPABASE_URL16}/rest/v1/orders?select=id,external_order_id,status,user_id,provider&external_order_id=not.is.null&status=not.in.${encodeURIComponent(notIn)}&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${BATCH_LIMIT}`;
+  const url = `${SUPABASE_URL17}/rest/v1/orders?select=id,external_order_id,status,user_id,provider&external_order_id=not.is.null&status=not.in.${encodeURIComponent(notIn)}&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${BATCH_LIMIT}`;
   const r = await fetch(url, {
     headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY15,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY15}`
+      apikey: SUPABASE_SERVICE_ROLE_KEY16,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY16}`
     }
   });
   if (!r.ok) {
@@ -59360,7 +59395,7 @@ async function tickOnce(syncFn) {
 }
 function startOrderStatusPoller(syncFn) {
   if (started) return;
-  if (!SUPABASE_URL16 || !SUPABASE_SERVICE_ROLE_KEY15) {
+  if (!SUPABASE_URL17 || !SUPABASE_SERVICE_ROLE_KEY16) {
     logger.warn("order-poller: SUPABASE_URL/SERVICE_ROLE_KEY missing \u2014 poller disabled");
     return;
   }
@@ -59396,8 +59431,8 @@ function startOrderStatusPoller(syncFn) {
 
 // src/lib/missed-refund-scanner.ts
 init_logger();
-var SUPABASE_URL17 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY16 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+var SUPABASE_URL18 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_SERVICE_ROLE_KEY17 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SCAN_INTERVAL_MS = 5 * 6e4;
 var WINDOW_DAYS2 = 90;
 var PAGE_SIZE = 200;
@@ -59405,7 +59440,7 @@ var timer2 = null;
 var scanInFlight = false;
 var started2 = false;
 function serviceRoleHeaders5() {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY16;
+  const key2 = SUPABASE_SERVICE_ROLE_KEY17;
   return {
     apikey: key2,
     Authorization: `Bearer ${key2}`,
@@ -59413,10 +59448,10 @@ function serviceRoleHeaders5() {
   };
 }
 async function fetchUnrefundedOrders() {
-  if (!SUPABASE_URL17 || !SUPABASE_SERVICE_ROLE_KEY16) return [];
+  if (!SUPABASE_URL18 || !SUPABASE_SERVICE_ROLE_KEY17) return [];
   const since = new Date(Date.now() - WINDOW_DAYS2 * 864e5).toISOString();
   const finalNegative = encodeURIComponent('("canceled","cancelled","failed","refunded")');
-  const url = `${SUPABASE_URL17}/rest/v1/orders?select=id,user_id,price,status,external_order_id&status=in.${finalNegative}&refunded_at=is.null&price=gt.0&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${PAGE_SIZE}`;
+  const url = `${SUPABASE_URL18}/rest/v1/orders?select=id,user_id,price,status,external_order_id&status=in.${finalNegative}&refunded_at=is.null&price=gt.0&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${PAGE_SIZE}`;
   try {
     const r = await fetch(url, { headers: serviceRoleHeaders5() });
     if (!r.ok) {
@@ -59434,7 +59469,7 @@ async function applyRefund(order) {
   const amount = Math.round(Number(order.price));
   if (amount <= 0) return false;
   try {
-    const rpcRes = await fetch(`${SUPABASE_URL17}/rest/v1/rpc/smm_refund_order`, {
+    const rpcRes = await fetch(`${SUPABASE_URL18}/rest/v1/rpc/smm_refund_order`, {
       method: "POST",
       headers: serviceRoleHeaders5(),
       body: JSON.stringify({ p_order_id: order.id, p_amount: amount })
@@ -59480,7 +59515,7 @@ async function scanOnce() {
 }
 function startMissedRefundScanner() {
   if (started2) return;
-  if (!SUPABASE_URL17 || !SUPABASE_SERVICE_ROLE_KEY16) {
+  if (!SUPABASE_URL18 || !SUPABASE_SERVICE_ROLE_KEY17) {
     logger.warn("missed-refund-scanner: Supabase secrets missing \u2014 scanner disabled");
     return;
   }
@@ -59507,7 +59542,7 @@ function startMissedRefundScanner() {
 
 // src/lib/pending-payment-scanner.ts
 init_logger();
-var SUPABASE_URL18 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+var SUPABASE_URL19 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
 var SERVICE_ROLE_KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SCAN_INTERVAL_MS2 = 3 * 6e4;
 var MIN_AGE_MS = 2 * 6e4;
@@ -59522,9 +59557,9 @@ function svcHeaders3() {
   return { apikey: key2, Authorization: `Bearer ${key2}`, "Content-Type": "application/json" };
 }
 async function fetchPendingPayments() {
-  if (!SUPABASE_URL18 || !SERVICE_ROLE_KEY) return [];
+  if (!SUPABASE_URL19 || !SERVICE_ROLE_KEY) return [];
   const cutoff = new Date(Date.now() - MIN_AGE_MS).toISOString();
-  const url = `${SUPABASE_URL18}/rest/v1/payments?select=id,user_id,order_id,created_at,amount&status=eq.pending&credited_at=is.null&order_id=not.is.null&created_at=lt.${encodeURIComponent(cutoff)}&order=created_at.asc&limit=${PAGE_SIZE2}`;
+  const url = `${SUPABASE_URL19}/rest/v1/payments?select=id,user_id,order_id,created_at,amount&status=eq.pending&credited_at=is.null&order_id=not.is.null&created_at=lt.${encodeURIComponent(cutoff)}&order=created_at.asc&limit=${PAGE_SIZE2}`;
   try {
     const r = await fetch(url, { headers: svcHeaders3() });
     if (!r.ok) return [];
@@ -59594,7 +59629,7 @@ async function scanOnce2() {
 }
 function startPendingPaymentScanner() {
   if (started3) return;
-  if (!SUPABASE_URL18 || !SERVICE_ROLE_KEY) {
+  if (!SUPABASE_URL19 || !SERVICE_ROLE_KEY) {
     logger.warn("pending-payment-scanner: Supabase secrets missing \u2014 scanner disabled");
     return;
   }

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Send, Info, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Info, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/lib/toast";
 import { createTicket, type TicketActionType } from "@/lib/tickets";
 
@@ -18,6 +18,15 @@ const ACTION_LABELS: Record<TicketActionType, string> = {
   refund: "Demander un remboursement",
   speed_up: "Accélérer la livraison",
   other: "Autre demande",
+};
+
+const TERMINAL_STATUSES = new Set(["completed", "cancelled", "partial", "refunded"]);
+
+const TERMINAL_LABELS: Record<string, string> = {
+  completed: "terminée",
+  cancelled:  "annulée",
+  partial:    "partiellement livrée",
+  refunded:   "remboursée",
 };
 
 function genTempCode(): string {
@@ -45,6 +54,7 @@ export default function CancelOrder() {
   const [submitting, setSubmitting] = useState(false);
   const [tempCode] = useState(() => genTempCode());
   const [userEdited, setUserEdited] = useState(false);
+  const [orderStatus, setOrderStatus] = useState<string | null>(null);
 
   const defaultMessage = useMemo(() => {
     const verb =
@@ -67,8 +77,8 @@ export default function CancelOrder() {
   useEffect(() => {
     if (!user || !orderId) return;
     let cancelled = false;
-    (async () => {
-      setLoading(true);
+
+    const fetchOrder = async () => {
       const { data } = await supabase
         .from("orders")
         .select("*")
@@ -76,10 +86,25 @@ export default function CancelOrder() {
         .eq("user_id", user.id)
         .limit(1);
       if (cancelled) return;
-      setOrder((data && data[0]) || null);
+      const row = (data && data[0]) || null;
+      setOrder(row);
+      setOrderStatus(row?.status ?? null);
+    };
+
+    (async () => {
+      setLoading(true);
+      await fetchOrder();
       setLoading(false);
     })();
-    return () => { cancelled = true; };
+
+    // Poll every 5 s so the status badge updates automatically if the order
+    // reaches a terminal state while the user has this page open.
+    const interval = setInterval(() => { void fetchOrder(); }, 5_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [user, orderId]);
 
   // Keep the textarea in sync with the action dropdown until the user types
@@ -156,6 +181,28 @@ export default function CancelOrder() {
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
             Commande introuvable.
+          </CardContent>
+        </Card>
+      ) : orderStatus && TERMINAL_STATUSES.has(orderStatus) ? (
+        /* Order already in a terminal state — block ticket creation */
+        <Card>
+          <CardContent className="p-6 space-y-3">
+            <div className="flex items-center gap-2 text-emerald-700">
+              <CheckCircle2 size={18} className="shrink-0" />
+              <span className="font-semibold text-base">Commande {TERMINAL_LABELS[orderStatus] ?? orderStatus}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              La commande <strong>#{order.external_order_id || order.id.slice(0, 8)}</strong> est
+              déjà <strong>{TERMINAL_LABELS[orderStatus] ?? orderStatus}</strong>. Aucune action
+              supplémentaire n'est nécessaire. Vous ne pouvez pas ouvrir un ticket pour une
+              commande dans cet état.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Si vous pensez qu'il s'agit d'une erreur, contactez le support.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => navigate("/dashboard/orders")}>
+              <ArrowLeft size={14} className="mr-1" /> Retour aux commandes
+            </Button>
           </CardContent>
         </Card>
       ) : (

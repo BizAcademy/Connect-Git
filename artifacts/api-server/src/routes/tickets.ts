@@ -11,6 +11,7 @@ import {
   TicketError,
   type TicketActionType,
 } from "../lib/tickets";
+import { TERMINAL_ORDER_STATUSES } from "../lib/ticket-auto-closer";
 
 const router: IRouter = Router();
 
@@ -107,6 +108,38 @@ router.post("/tickets", requireUser, async (req: AuthedRequest, res) => {
       order_external_id = order.external_order_id;
       provider_id = order.provider;
       service_name = order.service_name ? String(order.service_name).slice(0, 200) : null;
+
+      // If the order is already in a terminal state, create the ticket
+      // immediately as closed with a system note so the user gets instant
+      // feedback instead of waiting for the auto-closer background job.
+      if (order.status && TERMINAL_ORDER_STATUSES.has(order.status)) {
+        const label: Record<string, string> = {
+          completed: "terminée",
+          cancelled:  "annulée",
+          partial:    "partiellement livrée",
+          refunded:   "remboursée",
+        };
+        const t = await createTicket({
+          user_id: req.userId!,
+          order_external_id,
+          order_local_id,
+          provider_id,
+          service_name,
+          action_type,
+          message,
+        });
+        // Immediately close with system message
+        const closed = await updateTicket(t.id, {
+          status: "closed",
+          admin_response:
+            `Ticket fermé automatiquement : la commande liée est ${label[order.status] ?? order.status}. ` +
+            `Aucune intervention n'est nécessaire. ` +
+            `Si vous avez d'autres questions, ouvrez un nouveau ticket.`,
+          resolved_at: new Date().toISOString(),
+          resolved_by: "system",
+        });
+        return res.json({ ticket: closed ?? t });
+      }
     }
 
     const t = await createTicket({
