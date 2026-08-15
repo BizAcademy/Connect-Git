@@ -147,45 +147,45 @@ const HeroSection = () => {
 
             {/* Slider logos opérateurs Mobile Money — défile gauche→droite en boucle */}
             <div className="mb-4 md:mb-8">
-              <p className="text-[9px] md:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 md:mb-2">
+              <p className="text-[9px] md:text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 md:mb-3">
                 Moyens de paiement acceptés
               </p>
               <div className="relative overflow-hidden">
                 {/* Fondu sur les bords pour un effet "défilement infini" propre */}
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-6 md:w-10 z-10"
-                  style={{ background: "linear-gradient(to right, hsl(315, 60%, 96%), transparent)" }} />
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-6 md:w-10 z-10"
-                  style={{ background: "linear-gradient(to left, hsl(315, 60%, 96%), transparent)" }} />
-                <div className="marquee-track flex gap-3 md:gap-5 w-max">
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-8 md:w-12 z-10"
+                  style={{ background: "linear-gradient(to right, hsl(315, 60%, 96%) 40%, transparent)" }} />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-8 md:w-12 z-10"
+                  style={{ background: "linear-gradient(to left, hsl(315, 60%, 96%) 40%, transparent)" }} />
+
+                <div className="marquee-track flex gap-3 md:gap-4 w-max">
                   {brandStrip.map((b, i) => {
                     const customUrl = logos[b.code];
-                    // 1ère occurrence = above-the-fold → chargement EAGER + priorité haute pour
-                    // un affichage quasi-instantané. Les duplicates (i >= LANDING_BRANDS.length)
-                    // gardent loading="lazy" puisqu'ils ne servent que la boucle marquee.
+                    // 1ère occurrence = above-the-fold → chargement EAGER + priorité haute.
+                    // Les duplicates (i >= LANDING_BRANDS.length) restent lazy.
                     const isFirstOccurrence = i < LANDING_BRANDS.length;
                     return (
                       <div
                         key={`${b.code}-${i}`}
-                        className="shrink-0 flex items-center justify-center bg-white rounded-xl md:rounded-2xl shadow-sm border border-border/40 overflow-hidden p-2"
-                        style={{ width: 56, height: 56 }}
+                        className="payment-logo-card shrink-0 rounded-2xl overflow-hidden"
                         title={b.label}
                       >
                         {customUrl ? (
                           <img
                             src={customUrl}
                             alt={b.label}
-                            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                            className="payment-logo-img block"
+                            style={{ objectFit: "contain", background: "#ffffff" }}
                             loading={isFirstOccurrence ? "eager" : "lazy"}
                             decoding="async"
                             {...(isFirstOccurrence ? { fetchPriority: "high" as const } : {})}
                           />
                         ) : (
-                          <span
-                            className="w-full h-full flex items-center justify-center font-extrabold text-[10px] md:text-[11px] rounded-lg text-center leading-tight px-1"
+                          <div
+                            className="payment-logo-img flex items-center justify-center font-extrabold text-[11px] md:text-xs text-center leading-tight"
                             style={{ background: b.bg, color: b.text }}
                           >
                             {b.label}
-                          </span>
+                          </div>
                         )}
                       </div>
                     );
