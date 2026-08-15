@@ -186,13 +186,14 @@ const HeroSection = () => {
                         key={`${b.code}-${i}`}
                         className="payment-logo-card shrink-0 rounded-2xl overflow-hidden"
                         title={b.label}
+                        style={{ background: b.bg }}
                       >
                         {customUrl ? (
                           <img
                             src={customUrl}
                             alt={b.label}
                             className="payment-logo-img block"
-                            style={{ objectFit: "contain", background: "#ffffff" }}
+                            style={{ objectFit: "contain", padding: "10%" }}
                             loading={isFirstOccurrence ? "eager" : "lazy"}
                             decoding="async"
                             {...(isFirstOccurrence ? { fetchPriority: "high" as const } : {})}
@@ -200,7 +201,7 @@ const HeroSection = () => {
                         ) : (
                           <div
                             className="payment-logo-img flex items-center justify-center font-extrabold text-[11px] md:text-xs text-center leading-tight"
-                            style={{ background: b.bg, color: b.text }}
+                            style={{ color: b.text }}
                           >
                             {b.label}
                           </div>
