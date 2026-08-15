@@ -55,25 +55,52 @@ export async function fetchOperatorLogos(): Promise<Record<string, string>> {
   }
 }
 
-/** Save (upsert) a logo URL for a given operator code. */
+/** Save (upsert) a logo URL for a given operator code.
+ *
+ *  PostgREST's resolution=merge-duplicates requires ?on_conflict=<col> but the
+ *  `settings` table uses a plain unique index on `key`, which PostgREST cannot
+ *  always use as an arbiter (42P10).  We therefore use the safe INSERT → PATCH
+ *  pattern: insert first; on 409/23505 conflict, fall through to a targeted
+ *  PATCH on the existing row.
+ */
 export async function upsertOperatorLogo(operatorCode: string, logoUrl: string): Promise<void> {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error("Supabase service role not configured");
   }
   const key = KEY_PREFIX + operatorCode;
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/settings`, {
+
+  // 1. Try INSERT
+  const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/settings`, {
     method: "POST",
-    headers: {
-      ...serviceRoleHeaders(),
-      Prefer: "resolution=merge-duplicates,return=minimal",
-    },
+    headers: { ...serviceRoleHeaders(), Prefer: "return=minimal" },
     body: JSON.stringify({ key, value: logoUrl }),
   });
-  if (!r.ok) {
-    const body = await r.text();
-    throw new Error(`Supabase upsert failed (${r.status}): ${body.slice(0, 200)}`);
+
+  if (insertRes.ok || insertRes.status === 201) {
+    bustOperatorLogosCache();
+    return;
   }
-  bustOperatorLogosCache();
+
+  // 2. On duplicate-key conflict (409 / 23505), fall back to PATCH
+  if (insertRes.status === 409) {
+    const patchRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/settings?key=eq.${encodeURIComponent(key)}`,
+      {
+        method: "PATCH",
+        headers: { ...serviceRoleHeaders(), Prefer: "return=minimal" },
+        body: JSON.stringify({ value: logoUrl }),
+      },
+    );
+    if (!patchRes.ok) {
+      const body = await patchRes.text();
+      throw new Error(`Supabase logo update failed (${patchRes.status}): ${body.slice(0, 200)}`);
+    }
+    bustOperatorLogosCache();
+    return;
+  }
+
+  const body = await insertRes.text();
+  throw new Error(`Supabase logo insert failed (${insertRes.status}): ${body.slice(0, 200)}`);
 }
 
 const STORAGE_BUCKET = "operator-logos";

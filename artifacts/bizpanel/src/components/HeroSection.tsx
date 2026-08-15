@@ -8,8 +8,8 @@ import { preloadImage } from "@/lib/imagePreload";
 // rendu React — l'image est déjà en cours de téléchargement quand la page s'affiche.
 preloadImage(defaultCommunityImg);
 
-// Liste fixe des marques affichées dans le slider de la landing.
-// Les codes correspondent à ceux gérés dans le panneau admin (onglet "Logos accueil").
+// Marques de référence : logo couleur affiché en fallback quand l'admin n'a
+// pas encore uploadé d'image pour ce code.
 const LANDING_BRANDS: { code: string; label: string; bg: string; text: string }[] = [
   { code: "brand_orange", label: "Orange", bg: "#FF6600", text: "#fff" },
   { code: "brand_mtn",    label: "MTN",    bg: "#FFCB00", text: "#000" },
@@ -18,6 +18,14 @@ const LANDING_BRANDS: { code: string; label: string; bg: string; text: string }[
   { code: "brand_airtel", label: "Airtel", bg: "#E4002B", text: "#fff" },
   { code: "brand_mpesa",  label: "M-Pesa", bg: "#E60000", text: "#fff" },
 ];
+
+/** Convertit un code admin (ex: "orange_cm", "brand_mtn") en libellé lisible. */
+function codeToLabel(code: string): string {
+  return code
+    .replace(/^brand_/, "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -52,8 +60,18 @@ const HeroSection = () => {
       .catch(() => {/* fallback silencieux : pastilles couleur */});
   }, []);
 
+  // Construit la liste des items du slider dynamiquement :
+  // 1. Les LANDING_BRANDS de référence (logo uploadé ou pastille couleur en fallback).
+  // 2. Tous les logos supplémentaires configurés par l'admin (opérateurs pays, etc.)
+  //    qui ne sont pas déjà couverts par LANDING_BRANDS.
+  const knownCodes = new Set(LANDING_BRANDS.map((b) => b.code));
+  const extraItems = Object.keys(logos)
+    .filter((code) => !knownCodes.has(code))
+    .map((code) => ({ code, label: codeToLabel(code), bg: "#374151", text: "#fff" }));
+
+  const allItems = [...LANDING_BRANDS, ...extraItems];
   // Duplication × 2 pour une boucle marquee fluide (translateX(-50%) = item de départ).
-  const brandStrip = [...LANDING_BRANDS, ...LANDING_BRANDS];
+  const brandStrip = [...allItems, ...allItems];
 
   return (
     <section

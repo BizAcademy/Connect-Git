@@ -53400,7 +53400,7 @@ var HealthCheckResponse = objectType({
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-08-15T00:14:33.974Z";
+var BUILD_TIME = "2026-08-15T00:25:24.688Z";
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
@@ -55695,19 +55695,33 @@ async function upsertOperatorLogo(operatorCode, logoUrl) {
     throw new Error("Supabase service role not configured");
   }
   const key2 = KEY_PREFIX + operatorCode;
-  const r = await fetch(`${SUPABASE_URL7}/rest/v1/settings`, {
+  const insertRes = await fetch(`${SUPABASE_URL7}/rest/v1/settings`, {
     method: "POST",
-    headers: {
-      ...serviceRoleHeaders2(),
-      Prefer: "resolution=merge-duplicates,return=minimal"
-    },
+    headers: { ...serviceRoleHeaders2(), Prefer: "return=minimal" },
     body: JSON.stringify({ key: key2, value: logoUrl })
   });
-  if (!r.ok) {
-    const body = await r.text();
-    throw new Error(`Supabase upsert failed (${r.status}): ${body.slice(0, 200)}`);
+  if (insertRes.ok || insertRes.status === 201) {
+    bustOperatorLogosCache();
+    return;
   }
-  bustOperatorLogosCache();
+  if (insertRes.status === 409) {
+    const patchRes = await fetch(
+      `${SUPABASE_URL7}/rest/v1/settings?key=eq.${encodeURIComponent(key2)}`,
+      {
+        method: "PATCH",
+        headers: { ...serviceRoleHeaders2(), Prefer: "return=minimal" },
+        body: JSON.stringify({ value: logoUrl })
+      }
+    );
+    if (!patchRes.ok) {
+      const body2 = await patchRes.text();
+      throw new Error(`Supabase logo update failed (${patchRes.status}): ${body2.slice(0, 200)}`);
+    }
+    bustOperatorLogosCache();
+    return;
+  }
+  const body = await insertRes.text();
+  throw new Error(`Supabase logo insert failed (${insertRes.status}): ${body.slice(0, 200)}`);
 }
 var STORAGE_BUCKET = "operator-logos";
 async function uploadOperatorLogoFile(operatorCode, fileBuffer, mimeType) {
