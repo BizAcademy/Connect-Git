@@ -5127,7 +5127,7 @@ export default function Admin() {
       .then(async (response) => {
         if (!response.ok) throw new Error("Accès refusé");
         const data = await response.json();
-        if (!data.user?.is_admin) throw new Error("Accès refusé");
+        if (!data.user?.isAdmin) throw new Error("Accès refusé");
         setIsAdmin(true);
       })
       .catch(() => { navigate("/dashboard"); toast.error("Accès refusé"); })
