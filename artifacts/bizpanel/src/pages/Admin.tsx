@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Users, ShoppingCart, CreditCard, Settings, Layers,
-  FileText, LogOut, Shield, Edit2, Save, X, ToggleLeft, ToggleRight,
+  FileText, LogOut, Shield, Edit2, Save, X, ToggleLeft, ToggleRight, Megaphone,
   Plus, Trash2, RefreshCw, Image, Type, Link, CheckCircle2, Search, RotateCcw, ChevronDown, Loader2,
 } from "lucide-react";
 import {
@@ -76,6 +76,95 @@ import {
 } from "recharts";
 
 const fmt = (n: number) => `${Math.round(n).toLocaleString()} FCFA`;
+
+type AdvertisementForm = {
+  active: boolean;
+  title: string;
+  segments: Array<{ text: string; color: string }>;
+  image: string;
+  contactLabel: string;
+  contactUrl: string;
+};
+
+const EMPTY_ADVERTISEMENT: AdvertisementForm = {
+  active: false, title: "", segments: [{ text: "", color: "#374151" }],
+  image: "", contactLabel: "", contactUrl: "",
+};
+
+const AdminAdvertisement = () => {
+  const [form, setForm] = useState<AdvertisementForm>(EMPTY_ADVERTISEMENT);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    adminApiFetch("/api/admin/advertisement")
+      .then(({ advertisement }) => setForm({
+        ...EMPTY_ADVERTISEMENT, ...advertisement,
+        segments: advertisement?.segments?.length ? advertisement.segments : EMPTY_ADVERTISEMENT.segments,
+      }))
+      .catch(err => toast.error(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const result = await adminApiFetch("/api/admin/advertisement", {
+        method: "PUT",
+        body: JSON.stringify(form),
+      });
+      setForm({ ...form, ...result.advertisement, segments: result.advertisement.segments.length ? result.advertisement.segments : [{ text: "", color: "#374151" }] });
+      toast.success(form.active ? "Annonce publiée" : "Annonce enregistrée et désactivée");
+    } catch (err) { toast.error((err as Error).message); }
+    finally { setSaving(false); }
+  };
+
+  const chooseImage = async (file?: File) => {
+    if (!file) return;
+    try {
+      const image = await fileToCompressedDataUrl(file, 1200, 0.8);
+      setForm(current => ({ ...current, image }));
+    }
+    catch (err) { toast.error((err as Error).message); }
+  };
+
+  if (loading) return <LogoLoader />;
+  return (
+    <Card>
+      <CardHeader><CardTitle className="flex items-center gap-2"><Megaphone size={18} />Annonce du dashboard</CardTitle></CardHeader>
+      <CardContent className="space-y-5">
+        <div className="flex items-center justify-between rounded-xl border p-4">
+          <div><p className="font-semibold">Publication</p><p className="text-xs text-muted-foreground">Affiche l'annonce à chaque ouverture du dashboard.</p></div>
+          <button type="button" onClick={() => setForm({ ...form, active: !form.active })}>
+            {form.active ? <ToggleRight size={36} className="text-green-600" /> : <ToggleLeft size={36} className="text-muted-foreground" />}
+          </button>
+        </div>
+        <div><Label>Titre en gras (facultatif)</Label><Input className="mt-1" maxLength={255} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Promotion exceptionnelle" /></div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between"><Label>Texte coloré (facultatif)</Label><Button type="button" size="sm" variant="outline" onClick={() => setForm({ ...form, segments: [...form.segments, { text: "", color: "#f97316" }] })} disabled={form.segments.length >= 20}><Plus size={14} className="mr-1" />Portion</Button></div>
+          {form.segments.map((segment, index) => (
+            <div key={index} className="flex items-start gap-2">
+              <input type="color" value={segment.color} onChange={e => setForm({ ...form, segments: form.segments.map((s, i) => i === index ? { ...s, color: e.target.value } : s) })} className="mt-1 h-10 w-12 rounded border p-1" aria-label={`Couleur de la portion ${index + 1}`} />
+              <Textarea value={segment.text} maxLength={1000} onChange={e => setForm({ ...form, segments: form.segments.map((s, i) => i === index ? { ...s, text: e.target.value } : s) })} placeholder={`Portion de texte ${index + 1}`} className="min-h-10" />
+              <Button type="button" size="icon" variant="ghost" onClick={() => setForm({ ...form, segments: form.segments.filter((_, i) => i !== index) })} aria-label="Supprimer la portion"><Trash2 size={15} /></Button>
+            </div>
+          ))}
+        </div>
+        <div className="space-y-2">
+          <Label>Image (facultative)</Label>
+          <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => void chooseImage(e.target.files?.[0])} />
+          {form.image && <div className="relative"><img src={form.image} alt="Aperçu" className="max-h-64 w-full rounded-xl border object-contain" /><Button type="button" size="sm" variant="destructive" className="absolute right-2 top-2" onClick={() => setForm({ ...form, image: "" })}>Retirer</Button></div>}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div><Label>Texte du contact (facultatif)</Label><Input className="mt-1" maxLength={120} value={form.contactLabel} onChange={e => setForm({ ...form, contactLabel: e.target.value })} placeholder="Nous contacter sur WhatsApp" /></div>
+          <div><Label>Lien / téléphone du contact</Label><Input className="mt-1" maxLength={500} value={form.contactUrl} onChange={e => setForm({ ...form, contactUrl: e.target.value })} placeholder="https://… ou tel:+237…" /></div>
+        </div>
+        <Button onClick={save} disabled={saving}>{saving ? <Loader2 size={15} className="mr-2 animate-spin" /> : <Save size={15} className="mr-2" />}{form.active ? "Enregistrer et publier" : "Enregistrer"}</Button>
+        <p className="text-xs text-muted-foreground">Le bouton de fermeture reste verrouillé pendant 5 secondes. Le texte est rendu sans HTML afin d'empêcher toute injection XSS.</p>
+      </CardContent>
+    </Card>
+  );
+};
 
 const COUNTRY_CURRENCY_MAP: Record<string, { currency: string; symbol: string }> = {
   BJ: { currency: "XOF", symbol: "XOF" },
@@ -5222,6 +5311,7 @@ export default function Admin() {
             </TabsTrigger>
             <TabsTrigger value="services" className="flex flex-col gap-1 py-2 text-xs"><Layers size={15} />Tarifs</TabsTrigger>
             <TabsTrigger value="content" className="flex flex-col gap-1 py-2 text-xs"><FileText size={15} />Contenu</TabsTrigger>
+            <TabsTrigger value="advertisement" className="flex flex-col gap-1 py-2 text-xs"><Megaphone size={15} />Publicité</TabsTrigger>
             <TabsTrigger value="currencies" className="flex flex-col gap-1 py-2 text-xs"><Wallet size={15} />Devises</TabsTrigger>
             <TabsTrigger value="logos" className="flex flex-col gap-1 py-2 text-xs"><Image size={15} />Logos</TabsTrigger>
             <TabsTrigger value="settings" className="flex flex-col gap-1 py-2 text-xs"><Settings size={15} />Paramètres</TabsTrigger>
@@ -5240,6 +5330,7 @@ export default function Admin() {
           <TabsContent value="tickets"><AdminTickets onChanged={() => fetchAdminTicketsUnread().then(setTicketsUnread).catch(() => {})} /></TabsContent>
           <TabsContent value="services"><AdminServicesTab /></TabsContent>
           <TabsContent value="content"><AdminContent /></TabsContent>
+          <TabsContent value="advertisement"><AdminAdvertisement /></TabsContent>
           <TabsContent value="currencies"><AdminCurrencies /></TabsContent>
           <TabsContent value="logos">
             <AdminOperatorLogos />

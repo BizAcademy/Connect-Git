@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { syncOrdersStatus } from "@/lib/orderSync";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
+import { AdvertisementModal, type Advertisement } from "@/components/dashboard/AdvertisementModal";
 
 const STATUS_STYLE: Record<string, { label: string; cls: string }> = {
   pending:    { label: "En attente",  cls: "text-amber-700  bg-amber-50  border-amber-200"  },
@@ -28,8 +29,19 @@ export default function DashboardHome() {
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [advertisement, setAdvertisement] = useState<Advertisement | null>(null);
 
   useEffect(() => { setAvatarUrl(profile?.avatar_url ?? null); }, [profile?.avatar_url]);
+
+  useEffect(() => {
+    if (!user) return;
+    authedFetch("/api/advertisement")
+      .then(async response => {
+        if (!response.ok) throw new Error("Annonce indisponible");
+        setAdvertisement((await response.json()).advertisement || null);
+      })
+      .catch(error => console.error("[DashboardHome] advertisement load error", error));
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -65,6 +77,7 @@ export default function DashboardHome() {
 
   return (
     <div className="space-y-4 max-w-3xl mx-auto">
+      {advertisement && <AdvertisementModal advertisement={advertisement} />}
 
       {/* ── Carte d'accueil ─────────────────────────────────────────── */}
       <div

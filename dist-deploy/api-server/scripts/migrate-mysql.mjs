@@ -20320,7 +20320,20 @@ async function main() {
         applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     );
-    const directory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../migrations/mysql");
+    const candidates = [
+      path.resolve(process.cwd(), "migrations/mysql"),
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../migrations/mysql")
+    ];
+    let directory = null;
+    for (const candidate of candidates) {
+      try {
+        await fs.access(candidate);
+        directory = candidate;
+        break;
+      } catch {
+      }
+    }
+    if (!directory) throw new Error("Dossier migrations/mysql introuvable");
     const files = (await fs.readdir(directory)).filter((name) => /^\d+.*\.sql$/.test(name)).sort();
     for (const name of files) {
       const [existing] = await pool2.query("SELECT name FROM schema_migrations WHERE name = ? LIMIT 1", [name]);

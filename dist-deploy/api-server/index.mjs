@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-06T19:05:07.461Z";
+var BUILD_TIME = "2026-09-06T19:13:42.830Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -76486,6 +76486,84 @@ var import_multer = __toESM(require_multer(), 1);
 var router3 = (0, import_express3.Router)();
 var MAIN_ADMIN_EMAIL = (process.env["MAIN_ADMIN_EMAIL"] || "jude@gmail.com").toLowerCase();
 var uploadLogo = (0, import_multer.default)({ storage: import_multer.default.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
+var COLOR_RE = /^#[0-9a-f]{6}$/i;
+var IMAGE_RE = /^data:image\/(?:png|jpe?g|webp);base64,[a-z0-9+/=\r\n]+$/i;
+var CONTACT_RE = /^(?:https?:\/\/|mailto:|tel:)/i;
+function advertisementFromRow(row) {
+  if (!row) return { active: false, title: "", segments: [], image: "", contactLabel: "", contactUrl: "", updatedAt: null };
+  let segments = [];
+  try {
+    const raw = typeof row.message_segments === "string" ? JSON.parse(row.message_segments) : row.message_segments;
+    if (Array.isArray(raw)) segments = raw;
+  } catch {
+  }
+  return {
+    active: Boolean(row.active),
+    title: String(row.title || ""),
+    segments,
+    image: String(row.image_data || ""),
+    contactLabel: String(row.contact_label || ""),
+    contactUrl: String(row.contact_url || ""),
+    updatedAt: row.updated_at || null
+  };
+}
+async function readAdvertisement() {
+  const [rows] = await getMysqlPool().query(
+    "SELECT active,title,message_segments,image_data,contact_label,contact_url,updated_at FROM dashboard_advertisement WHERE id=1"
+  );
+  return advertisementFromRow(rows[0]);
+}
+router3.get("/advertisement", requireUser, async (_req, res) => {
+  try {
+    const advertisement = await readAdvertisement();
+    return res.json({ advertisement: advertisement.active ? advertisement : null });
+  } catch (err) {
+    logger.error({ err }, "advertisement read");
+    return res.status(500).json({ error: "Annonce indisponible" });
+  }
+});
+router3.get("/admin/advertisement", requireUser, requireAdmin, async (_req, res) => {
+  try {
+    return res.json({ advertisement: await readAdvertisement() });
+  } catch (err) {
+    logger.error({ err }, "admin advertisement read");
+    return res.status(500).json({ error: "Annonce indisponible" });
+  }
+});
+router3.put("/admin/advertisement", requireUser, requireAdmin, async (req, res) => {
+  const b = req.body || {};
+  const title = String(b.title || "").trim();
+  const image = String(b.image || "").trim();
+  const contactLabel = String(b.contactLabel || "").trim();
+  const contactUrl = String(b.contactUrl || "").trim();
+  const segments = Array.isArray(b.segments) ? b.segments.map((x) => {
+    const item = x && typeof x === "object" ? x : {};
+    return { text: String(item.text || "").trim(), color: String(item.color || "#374151") };
+  }).filter((x) => x.text) : [];
+  if (typeof b.active !== "boolean" || title.length > 255 || segments.length > 20 || segments.some((x) => x.text.length > 1e3 || !COLOR_RE.test(x.color)) || image.length > 6e6 || image && !IMAGE_RE.test(image) || contactLabel.length > 120 || contactUrl.length > 500 || contactUrl && !CONTACT_RE.test(contactUrl)) {
+    return res.status(400).json({ error: "Contenu de l'annonce invalide" });
+  }
+  if (b.active && !title && !segments.length && !image && !contactLabel) {
+    return res.status(400).json({ error: "Ajoutez au moins un contenu avant d'activer l'annonce" });
+  }
+  if (contactLabel && !contactUrl) return res.status(400).json({ error: "Ajoutez le lien ou num\xE9ro associ\xE9 au contact" });
+  try {
+    await getMysqlPool().execute(
+      `INSERT INTO dashboard_advertisement
+       (id,active,title,message_segments,image_data,contact_label,contact_url,updated_by)
+       VALUES (1,?,?,?,?,?,?,?)
+       ON DUPLICATE KEY UPDATE active=VALUES(active),title=VALUES(title),
+       message_segments=VALUES(message_segments),image_data=VALUES(image_data),
+       contact_label=VALUES(contact_label),contact_url=VALUES(contact_url),
+       updated_by=VALUES(updated_by)`,
+      [b.active, title || null, JSON.stringify(segments), image || null, contactLabel || null, contactUrl || null, req.userId]
+    );
+    return res.json({ ok: true, advertisement: await readAdvertisement() });
+  } catch (err) {
+    logger.error({ err }, "admin advertisement save");
+    return res.status(500).json({ error: "Enregistrement de l'annonce impossible" });
+  }
+});
 function actionCode(req, res, next) {
   const expected = process.env["ADMIN_ACTION_CODE"];
   if (!expected) return res.status(503).json({ error: "Code de confirmation non configur\xE9 c\xF4t\xE9 serveur (secret ADMIN_ACTION_CODE manquant)" });

@@ -50,13 +50,17 @@ cat > dist-deploy/api-server/package.json << 'EOF'
   "type": "module",
   "scripts": {
     "start": "node --enable-source-maps index.mjs",
-    "import:supabase-users": "node scripts/import-supabase-users.mjs"
+    "import:supabase-users": "node scripts/import-supabase-users.mjs",
+    "migrate:mysql": "node scripts/migrate-mysql.mjs"
   },
   "engines": {
     "node": ">=20"
   }
 }
 EOF
+
+mkdir -p dist-deploy/api-server/migrations/mysql
+cp migrations/mysql/*.sql dist-deploy/api-server/migrations/mysql/
 
 echo "   ✓ dist-deploy/api-server/ mis à jour ($(du -sh dist-deploy/api-server/index.mjs | cut -f1))"
 
