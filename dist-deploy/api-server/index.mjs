@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-06T17:39:44.861Z";
+var BUILD_TIME = "2026-09-06T18:14:25.240Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -78562,6 +78562,27 @@ function captureRawBody(req, _res, buf) {
 app.use(import_express11.default.json({ limit: "8mb", verify: captureRawBody }));
 app.use(import_express11.default.urlencoded({ extended: true, limit: "8mb" }));
 app.use((0, import_cookie_parser.default)());
+app.get("/api/health/mysql", async (_req, res) => {
+  try {
+    await getMysqlPool().query("SELECT 1");
+    return res.json({ ok: true });
+  } catch (error) {
+    const mysqlError = error;
+    const configured = ["MYSQL_HOST", "MYSQL_PORT", "MYSQL_DATABASE", "MYSQL_USER", "MYSQL_PASSWORD"].filter((key2) => process.env[key2] !== void 0);
+    const whitespace = configured.filter((key2) => {
+      const value = process.env[key2] ?? "";
+      return value !== value.trim();
+    });
+    return res.status(503).json({
+      ok: false,
+      code: typeof mysqlError.code === "string" ? mysqlError.code : "UNKNOWN",
+      errno: typeof mysqlError.errno === "number" ? mysqlError.errno : null,
+      sqlState: typeof mysqlError.sqlState === "string" ? mysqlError.sqlState : null,
+      configured,
+      whitespace
+    });
+  }
+});
 app.use("/api", apiLimiter, routes_default);
 if (process.env["NODE_ENV"] === "production") {
   const scriptDir = path5.dirname(fileURLToPath(import.meta.url));

@@ -9,6 +9,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { getMysqlPool } from "./lib/mysql";
 
 const app: Express = express();
 
@@ -84,6 +85,33 @@ function captureRawBody(req: Request, _res: unknown, buf: Buffer) {
 app.use(express.json({ limit: "8mb", verify: captureRawBody }));
 app.use(express.urlencoded({ extended: true, limit: "8mb" }));
 app.use(cookieParser());
+
+app.get("/api/health/mysql", async (_req, res) => {
+  try {
+    await getMysqlPool().query("SELECT 1");
+    return res.json({ ok: true });
+  } catch (error) {
+    const mysqlError = error as {
+      code?: unknown;
+      errno?: unknown;
+      sqlState?: unknown;
+    };
+    const configured = ["MYSQL_HOST", "MYSQL_PORT", "MYSQL_DATABASE", "MYSQL_USER", "MYSQL_PASSWORD"]
+      .filter((key) => process.env[key] !== undefined);
+    const whitespace = configured.filter((key) => {
+      const value = process.env[key] ?? "";
+      return value !== value.trim();
+    });
+    return res.status(503).json({
+      ok: false,
+      code: typeof mysqlError.code === "string" ? mysqlError.code : "UNKNOWN",
+      errno: typeof mysqlError.errno === "number" ? mysqlError.errno : null,
+      sqlState: typeof mysqlError.sqlState === "string" ? mysqlError.sqlState : null,
+      configured,
+      whitespace,
+    });
+  }
+});
 
 app.use("/api", apiLimiter, router);
 
