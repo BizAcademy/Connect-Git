@@ -14,10 +14,11 @@
 set -e
 
 MSG="${1:-"chore: mise à jour"}"
+GITHUB_TOKEN="${GITHUB_PERSONAL_ACCESS_TOKEN:-${GITHUB_PAT:-}}"
 
-if [ -z "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
-  echo "❌ Secret GITHUB_PERSONAL_ACCESS_TOKEN manquant."
-  echo "   Vérifiez l'onglet Secrets dans Replit."
+if [ -z "$GITHUB_TOKEN" ]; then
+  echo "❌ Secret GitHub manquant."
+  echo "   Ajoutez GITHUB_PAT (ou GITHUB_PERSONAL_ACCESS_TOKEN) dans l'onglet Secrets de Replit."
   exit 1
 fi
 
@@ -32,7 +33,7 @@ echo "============================================================"
 echo "🚀 Étape 2/2 : Push vers GitHub..."
 echo "============================================================"
 
-REPO_URL="https://x-token:${GITHUB_PERSONAL_ACCESS_TOKEN}@github.com/BizAcademy/Connect-Git.git"
+REPO_URL="https://x-token:${GITHUB_TOKEN}@github.com/BizAcademy/Connect-Git.git"
 
 git config user.email "replit@buzzbooster.app"
 git config user.name "BizAcademy"
