@@ -35,6 +35,24 @@ const records = Array.isArray(raw)
 if (!Array.isArray(records)) {
   throw new Error("Export must be a JSON array, Supabase Copy as JSON result, or { users: [...] }");
 }
+const allocatedUsernames = new Set();
+const usernameFor = (record) => {
+  const email = typeof record.email === "string" ? record.email : "";
+  const rawName =
+    typeof record.username === "string" && record.username.trim()
+      ? record.username.trim()
+      : email.split("@")[0];
+  const baseName = rawName.slice(0, 64);
+  const normalized = baseName.toLocaleLowerCase();
+  if (!allocatedUsernames.has(normalized)) {
+    allocatedUsernames.add(normalized);
+    return baseName;
+  }
+  const suffix = `-${String(record.id).slice(0, 8)}`;
+  const uniqueName = `${baseName.slice(0, 64 - suffix.length)}${suffix}`;
+  allocatedUsernames.add(uniqueName.toLocaleLowerCase());
+  return uniqueName;
+};
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST, port: Number(process.env.MYSQL_PORT || 3306),
   database: process.env.MYSQL_DATABASE, user: process.env.MYSQL_USER, password: process.env.MYSQL_PASSWORD,
@@ -49,7 +67,7 @@ try {
     } = record;
     if (typeof id !== "string" || !crypto.randomUUID || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) throw new Error("Invalid user UUID in export");
     if (typeof email !== "string" || !mcf.test(passwordHash) || !(await bcrypt.getRounds(passwordHash))) throw new Error("Invalid email or bcrypt password format in export");
-    const name = typeof username === "string" && username.trim() ? username.trim().slice(0, 64) : email.split("@")[0].slice(0, 64);
+    const name = usernameFor({ id, email, username });
     const balanceMinor = Math.round(Number(balance || 0) * 100);
     const affiliateEarningsMinor = Math.round(Number(affiliate_earnings || 0) * 100);
     if (!Number.isSafeInteger(balanceMinor) || !Number.isSafeInteger(affiliateEarningsMinor)) {
@@ -60,7 +78,7 @@ try {
       await connection.beginTransaction();
       await connection.execute("INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE email = VALUES(email)", [id, email.trim().toLowerCase(), passwordHash]);
       await connection.execute(
-        "INSERT INTO profiles (user_id, email, username, country, currency, balance_minor, affiliate_earnings_minor, avatar_url, referral_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE email = VALUES(email), country = COALESCE(VALUES(country), country), currency = COALESCE(VALUES(currency), currency), balance_minor = VALUES(balance_minor), affiliate_earnings_minor = VALUES(affiliate_earnings_minor), avatar_url = COALESCE(VALUES(avatar_url), avatar_url), referral_code = COALESCE(VALUES(referral_code), referral_code)",
+        "INSERT INTO profiles (user_id, email, username, country, currency, balance_minor, affiliate_earnings_minor, avatar_url, referral_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE email = VALUES(email), username = VALUES(username), country = COALESCE(VALUES(country), country), currency = COALESCE(VALUES(currency), currency), balance_minor = VALUES(balance_minor), affiliate_earnings_minor = VALUES(affiliate_earnings_minor), avatar_url = COALESCE(VALUES(avatar_url), avatar_url), referral_code = COALESCE(VALUES(referral_code), referral_code)",
         [id, email.trim().toLowerCase(), name, country || null, currency || null, balanceMinor, affiliateEarningsMinor, avatar_url || null, referral_code || null],
       );
       await connection.execute(
