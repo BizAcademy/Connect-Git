@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile();
+    await fetchProfile();
   };
 
   const patchProfile = (patch: Record<string, unknown>) => {

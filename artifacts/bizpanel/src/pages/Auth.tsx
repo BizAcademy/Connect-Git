@@ -6,6 +6,7 @@ import logoImg from "@/assets/logo-buzzbooster.png";
 import loginHeroImg from "@assets/auth-person.webp";
 import signupHeroImg from "@assets/signup-person.webp";
 import { useSiteContent } from "@/hooks/useSiteContent";
+import { useAuth } from "@/hooks/useAuth";
 import { prefetchImage } from "@/lib/imagePreload";
 
 // Mise en cache anticipée (arrière-plan, priorité minimale) : les visuels sont
@@ -17,6 +18,7 @@ import { REF_CODE_RE, checkRefCode, getStoredRefCode, recordRefVisit, storeRefCo
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { refreshProfile } = useAuth();
   const [searchParams] = useSearchParams();
   const { get } = useSiteContent();
   const loginImg = get("auth_login_image") || loginHeroImg;
@@ -84,6 +86,7 @@ const Auth = () => {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) { setLoading(false); toast.error(data.error || "Connexion impossible"); return; }
+    await refreshProfile();
     setLoading(false);
     toast.success("Connexion réussie !");
     navigate(data.user?.isAdmin ? "/admin" : "/dashboard");
@@ -118,6 +121,7 @@ const Auth = () => {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) { setLoading(false); toast.error(data.error || "Inscription impossible"); return; }
+    await refreshProfile();
 
     // Always store country in localStorage as a guaranteed fallback.
     // This covers the email-confirmation flow where data.session is null
