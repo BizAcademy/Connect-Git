@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-06T19:13:42.830Z";
+var BUILD_TIME = "2026-09-06T19:58:07.474Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -76813,9 +76813,21 @@ router3.post("/admin/deposits/:id/status", requireUser, requireAdmin, async (req
 router3.post("/admin/deposits/:id/credit-bonus", requireUser, requireAdmin, async (_req, res) => res.status(409).json({ error: "Le cr\xE9dit de bonus doit \xEAtre trait\xE9 par le service de paiement" }));
 router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) => {
   try {
-    const limit = String(req.query.limit) === "all" ? 1e5 : Math.min(Math.max(Number(req.query.limit) || 200, 1), 1e3), offset = Math.max(Number(req.query.offset) || 0, 0), type = String(req.query.type || "all");
-    const [rows] = await getMysqlPool().query(`SELECT * FROM (SELECT CONCAT('o-',o.id) id,o.id local_order_id,'order' kind,o.created_at,o.charge_minor amount,o.status,o.refunded_at,o.user_id,COALESCE(p.username,p.email,o.user_id) user_label,p.email user_email,CONCAT_WS(' \xB7 ',o.service_category,o.service_name) detail,COALESCE(o.external_order_id,o.provider_order_id) reference,o.provider FROM orders o LEFT JOIN profiles p ON p.user_id=o.user_id UNION ALL SELECT CONCAT('p-',x.id),NULL,'deposit',x.created_at,x.amount_minor,x.status,NULL,x.user_id,COALESCE(p.username,p.email,x.user_id),p.email,CONCAT('D\xE9p\xF4t \xB7 ',COALESCE(x.method,'')),COALESCE(x.transaction_id,x.order_id,x.provider_reference),NULL FROM payments x LEFT JOIN profiles p ON p.user_id=x.user_id) t ${type === "all" ? "" : `WHERE kind='${type === "adjustment" ? "deposit" : type}'`} ORDER BY created_at DESC LIMIT ? OFFSET ?`, [limit, offset]);
-    return res.json({ rows: rows.map((r) => ({ ...r, amount: Number(r.amount) / 100 })), total_count: null, has_more: rows.length === limit });
+    const limit = String(req.query.limit) === "all" ? 1e5 : Math.min(Math.max(Number(req.query.limit) || 200, 1), 1e3), offset = Math.max(Number(req.query.offset) || 0, 0), type = String(req.query.type || "all"), userId = String(req.query.user_id || "").trim();
+    const clauses = [];
+    const args = [];
+    if (type !== "all") {
+      clauses.push("kind=?");
+      args.push(type === "adjustment" ? "deposit" : type);
+    }
+    if (userId) {
+      if (!/^[0-9a-f-]{36}$/i.test(userId)) return res.status(400).json({ error: "user_id invalide" });
+      clauses.push("user_id=?");
+      args.push(userId);
+    }
+    const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    const [rows] = await getMysqlPool().query(`SELECT * FROM (SELECT CONCAT('o-',o.id) id,o.id local_order_id,'order' kind,o.created_at,o.charge_minor amount,o.status,o.refunded_at,o.refunded_amount_minor,o.user_id,COALESCE(p.username,p.email,o.user_id) user_label,p.email user_email,CONCAT_WS(' \xB7 ',o.service_category,o.service_name) detail,COALESCE(o.external_order_id,o.provider_order_id) reference,o.provider,p.country,o.currency FROM orders o LEFT JOIN profiles p ON p.user_id=o.user_id UNION ALL SELECT CONCAT('p-',x.id),NULL,'deposit',x.created_at,x.amount_minor,x.status,NULL,NULL,x.user_id,COALESCE(p.username,p.email,x.user_id),p.email,CONCAT('D\xE9p\xF4t \xB7 ',COALESCE(x.method,'')),COALESCE(x.transaction_id,x.order_id,x.provider_reference),NULL,x.country,x.currency FROM payments x LEFT JOIN profiles p ON p.user_id=x.user_id) t ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`, [...args, limit, offset]);
+    return res.json({ rows: rows.map((r) => ({ ...r, amount: Number(r.amount) / 100, refunded_amount: r.refunded_amount_minor == null ? null : Number(r.refunded_amount_minor) / 100 })), total_count: null, has_more: rows.length === limit });
   } catch (err) {
     logger.error({ err }, "transactions");
     return res.status(500).json({ error: "Erreur lecture transactions" });

@@ -39,7 +39,7 @@ echo "📋 [3/4] Copie vers dist-deploy/ (structure Plesk)..."
 # ── API Server ──────────────────────────────────────────────
 mkdir -p dist-deploy/api-server
 # Vide le contenu précédent sauf le dossier public/ (géré séparément)
-find dist-deploy/api-server -maxdepth 1 -not -name 'api-server' -not -name 'public' -delete 2>/dev/null || true
+find dist-deploy/api-server -mindepth 1 -maxdepth 1 ! -name 'public' -exec rm -rf {} +
 cp -r artifacts/api-server/dist/. dist-deploy/api-server/
 
 # Générer le package.json pour Plesk (point d'entrée Node.js)
@@ -51,6 +51,7 @@ cat > dist-deploy/api-server/package.json << 'EOF'
   "scripts": {
     "start": "node --enable-source-maps index.mjs",
     "import:supabase-users": "node scripts/import-supabase-users.mjs",
+    "import:supabase-history": "node scripts/import-supabase-history.mjs",
     "migrate:mysql": "node scripts/migrate-mysql.mjs"
   },
   "engines": {

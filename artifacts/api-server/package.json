@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "migrate:mysql": "pnpm run build && node ./dist/scripts/migrate-mysql.mjs",
     "import:supabase-users": "node ./scripts/import-supabase-users.mjs",
+    "import:supabase-history": "node ./scripts/import-supabase-history.mjs",
     "test:integration:money-earnings": "pnpm run build && node ./dist/scripts/integration-money-earnings.mjs"
   },
   "dependencies": {

@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node --enable-source-maps index.mjs",
     "import:supabase-users": "node scripts/import-supabase-users.mjs",
+    "import:supabase-history": "node scripts/import-supabase-history.mjs",
     "migrate:mysql": "node scripts/migrate-mysql.mjs"
   },
   "engines": {

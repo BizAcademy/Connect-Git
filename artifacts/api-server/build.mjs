@@ -132,11 +132,15 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
   // one-time Supabase importer separately so Plesk's "Run script" action can
   // execute it with the Node application's MYSQL_* environment variables.
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "scripts/import-supabase-users.mjs")],
+    entryPoints: [
+      path.resolve(artifactDir, "scripts/import-supabase-users.mjs"),
+      path.resolve(artifactDir, "scripts/import-supabase-history.mjs"),
+    ],
     platform: "node",
     bundle: true,
     format: "esm",
-    outfile: path.resolve(distDir, "scripts/import-supabase-users.mjs"),
+    outdir: path.resolve(distDir, "scripts"),
+    outExtension: { ".js": ".mjs" },
     logLevel: "info",
     banner: {
       js: `import { createRequire as __bannerCrReq } from 'node:module';
