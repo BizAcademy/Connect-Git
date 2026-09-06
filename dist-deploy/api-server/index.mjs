@@ -180,12 +180,12 @@ var require_common = __commonJS({
       createDebug.skips = [];
       createDebug.formatters = {};
       function selectColor(namespace) {
-        let hash = 0;
+        let hash2 = 0;
         for (let i = 0; i < namespace.length; i++) {
-          hash = (hash << 5) - hash + namespace.charCodeAt(i);
-          hash |= 0;
+          hash2 = (hash2 << 5) - hash2 + namespace.charCodeAt(i);
+          hash2 |= 0;
         }
-        return createDebug.colors[Math.abs(hash) % createDebug.colors.length];
+        return createDebug.colors[Math.abs(hash2) % createDebug.colors.length];
       }
       createDebug.selectColor = selectColor;
       function createDebug(namespace) {
@@ -819,17 +819,17 @@ var require_depd = __commonJS({
         return;
       }
       this._warned[key2] = true;
-      var msg = message;
-      if (!msg) {
-        msg = callSite === depSite || !callSite.name ? defaultMessage(depSite) : defaultMessage(callSite);
+      var msg2 = message;
+      if (!msg2) {
+        msg2 = callSite === depSite || !callSite.name ? defaultMessage(depSite) : defaultMessage(callSite);
       }
       if (haslisteners) {
-        var err = DeprecationError(this._namespace, msg, stack.slice(i));
+        var err = DeprecationError(this._namespace, msg2, stack.slice(i));
         process.emit("deprecation", err);
         return;
       }
       var format = process.stderr.isTTY ? formatColor : formatPlain;
-      var output = format.call(this, msg, caller, stack.slice(i));
+      var output = format.call(this, msg2, caller, stack.slice(i));
       process.stderr.write(output + "\n", "utf8");
     }
     function callSiteLocation(callSite) {
@@ -860,9 +860,9 @@ var require_depd = __commonJS({
       }
       return typeName && callSite.getMethodName() ? typeName + "." + funcName : funcName;
     }
-    function formatPlain(msg, caller, stack) {
+    function formatPlain(msg2, caller, stack) {
       var timestamp = (/* @__PURE__ */ new Date()).toUTCString();
-      var formatted = timestamp + " " + this._namespace + " deprecated " + msg;
+      var formatted = timestamp + " " + this._namespace + " deprecated " + msg2;
       if (this._traced) {
         for (var i = 0; i < stack.length; i++) {
           formatted += "\n    at " + stack[i].toString();
@@ -874,8 +874,8 @@ var require_depd = __commonJS({
       }
       return formatted;
     }
-    function formatColor(msg, caller, stack) {
-      var formatted = "\x1B[36;1m" + this._namespace + "\x1B[22;39m \x1B[33;1mdeprecated\x1B[22;39m \x1B[0m" + msg + "\x1B[39m";
+    function formatColor(msg2, caller, stack) {
+      var formatted = "\x1B[36;1m" + this._namespace + "\x1B[22;39m \x1B[33;1mdeprecated\x1B[22;39m \x1B[0m" + msg2 + "\x1B[39m";
       if (this._traced) {
         for (var i = 0; i < stack.length; i++) {
           formatted += "\n    \x1B[36mat " + stack[i].toString() + "\x1B[39m";
@@ -1119,13 +1119,13 @@ var require_statuses = __commonJS({
       504: true
     };
     function createMessageToStatusCodeMap(codes2) {
-      var map = {};
+      var map2 = {};
       Object.keys(codes2).forEach(function forEachCode(code) {
         var message = codes2[code];
         var status2 = Number(code);
-        map[message.toLowerCase()] = status2;
+        map2[message.toLowerCase()] = status2;
       });
-      return map;
+      return map2;
     }
     function createStatusCodeList(codes2) {
       return Object.keys(codes2).map(function mapCode(code) {
@@ -1133,11 +1133,11 @@ var require_statuses = __commonJS({
       });
     }
     function getStatusCode(message) {
-      var msg = message.toLowerCase();
-      if (!Object.prototype.hasOwnProperty.call(status.code, msg)) {
+      var msg2 = message.toLowerCase();
+      if (!Object.prototype.hasOwnProperty.call(status.code, msg2)) {
         throw new Error('invalid status message: "' + message + '"');
       }
-      return status.code[msg];
+      return status.code[msg2];
     }
     function getStatusMessage(code) {
       if (!Object.prototype.hasOwnProperty.call(status.message, code)) {
@@ -1238,7 +1238,7 @@ var require_http_errors = __commonJS({
     }
     function createError() {
       var err;
-      var msg;
+      var msg2;
       var status = 500;
       var props = {};
       for (var i = 0; i < arguments.length; i++) {
@@ -1250,7 +1250,7 @@ var require_http_errors = __commonJS({
         } else if (type === "number" && i === 0) {
           status = arg;
         } else if (type === "string") {
-          msg = arg;
+          msg2 = arg;
         } else if (type === "object") {
           props = arg;
         } else {
@@ -1265,7 +1265,7 @@ var require_http_errors = __commonJS({
       }
       var HttpError = createError[status] || createError[codeClass(status)];
       if (!err) {
-        err = HttpError ? new HttpError(msg) : new Error(msg || statuses.message[status]);
+        err = HttpError ? new HttpError(msg2) : new Error(msg2 || statuses.message[status]);
         Error.captureStackTrace(err, createError);
       }
       if (!HttpError || !(err instanceof HttpError) || err.status !== status) {
@@ -1289,14 +1289,14 @@ var require_http_errors = __commonJS({
     function createClientErrorConstructor(HttpError, name, code) {
       var className = toClassName(name);
       function ClientError(message) {
-        var msg = message != null ? message : statuses.message[code];
-        var err = new Error(msg);
+        var msg2 = message != null ? message : statuses.message[code];
+        var err = new Error(msg2);
         Error.captureStackTrace(err, ClientError);
         setPrototypeOf(err, ClientError.prototype);
         Object.defineProperty(err, "message", {
           enumerable: true,
           configurable: true,
-          value: msg,
+          value: msg2,
           writable: true
         });
         Object.defineProperty(err, "name", {
@@ -1328,14 +1328,14 @@ var require_http_errors = __commonJS({
     function createServerErrorConstructor(HttpError, name, code) {
       var className = toClassName(name);
       function ServerError(message) {
-        var msg = message != null ? message : statuses.message[code];
-        var err = new Error(msg);
+        var msg2 = message != null ? message : statuses.message[code];
+        var err = new Error(msg2);
         Error.captureStackTrace(err, ServerError);
         setPrototypeOf(err, ServerError.prototype);
         Object.defineProperty(err, "message", {
           enumerable: true,
           configurable: true,
-          value: msg,
+          value: msg2,
           writable: true
         });
         Object.defineProperty(err, "name", {
@@ -1393,7 +1393,7 @@ var require_bytes = __commonJS({
     module.exports.parse = parse;
     var formatThousandsRegExp = /\B(?=(\d{3})+(?!\d))/g;
     var formatDecimalsRegExp = /(?:\.0*|(\.[^0]+)0+)$/;
-    var map = {
+    var map2 = {
       b: 1,
       kb: 1 << 10,
       mb: 1 << 20,
@@ -1421,22 +1421,22 @@ var require_bytes = __commonJS({
       var decimalPlaces = options && options.decimalPlaces !== void 0 ? options.decimalPlaces : 2;
       var fixedDecimals = Boolean(options && options.fixedDecimals);
       var unit = options && options.unit || "";
-      if (!unit || !map[unit.toLowerCase()]) {
-        if (mag >= map.pb) {
+      if (!unit || !map2[unit.toLowerCase()]) {
+        if (mag >= map2.pb) {
           unit = "PB";
-        } else if (mag >= map.tb) {
+        } else if (mag >= map2.tb) {
           unit = "TB";
-        } else if (mag >= map.gb) {
+        } else if (mag >= map2.gb) {
           unit = "GB";
-        } else if (mag >= map.mb) {
+        } else if (mag >= map2.mb) {
           unit = "MB";
-        } else if (mag >= map.kb) {
+        } else if (mag >= map2.kb) {
           unit = "KB";
         } else {
           unit = "B";
         }
       }
-      var val = value / map[unit.toLowerCase()];
+      var val = value / map2[unit.toLowerCase()];
       var str = val.toFixed(decimalPlaces);
       if (!fixedDecimals) {
         str = str.replace(formatDecimalsRegExp, "$1");
@@ -1468,7 +1468,7 @@ var require_bytes = __commonJS({
       if (isNaN(floatValue)) {
         return null;
       }
-      return Math.floor(map[unit] * floatValue);
+      return Math.floor(map2[unit] * floatValue);
     }
   }
 });
@@ -5549,25 +5549,25 @@ var require_on_finished = __commonJS({
     var defer = typeof setImmediate === "function" ? setImmediate : function(fn) {
       process.nextTick(fn.bind.apply(fn, arguments));
     };
-    function onFinished(msg, listener) {
-      if (isFinished(msg) !== false) {
-        defer(listener, null, msg);
-        return msg;
+    function onFinished(msg2, listener) {
+      if (isFinished(msg2) !== false) {
+        defer(listener, null, msg2);
+        return msg2;
       }
-      attachListener(msg, wrap(listener));
-      return msg;
+      attachListener(msg2, wrap(listener));
+      return msg2;
     }
-    function isFinished(msg) {
-      var socket = msg.socket;
-      if (typeof msg.finished === "boolean") {
-        return Boolean(msg.finished || socket && !socket.writable);
+    function isFinished(msg2) {
+      var socket = msg2.socket;
+      if (typeof msg2.finished === "boolean") {
+        return Boolean(msg2.finished || socket && !socket.writable);
       }
-      if (typeof msg.complete === "boolean") {
-        return Boolean(msg.upgrade || !socket || !socket.readable || msg.complete && !msg.readable);
+      if (typeof msg2.complete === "boolean") {
+        return Boolean(msg2.upgrade || !socket || !socket.readable || msg2.complete && !msg2.readable);
       }
       return void 0;
     }
-    function attachFinishedListener(msg, callback) {
+    function attachFinishedListener(msg2, callback) {
       var eeMsg;
       var eeSocket;
       var finished = false;
@@ -5577,38 +5577,38 @@ var require_on_finished = __commonJS({
         finished = true;
         callback(error);
       }
-      eeMsg = eeSocket = first([[msg, "end", "finish"]], onFinish);
+      eeMsg = eeSocket = first([[msg2, "end", "finish"]], onFinish);
       function onSocket(socket) {
-        msg.removeListener("socket", onSocket);
+        msg2.removeListener("socket", onSocket);
         if (finished) return;
         if (eeMsg !== eeSocket) return;
         eeSocket = first([[socket, "error", "close"]], onFinish);
       }
-      if (msg.socket) {
-        onSocket(msg.socket);
+      if (msg2.socket) {
+        onSocket(msg2.socket);
         return;
       }
-      msg.on("socket", onSocket);
-      if (msg.socket === void 0) {
-        patchAssignSocket(msg, onSocket);
+      msg2.on("socket", onSocket);
+      if (msg2.socket === void 0) {
+        patchAssignSocket(msg2, onSocket);
       }
     }
-    function attachListener(msg, listener) {
-      var attached = msg.__onFinished;
+    function attachListener(msg2, listener) {
+      var attached = msg2.__onFinished;
       if (!attached || !attached.queue) {
-        attached = msg.__onFinished = createListener(msg);
-        attachFinishedListener(msg, attached);
+        attached = msg2.__onFinished = createListener(msg2);
+        attachFinishedListener(msg2, attached);
       }
       attached.queue.push(listener);
     }
-    function createListener(msg) {
+    function createListener(msg2) {
       function listener(err) {
-        if (msg.__onFinished === listener) msg.__onFinished = null;
+        if (msg2.__onFinished === listener) msg2.__onFinished = null;
         if (!listener.queue) return;
         var queue = listener.queue;
         listener.queue = null;
         for (var i = 0; i < queue.length; i++) {
-          queue[i](err, msg);
+          queue[i](err, msg2);
         }
       }
       listener.queue = [];
@@ -15202,11 +15202,11 @@ var require_mime_types = __commonJS({
       }
       return exts[0];
     }
-    function lookup(path7) {
-      if (!path7 || typeof path7 !== "string") {
+    function lookup(path6) {
+      if (!path6 || typeof path6 !== "string") {
         return false;
       }
-      var extension2 = extname("x." + path7).toLowerCase().slice(1);
+      var extension2 = extname("x." + path6).toLowerCase().slice(1);
       if (!extension2) {
         return false;
       }
@@ -18567,7 +18567,7 @@ var require_finalhandler = __commonJS({
       var onerror = opts.onerror;
       return function(err) {
         var headers;
-        var msg;
+        var msg2;
         var status;
         if (!err && res.headersSent) {
           debug("cannot 404 after headers sent");
@@ -18580,10 +18580,10 @@ var require_finalhandler = __commonJS({
           } else {
             headers = getErrorHeaders(err);
           }
-          msg = getErrorMessage(err, status, env);
+          msg2 = getErrorMessage(err, status, env);
         } else {
           status = 404;
-          msg = "Cannot " + req.method + " " + encodeUrl(getResourceName(req));
+          msg2 = "Cannot " + req.method + " " + encodeUrl(getResourceName(req));
         }
         debug("default %s", status);
         if (err && onerror) {
@@ -18596,7 +18596,7 @@ var require_finalhandler = __commonJS({
           }
           return;
         }
-        send(req, res, status, headers, msg);
+        send(req, res, status, headers, msg2);
       };
     }
     function getErrorHeaders(err) {
@@ -18606,14 +18606,14 @@ var require_finalhandler = __commonJS({
       return { ...err.headers };
     }
     function getErrorMessage(err, status, env) {
-      var msg;
+      var msg2;
       if (env !== "production") {
-        msg = err.stack;
-        if (!msg && typeof err.toString === "function") {
-          msg = err.toString();
+        msg2 = err.stack;
+        if (!msg2 && typeof err.toString === "function") {
+          msg2 = err.toString();
         }
       }
-      return msg || statuses.message[status];
+      return msg2 || statuses.message[status];
     }
     function getErrorStatusCode(err) {
       if (typeof err.status === "number" && err.status >= 400 && err.status < 600) {
@@ -18677,13 +18677,13 @@ var require_view = __commonJS({
   "../../node_modules/.pnpm/express@5.2.1/node_modules/express/lib/view.js"(exports, module) {
     "use strict";
     var debug = require_src()("express:view");
-    var path7 = __require("node:path");
-    var fs7 = __require("node:fs");
-    var dirname = path7.dirname;
-    var basename = path7.basename;
-    var extname = path7.extname;
-    var join = path7.join;
-    var resolve = path7.resolve;
+    var path6 = __require("node:path");
+    var fs6 = __require("node:fs");
+    var dirname = path6.dirname;
+    var basename = path6.basename;
+    var extname = path6.extname;
+    var join = path6.join;
+    var resolve = path6.resolve;
     module.exports = View;
     function View(name, options) {
       var opts = options || {};
@@ -18712,17 +18712,17 @@ var require_view = __commonJS({
       this.path = this.lookup(fileName);
     }
     View.prototype.lookup = function lookup(name) {
-      var path8;
+      var path7;
       var roots = [].concat(this.root);
       debug('lookup "%s"', name);
-      for (var i = 0; i < roots.length && !path8; i++) {
+      for (var i = 0; i < roots.length && !path7; i++) {
         var root = roots[i];
         var loc = resolve(root, name);
         var dir = dirname(loc);
         var file = basename(loc);
-        path8 = this.resolve(dir, file);
+        path7 = this.resolve(dir, file);
       }
-      return path8;
+      return path7;
     };
     View.prototype.render = function render(options, callback) {
       var sync = true;
@@ -18744,21 +18744,21 @@ var require_view = __commonJS({
     };
     View.prototype.resolve = function resolve2(dir, file) {
       var ext = this.ext;
-      var path8 = join(dir, file);
-      var stat = tryStat(path8);
+      var path7 = join(dir, file);
+      var stat = tryStat(path7);
       if (stat && stat.isFile()) {
-        return path8;
+        return path7;
       }
-      path8 = join(dir, basename(file, ext), "index" + ext);
-      stat = tryStat(path8);
+      path7 = join(dir, basename(file, ext), "index" + ext);
+      stat = tryStat(path7);
       if (stat && stat.isFile()) {
-        return path8;
+        return path7;
       }
     };
-    function tryStat(path8) {
-      debug('stat "%s"', path8);
+    function tryStat(path7) {
+      debug('stat "%s"', path7);
       try {
-        return fs7.statSync(path8);
+        return fs6.statSync(path7);
       } catch (e) {
         return void 0;
       }
@@ -18771,16 +18771,16 @@ var require_etag = __commonJS({
   "../../node_modules/.pnpm/etag@1.8.1/node_modules/etag/index.js"(exports, module) {
     "use strict";
     module.exports = etag;
-    var crypto5 = __require("crypto");
+    var crypto12 = __require("crypto");
     var Stats = __require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash = crypto5.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash2 = crypto12.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
-      return '"' + len.toString(16) + "-" + hash + '"';
+      return '"' + len.toString(16) + "-" + hash2 + '"';
     }
     function etag(entity, options) {
       if (entity == null) {
@@ -19894,15 +19894,15 @@ var require_dist = __commonJS({
       let index = 0;
       function consumeUntil(end) {
         const output = [];
-        let path7 = "";
+        let path6 = "";
         function writePath() {
-          if (!path7)
+          if (!path6)
             return;
           output.push({
             type: "text",
-            value: encodePath(path7)
+            value: encodePath(path6)
           });
-          path7 = "";
+          path6 = "";
         }
         while (index < chars.length) {
           const value = chars[index++];
@@ -19914,7 +19914,7 @@ var require_dist = __commonJS({
             if (index === chars.length) {
               throw new PathError(`Unexpected end after \\ at index ${index}`, str);
             }
-            path7 += chars[index++];
+            path6 += chars[index++];
             continue;
           }
           if (value === ":" || value === "*") {
@@ -19958,7 +19958,7 @@ var require_dist = __commonJS({
           if (value === "}" || value === "(" || value === ")" || value === "[" || value === "]" || value === "+" || value === "?" || value === "!") {
             throw new PathError(`Unexpected ${value} at index ${index - 1}`, str);
           }
-          path7 += value;
+          path6 += value;
         }
         if (end) {
           throw new PathError(`Unexpected end at index ${index}, expected ${end}`, str);
@@ -19968,17 +19968,17 @@ var require_dist = __commonJS({
       }
       return new TokenData(consumeUntil(""), str);
     }
-    function compile(path7, options = {}) {
+    function compile(path6, options = {}) {
       const { encode = encodeURIComponent, delimiter = DEFAULT_DELIMITER } = options;
-      const data = typeof path7 === "object" ? path7 : parse(path7, options);
+      const data = typeof path6 === "object" ? path6 : parse(path6, options);
       const fn = tokensToFunction(data.tokens, delimiter, encode);
-      return function path8(params = {}) {
+      return function path7(params = {}) {
         const missing = [];
-        const path9 = fn(params, missing);
+        const path8 = fn(params, missing);
         if (missing.length) {
           throw new TypeError(`Missing parameters: ${missing.join(", ")}`);
         }
-        return path9;
+        return path8;
       };
     }
     function tokensToFunction(tokens, delimiter, encode) {
@@ -20040,9 +20040,9 @@ var require_dist = __commonJS({
         return encodeValue(value);
       };
     }
-    function match(path7, options = {}) {
+    function match(path6, options = {}) {
       const { decode = decodeURIComponent, delimiter = DEFAULT_DELIMITER } = options;
-      const { regexp, keys } = pathToRegexp(path7, options);
+      const { regexp, keys } = pathToRegexp(path6, options);
       const decoders = keys.map((key2) => {
         if (decode === false)
           return NOOP_VALUE;
@@ -20054,7 +20054,7 @@ var require_dist = __commonJS({
         const m = regexp.exec(input);
         if (!m)
           return false;
-        const path8 = m[0];
+        const path7 = m[0];
         const params = /* @__PURE__ */ Object.create(null);
         for (let i = 1; i < m.length; i++) {
           if (m[i] === void 0)
@@ -20063,21 +20063,21 @@ var require_dist = __commonJS({
           const decoder = decoders[i - 1];
           params[key2.name] = decoder(m[i]);
         }
-        return { path: path8, params };
+        return { path: path7, params };
       };
     }
-    function pathToRegexp(path7, options = {}) {
+    function pathToRegexp(path6, options = {}) {
       const { delimiter = DEFAULT_DELIMITER, end = true, sensitive = false, trailing = true } = options;
       const keys = [];
       let source = "";
       let combinations = 0;
-      function process2(path8) {
-        if (Array.isArray(path8)) {
-          for (const p of path8)
+      function process2(path7) {
+        if (Array.isArray(path7)) {
+          for (const p of path7)
             process2(p);
           return;
         }
-        const data = typeof path8 === "object" ? path8 : parse(path8, options);
+        const data = typeof path7 === "object" ? path7 : parse(path7, options);
         flatten(data.tokens, 0, [], (tokens) => {
           if (combinations >= 256) {
             throw new PathError("Too many path combinations", data.originalPath);
@@ -20088,7 +20088,7 @@ var require_dist = __commonJS({
           combinations++;
         });
       }
-      process2(path7);
+      process2(path6);
       let pattern = `^(?:${source})`;
       if (trailing)
         pattern += "(?:" + escape2(delimiter) + "$)?";
@@ -20228,18 +20228,18 @@ var require_layer = __commonJS({
     var TRAILING_SLASH_REGEXP = /\/+$/;
     var MATCHING_GROUP_REGEXP = /\((?:\?<(.*?)>)?(?!\?)/g;
     module.exports = Layer;
-    function Layer(path7, options, fn) {
+    function Layer(path6, options, fn) {
       if (!(this instanceof Layer)) {
-        return new Layer(path7, options, fn);
+        return new Layer(path6, options, fn);
       }
-      debug("new %o", path7);
+      debug("new %o", path6);
       const opts = options || {};
       this.handle = fn;
       this.keys = [];
       this.name = fn.name || "<anonymous>";
       this.params = void 0;
       this.path = void 0;
-      this.slash = path7 === "/" && opts.end === false;
+      this.slash = path6 === "/" && opts.end === false;
       function matcher(_path) {
         if (_path instanceof RegExp) {
           const keys = [];
@@ -20278,7 +20278,7 @@ var require_layer = __commonJS({
           decode: decodeParam
         });
       }
-      this.matchers = Array.isArray(path7) ? path7.map(matcher) : [matcher(path7)];
+      this.matchers = Array.isArray(path6) ? path6.map(matcher) : [matcher(path6)];
     }
     Layer.prototype.handleError = function handleError(error, req, res, next) {
       const fn = this.handle;
@@ -20318,9 +20318,9 @@ var require_layer = __commonJS({
         next(err);
       }
     };
-    Layer.prototype.match = function match(path7) {
+    Layer.prototype.match = function match(path6) {
       let match2;
-      if (path7 != null) {
+      if (path6 != null) {
         if (this.slash) {
           this.params = {};
           this.path = "";
@@ -20328,7 +20328,7 @@ var require_layer = __commonJS({
         }
         let i = 0;
         while (!match2 && i < this.matchers.length) {
-          match2 = this.matchers[i](path7);
+          match2 = this.matchers[i](path6);
           i++;
         }
       }
@@ -20356,13 +20356,13 @@ var require_layer = __commonJS({
         throw err;
       }
     }
-    function loosen(path7) {
-      if (path7 instanceof RegExp || path7 === "/") {
-        return path7;
+    function loosen(path6) {
+      if (path6 instanceof RegExp || path6 === "/") {
+        return path6;
       }
-      return Array.isArray(path7) ? path7.map(function(p) {
+      return Array.isArray(path6) ? path6.map(function(p) {
         return loosen(p);
-      }) : String(path7).replace(TRAILING_SLASH_REGEXP, "");
+      }) : String(path6).replace(TRAILING_SLASH_REGEXP, "");
     }
   }
 });
@@ -20378,9 +20378,9 @@ var require_route = __commonJS({
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
     module.exports = Route;
-    function Route(path7) {
-      debug("new %o", path7);
-      this.path = path7;
+    function Route(path6) {
+      debug("new %o", path6);
+      this.path = path6;
       this.stack = [];
       this.methods = /* @__PURE__ */ Object.create(null);
     }
@@ -20501,27 +20501,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router10;
+    module.exports = Router11;
     module.exports.Route = Route;
-    function Router10(options) {
-      if (!(this instanceof Router10)) {
-        return new Router10(options);
+    function Router11(options) {
+      if (!(this instanceof Router11)) {
+        return new Router11(options);
       }
       const opts = options || {};
-      function router10(req, res, next) {
-        router10.handle(req, res, next);
+      function router11(req, res, next) {
+        router11.handle(req, res, next);
       }
-      Object.setPrototypeOf(router10, this);
-      router10.caseSensitive = opts.caseSensitive;
-      router10.mergeParams = opts.mergeParams;
-      router10.params = {};
-      router10.strict = opts.strict;
-      router10.stack = [];
-      return router10;
+      Object.setPrototypeOf(router11, this);
+      router11.caseSensitive = opts.caseSensitive;
+      router11.mergeParams = opts.mergeParams;
+      router11.params = {};
+      router11.strict = opts.strict;
+      router11.stack = [];
+      return router11;
     }
-    Router10.prototype = function() {
+    Router11.prototype = function() {
     };
-    Router10.prototype.param = function param(name, fn) {
+    Router11.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20541,7 +20541,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router10.prototype.handle = function handle(req, res, callback) {
+    Router11.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20588,8 +20588,8 @@ var require_router = __commonJS({
         if (++sync > 100) {
           return setImmediate(next, err);
         }
-        const path7 = getPathname(req);
-        if (path7 == null) {
+        const path6 = getPathname(req);
+        if (path6 == null) {
           return done(layerError);
         }
         let layer;
@@ -20597,7 +20597,7 @@ var require_router = __commonJS({
         let route;
         while (match !== true && idx < stack.length) {
           layer = stack[idx++];
-          match = matchLayer(layer, path7);
+          match = matchLayer(layer, path6);
           route = layer.route;
           if (typeof match !== "boolean") {
             layerError = layerError || match;
@@ -20635,18 +20635,18 @@ var require_router = __commonJS({
           } else if (route) {
             layer.handleRequest(req, res, next);
           } else {
-            trimPrefix(layer, layerError, layerPath, path7);
+            trimPrefix(layer, layerError, layerPath, path6);
           }
           sync = 0;
         });
       }
-      function trimPrefix(layer, layerError, layerPath, path7) {
+      function trimPrefix(layer, layerError, layerPath, path6) {
         if (layerPath.length !== 0) {
-          if (layerPath !== path7.substring(0, layerPath.length)) {
+          if (layerPath !== path6.substring(0, layerPath.length)) {
             next(layerError);
             return;
           }
-          const c = path7[layerPath.length];
+          const c = path6[layerPath.length];
           if (c && c !== "/") {
             next(layerError);
             return;
@@ -20668,9 +20668,9 @@ var require_router = __commonJS({
         }
       }
     };
-    Router10.prototype.use = function use(handler) {
+    Router11.prototype.use = function use(handler) {
       let offset = 0;
-      let path7 = "/";
+      let path6 = "/";
       if (typeof handler !== "function") {
         let arg = handler;
         while (Array.isArray(arg) && arg.length !== 0) {
@@ -20678,7 +20678,7 @@ var require_router = __commonJS({
         }
         if (typeof arg !== "function") {
           offset = 1;
-          path7 = handler;
+          path6 = handler;
         }
       }
       const callbacks = flatten.call(slice.call(arguments, offset), Infinity);
@@ -20690,8 +20690,8 @@ var require_router = __commonJS({
         if (typeof fn !== "function") {
           throw new TypeError("argument handler must be a function");
         }
-        debug("use %o %s", path7, fn.name || "<anonymous>");
-        const layer = new Layer(path7, {
+        debug("use %o %s", path6, fn.name || "<anonymous>");
+        const layer = new Layer(path6, {
           sensitive: this.caseSensitive,
           strict: false,
           end: false
@@ -20701,9 +20701,9 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router10.prototype.route = function route(path7) {
-      const route2 = new Route(path7);
-      const layer = new Layer(path7, {
+    Router11.prototype.route = function route(path6) {
+      const route2 = new Route(path6);
+      const layer = new Layer(path6, {
         sensitive: this.caseSensitive,
         strict: this.strict,
         end: true
@@ -20716,8 +20716,8 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router10.prototype[method] = function(path7) {
-        const route = this.route(path7);
+      Router11.prototype[method] = function(path6) {
+        const route = this.route(path6);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
       };
@@ -20746,9 +20746,9 @@ var require_router = __commonJS({
       const fqdnIndex = url.substring(0, pathLength).indexOf("://");
       return fqdnIndex !== -1 ? url.substring(0, url.indexOf("/", 3 + fqdnIndex)) : void 0;
     }
-    function matchLayer(layer, path7) {
+    function matchLayer(layer, path6) {
       try {
-        return layer.match(path7);
+        return layer.match(path6);
       } catch (err) {
         return err;
       }
@@ -20899,13 +20899,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router10 = require_router();
+    var Router11 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router10 = null;
+      var router11 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -20914,13 +20914,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router10 === null) {
-            router10 = new Router10({
+          if (router11 === null) {
+            router11 = new Router11({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router10;
+          return router11;
         }
       });
     };
@@ -20976,7 +20976,7 @@ var require_application = __commonJS({
     };
     app2.use = function use(fn) {
       var offset = 0;
-      var path7 = "/";
+      var path6 = "/";
       if (typeof fn !== "function") {
         var arg = fn;
         while (Array.isArray(arg) && arg.length !== 0) {
@@ -20984,22 +20984,22 @@ var require_application = __commonJS({
         }
         if (typeof arg !== "function") {
           offset = 1;
-          path7 = fn;
+          path6 = fn;
         }
       }
       var fns = flatten.call(slice.call(arguments, offset), Infinity);
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router10 = this.router;
+      var router11 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router10.use(path7, fn2);
+          return router11.use(path6, fn2);
         }
-        debug(".use app under %s", path7);
-        fn2.mountpath = path7;
+        debug(".use app under %s", path6);
+        fn2.mountpath = path6;
         fn2.parent = this;
-        router10.use(path7, function mounted_app(req, res, next) {
+        router11.use(path6, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -21011,8 +21011,8 @@ var require_application = __commonJS({
       }, this);
       return this;
     };
-    app2.route = function route(path7) {
-      return this.router.route(path7);
+    app2.route = function route(path6) {
+      return this.router.route(path6);
     };
     app2.engine = function engine(ext, fn) {
       if (typeof fn !== "function") {
@@ -21032,13 +21032,13 @@ var require_application = __commonJS({
       this.router.param(name, fn);
       return this;
     };
-    app2.set = function set(setting, val) {
+    app2.set = function set(setting2, val) {
       if (arguments.length === 1) {
-        return this.settings[setting];
+        return this.settings[setting2];
       }
-      debug('set "%s" to %o', setting, val);
-      this.settings[setting] = val;
-      switch (setting) {
+      debug('set "%s" to %o', setting2, val);
+      this.settings[setting2] = val;
+      switch (setting2) {
         case "etag":
           this.set("etag fn", compileETag(val));
           break;
@@ -21055,33 +21055,33 @@ var require_application = __commonJS({
       }
       return this;
     };
-    app2.path = function path7() {
+    app2.path = function path6() {
       return this.parent ? this.parent.path() + this.mountpath : "";
     };
-    app2.enabled = function enabled(setting) {
-      return Boolean(this.set(setting));
+    app2.enabled = function enabled(setting2) {
+      return Boolean(this.set(setting2));
     };
-    app2.disabled = function disabled(setting) {
-      return !this.set(setting);
+    app2.disabled = function disabled(setting2) {
+      return !this.set(setting2);
     };
-    app2.enable = function enable(setting) {
-      return this.set(setting, true);
+    app2.enable = function enable(setting2) {
+      return this.set(setting2, true);
     };
-    app2.disable = function disable(setting) {
-      return this.set(setting, false);
+    app2.disable = function disable(setting2) {
+      return this.set(setting2, false);
     };
     methods.forEach(function(method) {
-      app2[method] = function(path7) {
+      app2[method] = function(path6) {
         if (method === "get" && arguments.length === 1) {
-          return this.set(path7);
+          return this.set(path6);
         }
-        var route = this.route(path7);
+        var route = this.route(path6);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
       };
     });
-    app2.all = function all(path7) {
-      var route = this.route(path7);
+    app2.all = function all(path6) {
+      var route = this.route(path6);
       var args = slice.call(arguments, 1);
       for (var i = 0; i < methods.length; i++) {
         route[methods[i]].apply(route, args);
@@ -21991,7 +21991,7 @@ var require_request = __commonJS({
       var subdomains2 = !isIP2(hostname) ? hostname.split(".").reverse() : [hostname];
       return subdomains2.slice(offset);
     });
-    defineGetter(req, "path", function path7() {
+    defineGetter(req, "path", function path6() {
       return parse(this).pathname;
     });
     defineGetter(req, "host", function host() {
@@ -22202,8 +22202,8 @@ var require_content_disposition = __commonJS({
       this.type = type;
       this.parameters = parameters;
     }
-    function basename(path7) {
-      const normalized = path7.replaceAll("\\", "/");
+    function basename(path6) {
+      const normalized = path6.replaceAll("\\", "/");
       let end = normalized.length;
       while (end > 0 && normalized[end - 1] === "/") {
         end--;
@@ -22253,17 +22253,17 @@ var require_content_disposition = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js"(exports) {
-    var crypto5 = __require("crypto");
+    var crypto12 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto5.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto12.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto5.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto12.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -22444,32 +22444,32 @@ var require_send = __commonJS({
     var escapeHtml = require_escape_html();
     var etag = require_etag();
     var fresh = require_fresh();
-    var fs7 = __require("fs");
+    var fs6 = __require("fs");
     var mime = require_mime_types();
     var ms = require_ms();
     var onFinished = require_on_finished();
     var parseRange = require_range_parser();
-    var path7 = __require("path");
+    var path6 = __require("path");
     var statuses = require_statuses();
     var Stream = __require("stream");
     var util2 = __require("util");
-    var extname = path7.extname;
-    var join = path7.join;
-    var normalize = path7.normalize;
-    var resolve = path7.resolve;
-    var sep = path7.sep;
+    var extname = path6.extname;
+    var join = path6.join;
+    var normalize = path6.normalize;
+    var resolve = path6.resolve;
+    var sep = path6.sep;
     var BYTES_RANGE_REGEXP = /^ *bytes=/;
     var MAX_MAXAGE = 60 * 60 * 24 * 365 * 1e3;
     var UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
     module.exports = send;
-    function send(req, path8, options) {
-      return new SendStream(req, path8, options);
+    function send(req, path7, options) {
+      return new SendStream(req, path7, options);
     }
-    function SendStream(req, path8, options) {
+    function SendStream(req, path7, options) {
       Stream.call(this);
       var opts = options || {};
       this.options = opts;
-      this.path = path8;
+      this.path = path7;
       this.req = req;
       this._acceptRanges = opts.acceptRanges !== void 0 ? Boolean(opts.acceptRanges) : true;
       this._cacheControl = opts.cacheControl !== void 0 ? Boolean(opts.cacheControl) : true;
@@ -22493,8 +22493,8 @@ var require_send = __commonJS({
         return this.emit("error", createHttpError(status, err));
       }
       var res = this.res;
-      var msg = statuses.message[status] || String(status);
-      var doc = createHtmlDocument("Error", escapeHtml(msg));
+      var msg2 = statuses.message[status] || String(status);
+      var doc = createHtmlDocument("Error", escapeHtml(msg2));
       clearHeaders(res);
       if (err && err.headers) {
         setHeaders(res, err.headers);
@@ -22565,7 +22565,7 @@ var require_send = __commonJS({
           break;
       }
     };
-    SendStream.prototype.isFresh = function isFresh2() {
+    SendStream.prototype.isFresh = function isFresh() {
       return fresh(this.req.headers, {
         etag: this.res.getHeader("ETag"),
         "last-modified": this.res.getHeader("Last-Modified")
@@ -22583,10 +22583,10 @@ var require_send = __commonJS({
       var lastModified = this.res.getHeader("Last-Modified");
       return parseHttpDate(lastModified) <= parseHttpDate(ifRange);
     };
-    SendStream.prototype.redirect = function redirect(path8) {
+    SendStream.prototype.redirect = function redirect(path7) {
       var res = this.res;
       if (hasListeners(this, "directory")) {
-        this.emit("directory", res, path8);
+        this.emit("directory", res, path7);
         return;
       }
       if (this.hasTrailingSlash()) {
@@ -22606,38 +22606,38 @@ var require_send = __commonJS({
     SendStream.prototype.pipe = function pipe(res) {
       var root = this._root;
       this.res = res;
-      var path8 = decode(this.path);
-      if (path8 === -1) {
+      var path7 = decode(this.path);
+      if (path7 === -1) {
         this.error(400);
         return res;
       }
-      if (~path8.indexOf("\0")) {
+      if (~path7.indexOf("\0")) {
         this.error(400);
         return res;
       }
       var parts;
       if (root !== null) {
-        if (path8) {
-          path8 = normalize("." + sep + path8);
+        if (path7) {
+          path7 = normalize("." + sep + path7);
         }
-        if (UP_PATH_REGEXP.test(path8)) {
-          debug('malicious path "%s"', path8);
+        if (UP_PATH_REGEXP.test(path7)) {
+          debug('malicious path "%s"', path7);
           this.error(403);
           return res;
         }
-        parts = path8.split(sep);
-        path8 = normalize(join(root, path8));
+        parts = path7.split(sep);
+        path7 = normalize(join(root, path7));
       } else {
-        if (UP_PATH_REGEXP.test(path8)) {
-          debug('malicious path "%s"', path8);
+        if (UP_PATH_REGEXP.test(path7)) {
+          debug('malicious path "%s"', path7);
           this.error(403);
           return res;
         }
-        parts = normalize(path8).split(sep);
-        path8 = resolve(path8);
+        parts = normalize(path7).split(sep);
+        path7 = resolve(path7);
       }
       if (containsDotFile(parts)) {
-        debug('%s dotfile "%s"', this._dotfiles, path8);
+        debug('%s dotfile "%s"', this._dotfiles, path7);
         switch (this._dotfiles) {
           case "allow":
             break;
@@ -22651,13 +22651,13 @@ var require_send = __commonJS({
         }
       }
       if (this._index.length && this.hasTrailingSlash()) {
-        this.sendIndex(path8);
+        this.sendIndex(path7);
         return res;
       }
-      this.sendFile(path8);
+      this.sendFile(path7);
       return res;
     };
-    SendStream.prototype.send = function send2(path8, stat) {
+    SendStream.prototype.send = function send2(path7, stat) {
       var len = stat.size;
       var options = this.options;
       var opts = {};
@@ -22669,9 +22669,9 @@ var require_send = __commonJS({
         this.headersAlreadySent();
         return;
       }
-      debug('pipe "%s"', path8);
-      this.setHeader(path8, stat);
-      this.type(path8);
+      debug('pipe "%s"', path7);
+      this.setHeader(path7, stat);
+      this.type(path7);
       if (this.isConditionalGET()) {
         if (this.isPreconditionFailure()) {
           this.error(412);
@@ -22720,30 +22720,30 @@ var require_send = __commonJS({
         res.end();
         return;
       }
-      this.stream(path8, opts);
+      this.stream(path7, opts);
     };
-    SendStream.prototype.sendFile = function sendFile(path8) {
+    SendStream.prototype.sendFile = function sendFile(path7) {
       var i = 0;
       var self2 = this;
-      debug('stat "%s"', path8);
-      fs7.stat(path8, function onstat(err, stat) {
-        var pathEndsWithSep = path8[path8.length - 1] === sep;
-        if (err && err.code === "ENOENT" && !extname(path8) && !pathEndsWithSep) {
+      debug('stat "%s"', path7);
+      fs6.stat(path7, function onstat(err, stat) {
+        var pathEndsWithSep = path7[path7.length - 1] === sep;
+        if (err && err.code === "ENOENT" && !extname(path7) && !pathEndsWithSep) {
           return next(err);
         }
         if (err) return self2.onStatError(err);
-        if (stat.isDirectory()) return self2.redirect(path8);
+        if (stat.isDirectory()) return self2.redirect(path7);
         if (pathEndsWithSep) return self2.error(404);
-        self2.emit("file", path8, stat);
-        self2.send(path8, stat);
+        self2.emit("file", path7, stat);
+        self2.send(path7, stat);
       });
       function next(err) {
         if (self2._extensions.length <= i) {
           return err ? self2.onStatError(err) : self2.error(404);
         }
-        var p = path8 + "." + self2._extensions[i++];
+        var p = path7 + "." + self2._extensions[i++];
         debug('stat "%s"', p);
-        fs7.stat(p, function(err2, stat) {
+        fs6.stat(p, function(err2, stat) {
           if (err2) return next(err2);
           if (stat.isDirectory()) return next();
           self2.emit("file", p, stat);
@@ -22751,7 +22751,7 @@ var require_send = __commonJS({
         });
       }
     };
-    SendStream.prototype.sendIndex = function sendIndex(path8) {
+    SendStream.prototype.sendIndex = function sendIndex(path7) {
       var i = -1;
       var self2 = this;
       function next(err) {
@@ -22759,9 +22759,9 @@ var require_send = __commonJS({
           if (err) return self2.onStatError(err);
           return self2.error(404);
         }
-        var p = join(path8, self2._index[i]);
+        var p = join(path7, self2._index[i]);
         debug('stat "%s"', p);
-        fs7.stat(p, function(err2, stat) {
+        fs6.stat(p, function(err2, stat) {
           if (err2) return next(err2);
           if (stat.isDirectory()) return next();
           self2.emit("file", p, stat);
@@ -22770,10 +22770,10 @@ var require_send = __commonJS({
       }
       next();
     };
-    SendStream.prototype.stream = function stream(path8, options) {
+    SendStream.prototype.stream = function stream(path7, options) {
       var self2 = this;
       var res = this.res;
-      var stream2 = fs7.createReadStream(path8, options);
+      var stream2 = fs6.createReadStream(path7, options);
       this.emit("stream", stream2);
       stream2.pipe(res);
       function cleanup() {
@@ -22788,17 +22788,17 @@ var require_send = __commonJS({
         self2.emit("end");
       });
     };
-    SendStream.prototype.type = function type(path8) {
+    SendStream.prototype.type = function type(path7) {
       var res = this.res;
       if (res.getHeader("Content-Type")) return;
-      var ext = extname(path8);
+      var ext = extname(path7);
       var type2 = mime.contentType(ext) || "application/octet-stream";
       debug("content-type %s", type2);
       res.setHeader("Content-Type", type2);
     };
-    SendStream.prototype.setHeader = function setHeader(path8, stat) {
+    SendStream.prototype.setHeader = function setHeader(path7, stat) {
       var res = this.res;
-      this.emit("headers", res, path8, stat);
+      this.emit("headers", res, path7, stat);
       if (this._acceptRanges && !res.getHeader("Accept-Ranges")) {
         debug("accept ranges");
         res.setHeader("Accept-Ranges", "bytes");
@@ -22856,9 +22856,9 @@ var require_send = __commonJS({
       }
       return err instanceof Error ? createError(status, err, { expose: false }) : createError(status, err);
     }
-    function decode(path8) {
+    function decode(path7) {
       try {
-        return decodeURIComponent(path8);
+        return decodeURIComponent(path7);
       } catch (err) {
         return -1;
       }
@@ -23002,7 +23002,7 @@ var require_response = __commonJS({
     var http = __require("node:http");
     var onFinished = require_on_finished();
     var mime = require_mime_types();
-    var path7 = __require("node:path");
+    var path6 = __require("node:path");
     var pathIsAbsolute = __require("node:path").isAbsolute;
     var statuses = require_statuses();
     var sign = require_cookie_signature().sign;
@@ -23011,8 +23011,8 @@ var require_response = __commonJS({
     var setCharset = require_utils3().setCharset;
     var cookie = require_cookie();
     var send = require_send();
-    var extname = path7.extname;
-    var resolve = path7.resolve;
+    var extname = path6.extname;
+    var resolve = path6.resolve;
     var vary = require_vary();
     var { Buffer: Buffer3 } = __require("node:buffer");
     var res = Object.create(http.ServerResponse.prototype);
@@ -23158,26 +23158,26 @@ var require_response = __commonJS({
       this.type("txt");
       return this.send(body);
     };
-    res.sendFile = function sendFile(path8, options, callback) {
+    res.sendFile = function sendFile(path7, options, callback) {
       var done = callback;
       var req = this.req;
       var res2 = this;
       var next = req.next;
       var opts = options || {};
-      if (!path8) {
+      if (!path7) {
         throw new TypeError("path argument is required to res.sendFile");
       }
-      if (typeof path8 !== "string") {
+      if (typeof path7 !== "string") {
         throw new TypeError("path must be a string to res.sendFile");
       }
       if (typeof options === "function") {
         done = options;
         opts = {};
       }
-      if (!opts.root && !pathIsAbsolute(path8)) {
+      if (!opts.root && !pathIsAbsolute(path7)) {
         throw new TypeError("path must be absolute or specify root to res.sendFile");
       }
-      var pathname = encodeURI(path8);
+      var pathname = encodeURI(path7);
       opts.etag = this.app.enabled("etag");
       var file = send(req, pathname, opts);
       sendfile(res2, file, opts, function(err) {
@@ -23188,7 +23188,7 @@ var require_response = __commonJS({
         }
       });
     };
-    res.download = function download(path8, filename, options, callback) {
+    res.download = function download(path7, filename, options, callback) {
       var done = callback;
       var name = filename;
       var opts = options || null;
@@ -23205,7 +23205,7 @@ var require_response = __commonJS({
         opts = filename;
       }
       var headers = {
-        "Content-Disposition": contentDisposition(name || path8)
+        "Content-Disposition": contentDisposition(name || path7)
       };
       if (opts && opts.headers) {
         var keys = Object.keys(opts.headers);
@@ -23218,7 +23218,7 @@ var require_response = __commonJS({
       }
       opts = Object.create(opts);
       opts.headers = headers;
-      var fullPath = !opts.root ? resolve(path8) : path8;
+      var fullPath = !opts.root ? resolve(path7) : path7;
       return this.sendFile(fullPath, opts, done);
     };
     res.contentType = res.type = function contentType(type) {
@@ -23501,11 +23501,11 @@ var require_serve_static = __commonJS({
         }
         var forwardError = !fallthrough;
         var originalUrl = parseUrl.original(req);
-        var path7 = parseUrl(req).pathname;
-        if (path7 === "/" && originalUrl.pathname.substr(-1) !== "/") {
-          path7 = "";
+        var path6 = parseUrl(req).pathname;
+        if (path6 === "/" && originalUrl.pathname.substr(-1) !== "/") {
+          path6 = "";
         }
-        var stream = send(req, path7, opts);
+        var stream = send(req, path6, opts);
         stream.on("directory", onDirectory);
         if (setHeaders) {
           stream.on("headers", setHeaders);
@@ -23572,7 +23572,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router10 = require_router();
+    var Router11 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23594,8 +23594,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router10.Route;
-    exports.Router = Router10;
+    exports.Route = Router11.Route;
+    exports.Router = Router11;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -23887,6 +23887,119 @@ var require_lib3 = __commonJS({
       }
       module.exports = middlewareWrapper;
     })();
+  }
+});
+
+// ../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js
+var require_cookie_signature2 = __commonJS({
+  "../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js"(exports) {
+    var crypto12 = __require("crypto");
+    exports.sign = function(val, secret) {
+      if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
+      if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
+      return val + "." + crypto12.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+    };
+    exports.unsign = function(val, secret) {
+      if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
+      if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
+      var str = val.slice(0, val.lastIndexOf(".")), mac = exports.sign(str, secret);
+      return sha1(mac) == sha1(val) ? str : false;
+    };
+    function sha1(str) {
+      return crypto12.createHash("sha1").update(str).digest("hex");
+    }
+  }
+});
+
+// ../../node_modules/.pnpm/cookie-parser@1.4.7/node_modules/cookie-parser/index.js
+var require_cookie_parser = __commonJS({
+  "../../node_modules/.pnpm/cookie-parser@1.4.7/node_modules/cookie-parser/index.js"(exports, module) {
+    "use strict";
+    var cookie = require_cookie();
+    var signature = require_cookie_signature2();
+    module.exports = cookieParser2;
+    module.exports.JSONCookie = JSONCookie;
+    module.exports.JSONCookies = JSONCookies;
+    module.exports.signedCookie = signedCookie;
+    module.exports.signedCookies = signedCookies;
+    function cookieParser2(secret, options) {
+      var secrets = !secret || Array.isArray(secret) ? secret || [] : [secret];
+      return function cookieParser3(req, res, next) {
+        if (req.cookies) {
+          return next();
+        }
+        var cookies = req.headers.cookie;
+        req.secret = secrets[0];
+        req.cookies = /* @__PURE__ */ Object.create(null);
+        req.signedCookies = /* @__PURE__ */ Object.create(null);
+        if (!cookies) {
+          return next();
+        }
+        req.cookies = cookie.parse(cookies, options);
+        if (secrets.length !== 0) {
+          req.signedCookies = signedCookies(req.cookies, secrets);
+          req.signedCookies = JSONCookies(req.signedCookies);
+        }
+        req.cookies = JSONCookies(req.cookies);
+        next();
+      };
+    }
+    function JSONCookie(str) {
+      if (typeof str !== "string" || str.substr(0, 2) !== "j:") {
+        return void 0;
+      }
+      try {
+        return JSON.parse(str.slice(2));
+      } catch (err) {
+        return void 0;
+      }
+    }
+    function JSONCookies(obj) {
+      var cookies = Object.keys(obj);
+      var key2;
+      var val;
+      for (var i = 0; i < cookies.length; i++) {
+        key2 = cookies[i];
+        val = JSONCookie(obj[key2]);
+        if (val) {
+          obj[key2] = val;
+        }
+      }
+      return obj;
+    }
+    function signedCookie(str, secret) {
+      if (typeof str !== "string") {
+        return void 0;
+      }
+      if (str.substr(0, 2) !== "s:") {
+        return str;
+      }
+      var secrets = !secret || Array.isArray(secret) ? secret || [] : [secret];
+      for (var i = 0; i < secrets.length; i++) {
+        var val = signature.unsign(str.slice(2), secrets[i]);
+        if (val !== false) {
+          return val;
+        }
+      }
+      return false;
+    }
+    function signedCookies(obj, secret) {
+      var cookies = Object.keys(obj);
+      var dec;
+      var key2;
+      var ret = /* @__PURE__ */ Object.create(null);
+      var val;
+      for (var i = 0; i < cookies.length; i++) {
+        key2 = cookies[i];
+        val = obj[key2];
+        dec = signedCookie(val, secret);
+        if (val !== dec) {
+          ret[key2] = dec;
+          delete obj[key2];
+        }
+      }
+      return ret;
+    }
   }
 });
 
@@ -24599,12 +24712,12 @@ var require_debug = __commonJS({
     exports.formatters = {};
     var prevTime;
     function selectColor(namespace) {
-      var hash = 0, i;
+      var hash2 = 0, i;
       for (i in namespace) {
-        hash = (hash << 5) - hash + namespace.charCodeAt(i);
-        hash |= 0;
+        hash2 = (hash2 << 5) - hash2 + namespace.charCodeAt(i);
+        hash2 |= 0;
       }
-      return exports.colors[Math.abs(hash) % exports.colors.length];
+      return exports.colors[Math.abs(hash2) % exports.colors.length];
     }
     function createDebug(namespace) {
       function debug() {
@@ -24859,8 +24972,8 @@ var require_node2 = __commonJS({
           }
           break;
         case "FILE":
-          var fs7 = __require("fs");
-          stream2 = new fs7.SyncWriteStream(fd2, { autoClose: false });
+          var fs6 = __require("fs");
+          stream2 = new fs6.SyncWriteStream(fd2, { autoClose: false });
           stream2._type = "fs";
           break;
         case "PIPE":
@@ -25087,8 +25200,8 @@ var require_compression = __commonJS({
           listeners.push([type, listener]);
           return this;
         };
-        function nocompress(msg) {
-          debug("no compression: %s", msg);
+        function nocompress(msg2) {
+          debug("no compression: %s", msg2);
           addListeners(res, _on, listeners);
           listeners = null;
         }
@@ -27357,8 +27470,8 @@ var require_req = __commonJS({
       if (req.originalUrl) {
         _req.url = req.originalUrl;
       } else {
-        const path7 = req.path;
-        _req.url = typeof path7 === "string" ? path7 : req.url ? req.url.path || req.url : void 0;
+        const path6 = req.path;
+        _req.url = typeof path6 === "string" ? path6 : req.url ? req.url.path || req.url : void 0;
       }
       if (req.query) {
         _req.query = req.query;
@@ -27523,14 +27636,14 @@ var require_redact = __commonJS({
       }
       return obj;
     }
-    function parsePath(path7) {
+    function parsePath(path6) {
       const parts = [];
       let current = "";
       let inBrackets = false;
       let inQuotes = false;
       let quoteChar = "";
-      for (let i = 0; i < path7.length; i++) {
-        const char = path7[i];
+      for (let i = 0; i < path6.length; i++) {
+        const char = path6[i];
         if (!inBrackets && char === ".") {
           if (current) {
             parts.push(current);
@@ -27661,10 +27774,10 @@ var require_redact = __commonJS({
       return current;
     }
     function redactPaths(obj, paths, censor, remove = false) {
-      for (const path7 of paths) {
-        const parts = parsePath(path7);
+      for (const path6 of paths) {
+        const parts = parsePath(path6);
         if (parts.includes("*")) {
-          redactWildcardPath(obj, parts, censor, path7, remove);
+          redactWildcardPath(obj, parts, censor, path6, remove);
         } else {
           if (remove) {
             removeKey(obj, parts);
@@ -27749,8 +27862,8 @@ var require_redact = __commonJS({
           }
         } else {
           if (afterWildcard.includes("*")) {
-            const wrappedCensor = typeof censor === "function" ? (value, path7) => {
-              const fullPath = [...pathArray.slice(0, pathLength), ...path7];
+            const wrappedCensor = typeof censor === "function" ? (value, path6) => {
+              const fullPath = [...pathArray.slice(0, pathLength), ...path6];
               return censor(value, fullPath);
             } : censor;
             redactWildcardPath(current, afterWildcard, wrappedCensor, originalPath, remove);
@@ -27785,8 +27898,8 @@ var require_redact = __commonJS({
         return null;
       }
       const pathStructure = /* @__PURE__ */ new Map();
-      for (const path7 of pathsToClone) {
-        const parts = parsePath(path7);
+      for (const path6 of pathsToClone) {
+        const parts = parsePath(path6);
         let current = pathStructure;
         for (let i = 0; i < parts.length; i++) {
           const part = parts[i];
@@ -27838,24 +27951,24 @@ var require_redact = __commonJS({
       }
       return cloneSelectively(obj, pathStructure);
     }
-    function validatePath(path7) {
-      if (typeof path7 !== "string") {
+    function validatePath(path6) {
+      if (typeof path6 !== "string") {
         throw new Error("Paths must be (non-empty) strings");
       }
-      if (path7 === "") {
+      if (path6 === "") {
         throw new Error("Invalid redaction path ()");
       }
-      if (path7.includes("..")) {
-        throw new Error(`Invalid redaction path (${path7})`);
+      if (path6.includes("..")) {
+        throw new Error(`Invalid redaction path (${path6})`);
       }
-      if (path7.includes(",")) {
-        throw new Error(`Invalid redaction path (${path7})`);
+      if (path6.includes(",")) {
+        throw new Error(`Invalid redaction path (${path6})`);
       }
       let bracketCount = 0;
       let inQuotes = false;
       let quoteChar = "";
-      for (let i = 0; i < path7.length; i++) {
-        const char = path7[i];
+      for (let i = 0; i < path6.length; i++) {
+        const char = path6[i];
         if ((char === '"' || char === "'") && bracketCount > 0) {
           if (!inQuotes) {
             inQuotes = true;
@@ -27869,20 +27982,20 @@ var require_redact = __commonJS({
         } else if (char === "]" && !inQuotes) {
           bracketCount--;
           if (bracketCount < 0) {
-            throw new Error(`Invalid redaction path (${path7})`);
+            throw new Error(`Invalid redaction path (${path6})`);
           }
         }
       }
       if (bracketCount !== 0) {
-        throw new Error(`Invalid redaction path (${path7})`);
+        throw new Error(`Invalid redaction path (${path6})`);
       }
     }
     function validatePaths(paths) {
       if (!Array.isArray(paths)) {
         throw new TypeError("paths must be an array");
       }
-      for (const path7 of paths) {
-        validatePath(path7);
+      for (const path6 of paths) {
+        validatePath(path6);
       }
     }
     function slowRedact(options = {}) {
@@ -28050,8 +28163,8 @@ var require_redaction = __commonJS({
         if (shape[k] === null) {
           o[k] = (value) => topCensor(value, [k]);
         } else {
-          const wrappedCensor = typeof censor === "function" ? (value, path7) => {
-            return censor(value, [k, ...path7]);
+          const wrappedCensor = typeof censor === "function" ? (value, path6) => {
+            return censor(value, [k, ...path6]);
           } : censor;
           o[k] = Redact({
             paths: shape[k],
@@ -28269,10 +28382,10 @@ var require_atomic_sleep = __commonJS({
 var require_sonic_boom = __commonJS({
   "../../node_modules/.pnpm/sonic-boom@4.2.1/node_modules/sonic-boom/index.js"(exports, module) {
     "use strict";
-    var fs7 = __require("fs");
+    var fs6 = __require("fs");
     var EventEmitter = __require("events");
     var inherits = __require("util").inherits;
-    var path7 = __require("path");
+    var path6 = __require("path");
     var sleep = require_atomic_sleep();
     var assert = __require("assert");
     var BUSY_WRITE_TIMEOUT = 100;
@@ -28280,8 +28393,8 @@ var require_sonic_boom = __commonJS({
     var MAX_WRITE = 16 * 1024;
     var kContentModeBuffer = "buffer";
     var kContentModeUtf8 = "utf8";
-    var [major, minor] = (process.versions.node || "0.0").split(".").map(Number);
-    var kCopyBuffer = major >= 22 && minor >= 7;
+    var [major, minor3] = (process.versions.node || "0.0").split(".").map(Number);
+    var kCopyBuffer = major >= 22 && minor3 >= 7;
     function openFile(file, sonic) {
       sonic._opening = true;
       sonic._writing = true;
@@ -28326,20 +28439,20 @@ var require_sonic_boom = __commonJS({
       const mode = sonic.mode;
       if (sonic.sync) {
         try {
-          if (sonic.mkdir) fs7.mkdirSync(path7.dirname(file), { recursive: true });
-          const fd = fs7.openSync(file, flags, mode);
+          if (sonic.mkdir) fs6.mkdirSync(path6.dirname(file), { recursive: true });
+          const fd = fs6.openSync(file, flags, mode);
           fileOpened(null, fd);
         } catch (err) {
           fileOpened(err);
           throw err;
         }
       } else if (sonic.mkdir) {
-        fs7.mkdir(path7.dirname(file), { recursive: true }, (err) => {
+        fs6.mkdir(path6.dirname(file), { recursive: true }, (err) => {
           if (err) return fileOpened(err);
-          fs7.open(file, flags, mode, fileOpened);
+          fs6.open(file, flags, mode, fileOpened);
         });
       } else {
-        fs7.open(file, flags, mode, fileOpened);
+        fs6.open(file, flags, mode, fileOpened);
       }
     }
     function SonicBoom(opts) {
@@ -28380,8 +28493,8 @@ var require_sonic_boom = __commonJS({
         this.flush = flushBuffer;
         this.flushSync = flushBufferSync;
         this._actualWrite = actualWriteBuffer;
-        fsWriteSync = () => fs7.writeSync(this.fd, this._writingBuf);
-        fsWrite = () => fs7.write(this.fd, this._writingBuf, this.release);
+        fsWriteSync = () => fs6.writeSync(this.fd, this._writingBuf);
+        fsWrite = () => fs6.write(this.fd, this._writingBuf, this.release);
       } else if (contentMode === void 0 || contentMode === kContentModeUtf8) {
         this._writingBuf = "";
         this.write = write;
@@ -28390,15 +28503,15 @@ var require_sonic_boom = __commonJS({
         this._actualWrite = actualWrite;
         fsWriteSync = () => {
           if (Buffer.isBuffer(this._writingBuf)) {
-            return fs7.writeSync(this.fd, this._writingBuf);
+            return fs6.writeSync(this.fd, this._writingBuf);
           }
-          return fs7.writeSync(this.fd, this._writingBuf, "utf8");
+          return fs6.writeSync(this.fd, this._writingBuf, "utf8");
         };
         fsWrite = () => {
           if (Buffer.isBuffer(this._writingBuf)) {
-            return fs7.write(this.fd, this._writingBuf, this.release);
+            return fs6.write(this.fd, this._writingBuf, this.release);
           }
-          return fs7.write(this.fd, this._writingBuf, "utf8", this.release);
+          return fs6.write(this.fd, this._writingBuf, "utf8", this.release);
         };
       } else {
         throw new Error(`SonicBoom supports "${kContentModeUtf8}" and "${kContentModeBuffer}", but passed ${contentMode}`);
@@ -28455,7 +28568,7 @@ var require_sonic_boom = __commonJS({
           }
         }
         if (this._fsync) {
-          fs7.fsyncSync(this.fd);
+          fs6.fsyncSync(this.fd);
         }
         const len = this._len;
         if (this._reopening) {
@@ -28569,7 +28682,7 @@ var require_sonic_boom = __commonJS({
       const onDrain = () => {
         if (!this._fsync) {
           try {
-            fs7.fsync(this.fd, (err) => {
+            fs6.fsync(this.fd, (err) => {
               this._flushPending = false;
               cb(err);
             });
@@ -28671,7 +28784,7 @@ var require_sonic_boom = __commonJS({
       const fd = this.fd;
       this.once("ready", () => {
         if (fd !== this.fd) {
-          fs7.close(fd, (err) => {
+          fs6.close(fd, (err) => {
             if (err) {
               return this.emit("error", err);
             }
@@ -28720,7 +28833,7 @@ var require_sonic_boom = __commonJS({
           buf = this._bufs[0];
         }
         try {
-          const n = Buffer.isBuffer(buf) ? fs7.writeSync(this.fd, buf) : fs7.writeSync(this.fd, buf, "utf8");
+          const n = Buffer.isBuffer(buf) ? fs6.writeSync(this.fd, buf) : fs6.writeSync(this.fd, buf, "utf8");
           const releasedBufObj = releaseWritingBuf(buf, this._len, n);
           buf = releasedBufObj.writingBuf;
           this._len = releasedBufObj.len;
@@ -28736,7 +28849,7 @@ var require_sonic_boom = __commonJS({
         }
       }
       try {
-        fs7.fsyncSync(this.fd);
+        fs6.fsyncSync(this.fd);
       } catch {
       }
     }
@@ -28757,7 +28870,7 @@ var require_sonic_boom = __commonJS({
           buf = mergeBuf(this._bufs[0], this._lens[0]);
         }
         try {
-          const n = fs7.writeSync(this.fd, buf);
+          const n = fs6.writeSync(this.fd, buf);
           buf = buf.subarray(n);
           this._len = Math.max(this._len - n, 0);
           if (buf.length <= 0) {
@@ -28785,13 +28898,13 @@ var require_sonic_boom = __commonJS({
       this._writingBuf = this._writingBuf.length ? this._writingBuf : this._bufs.shift() || "";
       if (this.sync) {
         try {
-          const written = Buffer.isBuffer(this._writingBuf) ? fs7.writeSync(this.fd, this._writingBuf) : fs7.writeSync(this.fd, this._writingBuf, "utf8");
+          const written = Buffer.isBuffer(this._writingBuf) ? fs6.writeSync(this.fd, this._writingBuf) : fs6.writeSync(this.fd, this._writingBuf, "utf8");
           release(null, written);
         } catch (err) {
           release(err);
         }
       } else {
-        fs7.write(this.fd, this._writingBuf, release);
+        fs6.write(this.fd, this._writingBuf, release);
       }
     }
     function actualWriteBuffer() {
@@ -28800,7 +28913,7 @@ var require_sonic_boom = __commonJS({
       this._writingBuf = this._writingBuf.length ? this._writingBuf : mergeBuf(this._bufs.shift(), this._lens.shift());
       if (this.sync) {
         try {
-          const written = fs7.writeSync(this.fd, this._writingBuf);
+          const written = fs6.writeSync(this.fd, this._writingBuf);
           release(null, written);
         } catch (err) {
           release(err);
@@ -28809,7 +28922,7 @@ var require_sonic_boom = __commonJS({
         if (kCopyBuffer) {
           this._writingBuf = Buffer.from(this._writingBuf);
         }
-        fs7.write(this.fd, this._writingBuf, release);
+        fs6.write(this.fd, this._writingBuf, release);
       }
     }
     function actualClose(sonic) {
@@ -28825,12 +28938,12 @@ var require_sonic_boom = __commonJS({
       sonic._lens = [];
       assert(typeof sonic.fd === "number", `sonic.fd must be a number, got ${typeof sonic.fd}`);
       try {
-        fs7.fsync(sonic.fd, closeWrapped);
+        fs6.fsync(sonic.fd, closeWrapped);
       } catch {
       }
       function closeWrapped() {
         if (sonic.fd !== 1 && sonic.fd !== 2) {
-          fs7.close(sonic.fd, done);
+          fs6.close(sonic.fd, done);
         } else {
           done();
         }
@@ -29199,14 +29312,14 @@ var require_thread_stream = __commonJS({
         destroy(stream, new Error("overwritten"));
       }
     }
-    function onWorkerMessage(msg) {
+    function onWorkerMessage(msg2) {
       const stream = this.stream.deref();
       if (stream === void 0) {
         this.exited = true;
         this.terminate();
         return;
       }
-      switch (msg.code) {
+      switch (msg2.code) {
         case "READY":
           this.stream = new WeakRef2(stream);
           stream.flush(() => {
@@ -29215,20 +29328,20 @@ var require_thread_stream = __commonJS({
           });
           break;
         case "ERROR":
-          destroy(stream, msg.err);
+          destroy(stream, msg2.err);
           break;
         case "EVENT":
-          if (Array.isArray(msg.args)) {
-            stream.emit(msg.name, ...msg.args);
+          if (Array.isArray(msg2.args)) {
+            stream.emit(msg2.name, ...msg2.args);
           } else {
-            stream.emit(msg.name, msg.args);
+            stream.emit(msg2.name, msg2.args);
           }
           break;
         case "WARNING":
-          process.emitWarning(msg.err);
+          process.emitWarning(msg2.err);
           break;
         default:
-          destroy(stream, new Error("this should not happen: " + msg.code));
+          destroy(stream, new Error("this should not happen: " + msg2.code));
       }
     }
     function onWorkerExit(code) {
@@ -29683,7 +29796,7 @@ var require_tools = __commonJS({
       };
       function LOG(o, ...n) {
         if (typeof o === "object") {
-          let msg = o;
+          let msg2 = o;
           if (o !== null) {
             if (o.method && o.headers && o.socket) {
               o = mapHttpRequest(o);
@@ -29692,22 +29805,22 @@ var require_tools = __commonJS({
             }
           }
           let formatParams;
-          if (msg === null && n.length === 0) {
+          if (msg2 === null && n.length === 0) {
             formatParams = [null];
           } else {
-            msg = n.shift();
+            msg2 = n.shift();
             formatParams = n;
           }
-          if (typeof this[msgPrefixSym] === "string" && msg !== void 0 && msg !== null) {
-            msg = this[msgPrefixSym] + msg;
+          if (typeof this[msgPrefixSym] === "string" && msg2 !== void 0 && msg2 !== null) {
+            msg2 = this[msgPrefixSym] + msg2;
           }
-          this[writeSym](o, format(msg, formatParams, this[formatOptsSym]), level);
+          this[writeSym](o, format(msg2, formatParams, this[formatOptsSym]), level);
         } else {
-          let msg = o === void 0 ? n.shift() : o;
-          if (typeof this[msgPrefixSym] === "string" && msg !== void 0 && msg !== null) {
-            msg = this[msgPrefixSym] + msg;
+          let msg2 = o === void 0 ? n.shift() : o;
+          if (typeof this[msgPrefixSym] === "string" && msg2 !== void 0 && msg2 !== null) {
+            msg2 = this[msgPrefixSym] + msg2;
           }
-          this[writeSym](null, format(msg, n, this[formatOptsSym]), level);
+          this[writeSym](null, format(msg2, n, this[formatOptsSym]), level);
         }
       }
     }
@@ -29735,14 +29848,14 @@ var require_tools = __commonJS({
       }
       return point < 32 ? JSON.stringify(str) : '"' + result + '"';
     }
-    function asJson(obj, msg, num, time) {
+    function asJson(obj, msg2, num, time) {
       if (asJsonChan.hasSubscribers === false) {
-        return _asJson.call(this, obj, msg, num, time);
+        return _asJson.call(this, obj, msg2, num, time);
       }
       const store = { instance: this, arguments };
-      return asJsonChan.traceSync(_asJson, store, this, obj, msg, num, time);
+      return asJsonChan.traceSync(_asJson, store, this, obj, msg2, num, time);
     }
-    function _asJson(obj, msg, num, time) {
+    function _asJson(obj, msg2, num, time) {
       const stringify2 = this[stringifySym];
       const stringifySafe = this[stringifySafeSym];
       const stringifiers = this[stringifiersSym];
@@ -29793,8 +29906,8 @@ var require_tools = __commonJS({
         }
       }
       let msgStr = "";
-      if (msg !== void 0) {
-        value = serializers[messageKey] ? serializers[messageKey](msg) : msg;
+      if (msg2 !== void 0) {
+        value = serializers[messageKey] ? serializers[messageKey](msg2) : msg2;
         const stringifier = stringifiers[messageKey] || wildcardStringifier;
         switch (typeof value) {
           case "function":
@@ -30378,7 +30491,7 @@ var require_proto = __commonJS({
     function defaultMixinMergeStrategy(mergeObject, mixinObject) {
       return Object.assign(mixinObject, mergeObject);
     }
-    function write(_obj, msg, num) {
+    function write(_obj, msg2, num) {
       const t = this[timeSym]();
       const mixin = this[mixinSym];
       const errorKey = this[errorKeySym];
@@ -30390,24 +30503,24 @@ var require_proto = __commonJS({
         obj = {};
       } else if (_obj instanceof Error) {
         obj = { [errorKey]: _obj };
-        if (msg === void 0) {
-          msg = _obj.message;
+        if (msg2 === void 0) {
+          msg2 = _obj.message;
         }
       } else {
         obj = _obj;
-        if (msg === void 0 && _obj[messageKey] === void 0 && _obj[errorKey]) {
-          msg = _obj[errorKey].message;
+        if (msg2 === void 0 && _obj[messageKey] === void 0 && _obj[errorKey]) {
+          msg2 = _obj[errorKey].message;
         }
       }
       if (mixin) {
         obj = mixinMergeStrategy(obj, mixin(obj, num, this));
       }
-      const s = this[asJsonSym](obj, msg, num, t);
+      const s = this[asJsonSym](obj, msg2, num, t);
       const stream = this[streamSym];
       if (stream[needsMetadataGsym] === true) {
         stream.lastLevel = num;
         stream.lastObj = obj;
-        stream.lastMsg = msg;
+        stream.lastMsg = msg2;
         stream.lastTime = t.slice(this[timeSliceIndexSym]);
         stream.lastLogger = this;
       }
@@ -31194,9 +31307,9 @@ var require_pino = __commonJS({
   "../../node_modules/.pnpm/pino@9.14.0/node_modules/pino/pino.js"(exports, module) {
     function pinoBundlerAbsolutePath(p) {
       try {
-        const path7 = __require("path");
+        const path6 = __require("path");
         const outputDir = "/home/runner/workspace/artifacts/api-server/dist";
-        return path7.resolve(outputDir, p.replace(/^\.\//, ""));
+        return path6.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
         return f(p);
@@ -31678,285 +31791,6 @@ var init_logger = __esm({
         }
       }
     });
-  }
-});
-
-// src/lib/smm-pricing.ts
-var smm_pricing_exports = {};
-__export(smm_pricing_exports, {
-  USD_TO_LOCAL_RATES: () => USD_TO_LOCAL_RATES,
-  clearUsdRatesOverride: () => clearUsdRatesOverride,
-  defaultPriceFcfa: () => defaultPriceFcfa,
-  defaultPriceFcfaForCurrency: () => defaultPriceFcfaForCurrency,
-  deleteEntry: () => deleteEntry,
-  enrichServices: () => enrichServices,
-  getUsdRates: () => getUsdRates,
-  loadPricing: () => loadPricing,
-  savePricing: () => savePricing,
-  setEntry: () => setEntry,
-  setUsdRatesOverride: () => setUsdRatesOverride,
-  usdToFcfaRate: () => usdToFcfaRate,
-  usdToLocalRate: () => usdToLocalRate
-});
-import { promises as fs } from "node:fs";
-import path from "node:path";
-function fileFor(providerId) {
-  return path.resolve(process.cwd(), "data", `smm-pricing-${providerId}.json`);
-}
-async function loadPricing(providerId = 1) {
-  if (cache[providerId]) return cache[providerId];
-  const FILE2 = fileFor(providerId);
-  try {
-    await fs.mkdir(path.dirname(FILE2), { recursive: true });
-    let txt = await fs.readFile(FILE2, "utf8").catch(() => "");
-    if (!txt && providerId === 1) {
-      txt = await fs.readFile(LEGACY_FILE, "utf8").catch(() => "");
-    }
-    cache[providerId] = txt ? JSON.parse(txt) : {};
-  } catch (err) {
-    logger.error({ err, providerId }, "failed to load smm pricing, starting empty");
-    cache[providerId] = {};
-  }
-  return cache[providerId];
-}
-async function savePricing(map, providerId = 1) {
-  cache[providerId] = map;
-  const FILE2 = fileFor(providerId);
-  await fs.mkdir(path.dirname(FILE2), { recursive: true });
-  await fs.writeFile(FILE2, JSON.stringify(map, null, 2), "utf8");
-}
-async function setEntry(serviceId, entry, providerId = 1) {
-  const map = await loadPricing(providerId);
-  map[String(serviceId)] = { ...entry, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
-  await savePricing(map, providerId);
-  return map;
-}
-async function deleteEntry(serviceId, providerId = 1) {
-  const map = await loadPricing(providerId);
-  delete map[String(serviceId)];
-  await savePricing(map, providerId);
-  return map;
-}
-function getUsdRates() {
-  return _usdRatesOverride ?? USD_TO_LOCAL_RATES;
-}
-function setUsdRatesOverride(rates) {
-  _usdRatesOverride = {
-    default: { ...USD_TO_LOCAL_RATES.default, ...rates.default },
-    peakerr: { ...USD_TO_LOCAL_RATES.peakerr, ...rates.peakerr }
-  };
-}
-function clearUsdRatesOverride() {
-  _usdRatesOverride = null;
-}
-function usdToLocalRate(providerId, currency) {
-  const effective = getUsdRates();
-  const rates = providerId === 4 ? effective.peakerr : effective.default;
-  const cur = (currency ?? "XOF").toUpperCase();
-  return rates[cur] ?? rates["XOF"];
-}
-function usdToFcfaRate(providerId) {
-  return usdToLocalRate(providerId, "XAF");
-}
-function defaultPriceFcfaForCurrency(rateUsd, providerId, currency) {
-  const cur = (currency ?? "XOF").toUpperCase();
-  const localRate = usdToLocalRate(providerId, cur);
-  const fcfaPerUnit = FCFA_PER_LOCAL[cur] ?? 1;
-  return Math.round(Number(rateUsd) * localRate * fcfaPerUnit / 10) * 10;
-}
-function defaultPriceFcfa(rateUsd, providerId) {
-  return defaultPriceFcfaForCurrency(rateUsd, providerId, "XAF");
-}
-async function enrichServices(services, providerId = 1) {
-  const map = await loadPricing(providerId);
-  const enriched = services.map((s) => {
-    const override = map[String(s.service)];
-    const customPrice = override?.price_fcfa;
-    return {
-      ...s,
-      provider: providerId,
-      price_fcfa: typeof customPrice === "number" ? customPrice : defaultPriceFcfa(s.rate, providerId),
-      price_is_custom: typeof customPrice === "number",
-      hidden: !!override?.hidden,
-      featured: !!override?.featured
-    };
-  });
-  return enriched.sort((a, b) => {
-    if (a.featured && !b.featured) return -1;
-    if (!a.featured && b.featured) return 1;
-    return 0;
-  });
-}
-var LEGACY_FILE, cache, USD_TO_LOCAL_RATES, _usdRatesOverride, FCFA_PER_LOCAL;
-var init_smm_pricing = __esm({
-  "src/lib/smm-pricing.ts"() {
-    "use strict";
-    init_logger();
-    LEGACY_FILE = path.resolve(process.cwd(), "data", "smm-pricing.json");
-    cache = {};
-    USD_TO_LOCAL_RATES = {
-      peakerr: { XAF: 1e3, XOF: 1111, GMD: 80, CDF: 9e3, GNF: 9e3 },
-      default: { XAF: 900, XOF: 1e3, GMD: 73, CDF: 8100, GNF: 7300 }
-    };
-    _usdRatesOverride = null;
-    FCFA_PER_LOCAL = {
-      XAF: 1,
-      XOF: 0.9,
-      GMD: 6.6667,
-      CDF: 0.1111,
-      GNF: 0.0625
-    };
-  }
-});
-
-// src/lib/operator-health.ts
-var operator_health_exports = {};
-__export(operator_health_exports, {
-  COOLDOWN_MS: () => COOLDOWN_MS,
-  clearOperatorHealth: () => clearOperatorHealth,
-  isOperatorAvailabilityError: () => isOperatorAvailabilityError,
-  isOperatorUnavailable: () => isOperatorUnavailable,
-  isUserSideError: () => isUserSideError,
-  listUnavailableOperators: () => listUnavailableOperators,
-  markOperatorFailure: () => markOperatorFailure,
-  markOperatorOk: () => markOperatorOk
-});
-function key(country, operator) {
-  return `${String(country).toUpperCase()}:${String(operator).toLowerCase()}`;
-}
-function isOperatorAvailabilityError(args) {
-  const { httpStatus, message, payload } = args;
-  if (typeof httpStatus === "number" && httpStatus >= 500) return true;
-  const haystack = [
-    message ?? "",
-    typeof payload === "string" ? payload : "",
-    payload && typeof payload === "object" ? JSON.stringify(payload) : ""
-  ].join(" ").toLowerCase();
-  if (!haystack) return false;
-  const availabilityPatterns = [
-    /operator\s+(not|un)?available/i,
-    /operator\s+(is\s+)?down/i,
-    /operator\s+offline/i,
-    /service\s+(is\s+)?(unavailable|indisponible|down|offline)/i,
-    /service\s+momentan/i,
-    // "momentanément indisponible"
-    /provider\s+(unavailable|down|offline)/i,
-    /maintenance/i,
-    /temporair?ement\s+indisponible/i,
-    // "temporairement indisponible"
-    /momentan[eé]ment\s+indisponible/i,
-    /timeout/i,
-    /gateway\s+(timeout|error)/i,
-    /upstream/i,
-    /try\s+again\s+later/i,
-    /r[eé]essayez\s+plus\s+tard/i
-  ];
-  if (availabilityPatterns.some((re) => re.test(haystack))) return true;
-  return false;
-}
-function isUserSideError(args) {
-  const haystack = [
-    args.message ?? "",
-    typeof args.payload === "string" ? args.payload : "",
-    args.payload && typeof args.payload === "object" ? JSON.stringify(args.payload) : ""
-  ].join(" ").toLowerCase();
-  if (!haystack) return false;
-  const userPatterns = [
-    /invalid\s+(otp|code)/i,
-    /wrong\s+(otp|code|pin)/i,
-    /code\s+otp\s+(invalide|incorrect)/i,
-    /insufficient\s+(user\s+)?(funds|balance)/i,
-    /solde\s+insuffisant/i,
-    /invalid\s+phone/i,
-    /num[eé]ro\s+invalide/i,
-    /invalid\s+amount/i,
-    /montant\s+invalide/i,
-    /not\s+a\s+(subscriber|customer)/i,
-    /cancell?ed\s+by\s+(user|customer)/i,
-    /annul[eé]\s+par/i
-  ];
-  return userPatterns.some((re) => re.test(haystack));
-}
-function markOperatorFailure(country, operator, errorMsg) {
-  if (!country || !operator) return;
-  const k = key(country, operator);
-  const prev = state.get(k);
-  const entry = {
-    unavailableUntil: Date.now() + COOLDOWN_MS,
-    lastError: String(errorMsg).slice(0, 300),
-    lastFailureAt: Date.now(),
-    failureCount: (prev?.failureCount ?? 0) + 1
-  };
-  state.set(k, entry);
-  logger.warn(
-    { country, operator, until: new Date(entry.unavailableUntil).toISOString(), failureCount: entry.failureCount, err: entry.lastError },
-    "operator marked unavailable"
-  );
-}
-function markOperatorOk(country, operator) {
-  if (!country || !operator) return;
-  const k = key(country, operator);
-  if (state.delete(k)) {
-    logger.info({ country, operator }, "operator marked healthy (cleared cooldown)");
-  }
-}
-function isOperatorUnavailable(country, operator) {
-  const k = key(country, operator);
-  const e = state.get(k);
-  if (!e) return false;
-  if (e.unavailableUntil <= Date.now()) {
-    state.delete(k);
-    return false;
-  }
-  return true;
-}
-function listUnavailableOperators() {
-  const now = Date.now();
-  const out = [];
-  for (const [k, v] of state.entries()) {
-    if (v.unavailableUntil <= now) {
-      state.delete(k);
-      continue;
-    }
-    const [country, operator] = k.split(":");
-    out.push({
-      country,
-      operator,
-      unavailableUntil: new Date(v.unavailableUntil).toISOString(),
-      lastError: v.lastError,
-      lastFailureAt: new Date(v.lastFailureAt).toISOString(),
-      failureCount: v.failureCount
-    });
-  }
-  return out;
-}
-function clearOperatorHealth(country, operator) {
-  if (!country) {
-    const n2 = state.size;
-    state.clear();
-    logger.info({ cleared: n2 }, "operator health: cleared all");
-    return n2;
-  }
-  if (operator) {
-    return state.delete(key(country, operator)) ? 1 : 0;
-  }
-  let n = 0;
-  const prefix = `${country.toUpperCase()}:`;
-  for (const k of [...state.keys()]) {
-    if (k.startsWith(prefix)) {
-      state.delete(k);
-      n++;
-    }
-  }
-  return n;
-}
-var COOLDOWN_MS, state;
-var init_operator_health = __esm({
-  "src/lib/operator-health.ts"() {
-    "use strict";
-    init_logger();
-    COOLDOWN_MS = 10 * 60 * 1e3;
-    state = /* @__PURE__ */ new Map();
   }
 });
 
@@ -40671,11 +40505,11 @@ var require_mime_types2 = __commonJS({
       }
       return exts[0];
     }
-    function lookup(path7) {
-      if (!path7 || typeof path7 !== "string") {
+    function lookup(path6) {
+      if (!path6 || typeof path6 !== "string") {
         return false;
       }
-      var extension2 = extname("x." + path7).toLowerCase().substr(1);
+      var extension2 = extname("x." + path6).toLowerCase().substr(1);
       if (!extension2) {
         return false;
       }
@@ -41184,19 +41018,19 @@ var require_utils4 = __commonJS({
       if (decode)
         return decode(data, hint);
     }
-    function basename(path7) {
-      if (typeof path7 !== "string")
+    function basename(path6) {
+      if (typeof path6 !== "string")
         return "";
-      for (let i = path7.length - 1; i >= 0; --i) {
-        switch (path7.charCodeAt(i)) {
+      for (let i = path6.length - 1; i >= 0; --i) {
+        switch (path6.charCodeAt(i)) {
           case 47:
           // '/'
           case 92:
-            path7 = path7.slice(i + 1);
-            return path7 === ".." || path7 === "." ? "" : path7;
+            path6 = path6.slice(i + 1);
+            return path6 === ".." || path6 === "." ? "" : path6;
         }
       }
-      return path7 === ".." || path7 === "." ? "" : path7;
+      return path6 === ".." || path6 === "." ? "" : path6;
     }
     var TOKEN = [
       0,
@@ -45039,12 +44873,12 @@ var require_make_middleware = __commonJS({
 // ../../node_modules/.pnpm/multer@2.1.1/node_modules/multer/storage/disk.js
 var require_disk = __commonJS({
   "../../node_modules/.pnpm/multer@2.1.1/node_modules/multer/storage/disk.js"(exports, module) {
-    var fs7 = __require("fs");
+    var fs6 = __require("fs");
     var os = __require("os");
-    var path7 = __require("path");
-    var crypto5 = __require("crypto");
+    var path6 = __require("path");
+    var crypto12 = __require("crypto");
     function getFilename(req, file, cb) {
-      crypto5.randomBytes(16, function(err, raw) {
+      crypto12.randomBytes(16, function(err, raw) {
         cb(err, err ? void 0 : raw.toString("hex"));
       });
     }
@@ -45054,7 +44888,7 @@ var require_disk = __commonJS({
     function DiskStorage(opts) {
       this.getFilename = opts.filename || getFilename;
       if (typeof opts.destination === "string") {
-        fs7.mkdirSync(opts.destination, { recursive: true });
+        fs6.mkdirSync(opts.destination, { recursive: true });
         this.getDestination = function($0, $1, cb) {
           cb(null, opts.destination);
         };
@@ -45068,8 +44902,8 @@ var require_disk = __commonJS({
         if (err) return cb(err);
         that.getFilename(req, file, function(err2, filename) {
           if (err2) return cb(err2);
-          var finalPath = path7.join(destination, filename);
-          var outStream = fs7.createWriteStream(finalPath);
+          var finalPath = path6.join(destination, filename);
+          var outStream = fs6.createWriteStream(finalPath);
           file.stream.pipe(outStream);
           outStream.on("error", cb);
           outStream.on("finish", function() {
@@ -45084,11 +44918,11 @@ var require_disk = __commonJS({
       });
     };
     DiskStorage.prototype._removeFile = function _removeFile(req, file, cb) {
-      var path8 = file.path;
+      var path7 = file.path;
       delete file.destination;
       delete file.filename;
       delete file.path;
-      fs7.unlink(path8, cb);
+      fs6.unlink(path7, cb);
     };
     module.exports = function(opts) {
       return new DiskStorage(opts);
@@ -45504,15 +45338,15 @@ var require_errors = __commonJS({
       } else {
         determiner = "must be";
       }
-      let msg;
+      let msg2;
       if (endsWith(name, " argument")) {
-        msg = `The ${name} ${determiner} ${oneOf(expected, "type")}`;
+        msg2 = `The ${name} ${determiner} ${oneOf(expected, "type")}`;
       } else {
         const type = includes(name, ".") ? "property" : "argument";
-        msg = `The "${name}" ${type} ${determiner} ${oneOf(expected, "type")}`;
+        msg2 = `The "${name}" ${type} ${determiner} ${oneOf(expected, "type")}`;
       }
-      msg += `. Received type ${typeof actual}`;
-      return msg;
+      msg2 += `. Received type ${typeof actual}`;
+      return msg2;
     }, TypeError);
     createErrorType("ERR_STREAM_PUSH_AFTER_EOF", "stream.push() after EOF");
     createErrorType("ERR_METHOD_NOT_IMPLEMENTED", function(name) {
@@ -46378,8 +46212,8 @@ var require_end_of_stream = __commonJS({
       return function() {
         if (called) return;
         called = true;
-        for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-          args[_key] = arguments[_key];
+        for (var _len = arguments.length, args = new Array(_len), _key2 = 0; _key2 < _len; _key2++) {
+          args[_key2] = arguments[_key2];
         }
         callback.apply(this, args);
       };
@@ -47671,8 +47505,8 @@ var require_pipeline = __commonJS({
       return streams.pop();
     }
     function pipeline() {
-      for (var _len = arguments.length, streams = new Array(_len), _key = 0; _key < _len; _key++) {
-        streams[_key] = arguments[_key];
+      for (var _len = arguments.length, streams = new Array(_len), _key2 = 0; _key2 < _len; _key2++) {
+        streams[_key2] = arguments[_key2];
       }
       var callback = popCallback(streams);
       if (Array.isArray(streams[0])) streams = streams[0];
@@ -48547,9 +48381,161 @@ var require_multer = __commonJS({
   }
 });
 
+// src/lib/operator-health.ts
+var operator_health_exports = {};
+__export(operator_health_exports, {
+  COOLDOWN_MS: () => COOLDOWN_MS,
+  clearOperatorHealth: () => clearOperatorHealth,
+  isOperatorAvailabilityError: () => isOperatorAvailabilityError,
+  isOperatorUnavailable: () => isOperatorUnavailable,
+  isUserSideError: () => isUserSideError,
+  listUnavailableOperators: () => listUnavailableOperators,
+  markOperatorFailure: () => markOperatorFailure,
+  markOperatorOk: () => markOperatorOk
+});
+function key(country, operator) {
+  return `${String(country).toUpperCase()}:${String(operator).toLowerCase()}`;
+}
+function isOperatorAvailabilityError(args) {
+  const { httpStatus, message, payload } = args;
+  if (typeof httpStatus === "number" && httpStatus >= 500) return true;
+  const haystack = [
+    message ?? "",
+    typeof payload === "string" ? payload : "",
+    payload && typeof payload === "object" ? JSON.stringify(payload) : ""
+  ].join(" ").toLowerCase();
+  if (!haystack) return false;
+  const availabilityPatterns = [
+    /operator\s+(not|un)?available/i,
+    /operator\s+(is\s+)?down/i,
+    /operator\s+offline/i,
+    /service\s+(is\s+)?(unavailable|indisponible|down|offline)/i,
+    /service\s+momentan/i,
+    // "momentanément indisponible"
+    /provider\s+(unavailable|down|offline)/i,
+    /maintenance/i,
+    /temporair?ement\s+indisponible/i,
+    // "temporairement indisponible"
+    /momentan[eé]ment\s+indisponible/i,
+    /timeout/i,
+    /gateway\s+(timeout|error)/i,
+    /upstream/i,
+    /try\s+again\s+later/i,
+    /r[eé]essayez\s+plus\s+tard/i
+  ];
+  if (availabilityPatterns.some((re) => re.test(haystack))) return true;
+  return false;
+}
+function isUserSideError(args) {
+  const haystack = [
+    args.message ?? "",
+    typeof args.payload === "string" ? args.payload : "",
+    args.payload && typeof args.payload === "object" ? JSON.stringify(args.payload) : ""
+  ].join(" ").toLowerCase();
+  if (!haystack) return false;
+  const userPatterns = [
+    /invalid\s+(otp|code)/i,
+    /wrong\s+(otp|code|pin)/i,
+    /code\s+otp\s+(invalide|incorrect)/i,
+    /insufficient\s+(user\s+)?(funds|balance)/i,
+    /solde\s+insuffisant/i,
+    /invalid\s+phone/i,
+    /num[eé]ro\s+invalide/i,
+    /invalid\s+amount/i,
+    /montant\s+invalide/i,
+    /not\s+a\s+(subscriber|customer)/i,
+    /cancell?ed\s+by\s+(user|customer)/i,
+    /annul[eé]\s+par/i
+  ];
+  return userPatterns.some((re) => re.test(haystack));
+}
+function markOperatorFailure(country, operator, errorMsg) {
+  if (!country || !operator) return;
+  const k = key(country, operator);
+  const prev = state.get(k);
+  const entry = {
+    unavailableUntil: Date.now() + COOLDOWN_MS,
+    lastError: String(errorMsg).slice(0, 300),
+    lastFailureAt: Date.now(),
+    failureCount: (prev?.failureCount ?? 0) + 1
+  };
+  state.set(k, entry);
+  logger.warn(
+    { country, operator, until: new Date(entry.unavailableUntil).toISOString(), failureCount: entry.failureCount, err: entry.lastError },
+    "operator marked unavailable"
+  );
+}
+function markOperatorOk(country, operator) {
+  if (!country || !operator) return;
+  const k = key(country, operator);
+  if (state.delete(k)) {
+    logger.info({ country, operator }, "operator marked healthy (cleared cooldown)");
+  }
+}
+function isOperatorUnavailable(country, operator) {
+  const k = key(country, operator);
+  const e = state.get(k);
+  if (!e) return false;
+  if (e.unavailableUntil <= Date.now()) {
+    state.delete(k);
+    return false;
+  }
+  return true;
+}
+function listUnavailableOperators() {
+  const now = Date.now();
+  const out = [];
+  for (const [k, v] of state.entries()) {
+    if (v.unavailableUntil <= now) {
+      state.delete(k);
+      continue;
+    }
+    const [country, operator] = k.split(":");
+    out.push({
+      country,
+      operator,
+      unavailableUntil: new Date(v.unavailableUntil).toISOString(),
+      lastError: v.lastError,
+      lastFailureAt: new Date(v.lastFailureAt).toISOString(),
+      failureCount: v.failureCount
+    });
+  }
+  return out;
+}
+function clearOperatorHealth(country, operator) {
+  if (!country) {
+    const n2 = state.size;
+    state.clear();
+    logger.info({ cleared: n2 }, "operator health: cleared all");
+    return n2;
+  }
+  if (operator) {
+    return state.delete(key(country, operator)) ? 1 : 0;
+  }
+  let n = 0;
+  const prefix = `${country.toUpperCase()}:`;
+  for (const k of [...state.keys()]) {
+    if (k.startsWith(prefix)) {
+      state.delete(k);
+      n++;
+    }
+  }
+  return n;
+}
+var COOLDOWN_MS, state;
+var init_operator_health = __esm({
+  "src/lib/operator-health.ts"() {
+    "use strict";
+    init_logger();
+    COOLDOWN_MS = 10 * 60 * 1e3;
+    state = /* @__PURE__ */ new Map();
+  }
+});
+
 // src/app.ts
-var import_express10 = __toESM(require_express2(), 1);
+var import_express11 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
+var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_compression = __toESM(require_compression(), 1);
 
 // ../../node_modules/.pnpm/express-rate-limit@8.5.2_express@5.2.1/node_modules/express-rate-limit/dist/index.mjs
@@ -48734,9 +48720,9 @@ var getResetSeconds = (windowMs, resetTime) => {
   return resetSeconds;
 };
 var getPartitionKey = (key2) => {
-  const hash = createHash("sha256");
-  hash.update(key2);
-  const partitionKey = hash.digest("hex").slice(0, 12);
+  const hash2 = createHash("sha256");
+  hash2.update(key2);
+  const partitionKey = hash2.digest("hex").slice(0, 12);
   return Buffer2.from(partitionKey).toString("base64");
 };
 var setLegacyHeaders = (response, info) => {
@@ -49248,8 +49234,8 @@ var promisifyStore = (passedStore) => {
   }
   return new PromisifiedStore();
 };
-var getOptionsFromConfig = (config) => {
-  const { validations: validations2, ...directlyPassableEntries } = config;
+var getOptionsFromConfig = (config2) => {
+  const { validations: validations2, ...directlyPassableEntries } = config2;
   return {
     ...directlyPassableEntries,
     validate: validations2.enabled
@@ -49276,7 +49262,7 @@ var parseOptions = (passedOptions) => {
   validations2.ipv6SubnetOrKeyGenerator(notUndefinedOptions);
   let standardHeaders = notUndefinedOptions.standardHeaders ?? false;
   if (standardHeaders === true) standardHeaders = "draft-6";
-  const config = {
+  const config2 = {
     windowMs: 60 * 1e3,
     limit: passedOptions.max ?? 5,
     // `max` is deprecated, but support it anyways.
@@ -49285,12 +49271,12 @@ var parseOptions = (passedOptions) => {
     legacyHeaders: passedOptions.headers ?? true,
     identifier(request, _response) {
       let duration = "";
-      const property = config.requestPropertyName;
+      const property = config2.requestPropertyName;
       const { limit } = request[property];
-      const seconds = config.windowMs / 1e3;
-      const minutes = config.windowMs / (1e3 * 60);
-      const hours = config.windowMs / (1e3 * 60 * 60);
-      const days = config.windowMs / (1e3 * 60 * 60 * 24);
+      const seconds = config2.windowMs / 1e3;
+      const minutes = config2.windowMs / (1e3 * 60);
+      const hours = config2.windowMs / (1e3 * 60 * 60);
+      const days = config2.windowMs / (1e3 * 60 * 60 * 24);
       if (seconds < 60) duration = `${seconds}sec`;
       else if (minutes < 60) duration = `${minutes}min`;
       else if (hours < 24) duration = `${hours}hr${hours > 1 ? "s" : ""}`;
@@ -49310,19 +49296,19 @@ var parseOptions = (passedOptions) => {
       const ip = request.ip;
       let subnet = 56;
       if (isIPv62(ip)) {
-        subnet = typeof config.ipv6Subnet === "function" ? await config.ipv6Subnet(request, response) : config.ipv6Subnet;
-        if (typeof config.ipv6Subnet === "function")
+        subnet = typeof config2.ipv6Subnet === "function" ? await config2.ipv6Subnet(request, response) : config2.ipv6Subnet;
+        if (typeof config2.ipv6Subnet === "function")
           validations2.ipv6Subnet(subnet);
       }
       return ipKeyGenerator(ip, subnet);
     },
     ipv6Subnet: 56,
     async handler(request, response, _next, _optionsUsed) {
-      response.status(config.statusCode);
-      const message = typeof config.message === "function" ? await config.message(
+      response.status(config2.statusCode);
+      const message = typeof config2.message === "function" ? await config2.message(
         request,
         response
-      ) : config.message;
+      ) : config2.message;
       if (!response.writableEnded) response.send(message);
     },
     passOnStoreError: false,
@@ -49339,12 +49325,12 @@ var parseOptions = (passedOptions) => {
     validations: validations2,
     logger: logger2
   };
-  if (typeof config.store.increment !== "function" || typeof config.store.decrement !== "function" || typeof config.store.resetKey !== "function" || config.store.resetAll !== void 0 && typeof config.store.resetAll !== "function" || config.store.init !== void 0 && typeof config.store.init !== "function") {
+  if (typeof config2.store.increment !== "function" || typeof config2.store.decrement !== "function" || typeof config2.store.resetKey !== "function" || config2.store.resetAll !== void 0 && typeof config2.store.resetAll !== "function" || config2.store.init !== void 0 && typeof config2.store.init !== "function") {
     throw new TypeError(
       "An invalid store was passed. Please ensure that the store is a class that implements the `Store` interface."
     );
   }
-  return config;
+  return config2;
 };
 var handleAsyncErrors = (fn) => async (request, response, next) => {
   try {
@@ -49354,23 +49340,23 @@ var handleAsyncErrors = (fn) => async (request, response, next) => {
   }
 };
 var rateLimit = (passedOptions) => {
-  const config = parseOptions(passedOptions ?? {});
-  const options = getOptionsFromConfig(config);
-  config.validations.creationStack(config.store);
-  config.validations.unsharedStore(config.store);
-  if (typeof config.store.init === "function") {
+  const config2 = parseOptions(passedOptions ?? {});
+  const options = getOptionsFromConfig(config2);
+  config2.validations.creationStack(config2.store);
+  config2.validations.unsharedStore(config2.store);
+  if (typeof config2.store.init === "function") {
     try {
-      const storeInit = config.store.init(options);
+      const storeInit = config2.store.init(options);
       if (storeInit instanceof Promise) {
         storeInit.catch(
-          (error) => config.logger.error(
+          (error) => config2.logger.error(
             error,
             "express-rate-limit: async error during store initialization."
           )
         );
       }
     } catch (error) {
-      config.logger.error(
+      config2.logger.error(
         error,
         "express-rate-limit: error during store initialization."
       );
@@ -49378,25 +49364,25 @@ var rateLimit = (passedOptions) => {
   }
   const middleware = handleAsyncErrors(
     async (request, response, next) => {
-      const closePromise = config.skipFailedRequests && new Promise((resolve) => response.once("close", resolve));
-      const finishPromise = (config.skipFailedRequests || config.skipSuccessfulRequests) && new Promise((resolve) => response.once("finish", resolve));
-      const errorPromise = config.skipFailedRequests && new Promise((resolve) => response.once("error", resolve));
-      const skip = await config.skip(request, response);
+      const closePromise = config2.skipFailedRequests && new Promise((resolve) => response.once("close", resolve));
+      const finishPromise = (config2.skipFailedRequests || config2.skipSuccessfulRequests) && new Promise((resolve) => response.once("finish", resolve));
+      const errorPromise = config2.skipFailedRequests && new Promise((resolve) => response.once("error", resolve));
+      const skip = await config2.skip(request, response);
       if (skip) {
         next();
         return;
       }
       const augmentedRequest = request;
-      const key2 = await config.keyGenerator(request, response);
+      const key2 = await config2.keyGenerator(request, response);
       let totalHits = 0;
       let resetTime;
       try {
-        const incrementResult = await config.store.increment(key2);
+        const incrementResult = await config2.store.increment(key2);
         totalHits = incrementResult.totalHits;
         resetTime = incrementResult.resetTime;
       } catch (error) {
-        if (config.passOnStoreError) {
-          config.logger.error(
+        if (config2.passOnStoreError) {
+          config2.logger.error(
             error,
             "express-rate-limit: error from store, allowing request without rate-limiting."
           );
@@ -49405,11 +49391,11 @@ var rateLimit = (passedOptions) => {
         }
         throw error;
       }
-      config.validations.positiveHits(totalHits);
-      config.validations.singleCount(request, config.store, key2);
-      const retrieveLimit = typeof config.limit === "function" ? config.limit(request, response) : config.limit;
+      config2.validations.positiveHits(totalHits);
+      config2.validations.singleCount(request, config2.store, key2);
+      const retrieveLimit = typeof config2.limit === "function" ? config2.limit(request, response) : config2.limit;
       const limit = await retrieveLimit;
-      config.validations.limit(limit);
+      config2.validations.limit(limit);
       const info = {
         limit,
         used: totalHits,
@@ -49422,46 +49408,46 @@ var rateLimit = (passedOptions) => {
         enumerable: false,
         value: totalHits
       });
-      augmentedRequest[config.requestPropertyName] = info;
-      if (config.legacyHeaders && !response.headersSent) {
+      augmentedRequest[config2.requestPropertyName] = info;
+      if (config2.legacyHeaders && !response.headersSent) {
         setLegacyHeaders(response, info);
       }
-      if (config.standardHeaders && !response.headersSent) {
-        switch (config.standardHeaders) {
+      if (config2.standardHeaders && !response.headersSent) {
+        switch (config2.standardHeaders) {
           case "draft-6": {
-            setDraft6Headers(response, info, config.windowMs);
+            setDraft6Headers(response, info, config2.windowMs);
             break;
           }
           case "draft-7": {
-            config.validations.headersResetTime(info.resetTime);
-            setDraft7Headers(response, info, config.windowMs);
+            config2.validations.headersResetTime(info.resetTime);
+            setDraft7Headers(response, info, config2.windowMs);
             break;
           }
           case "draft-8": {
-            const retrieveName = typeof config.identifier === "function" ? config.identifier(request, response) : config.identifier;
+            const retrieveName = typeof config2.identifier === "function" ? config2.identifier(request, response) : config2.identifier;
             const name = await retrieveName;
-            config.validations.headersResetTime(info.resetTime);
-            setDraft8Headers(response, info, config.windowMs, name, key2);
+            config2.validations.headersResetTime(info.resetTime);
+            setDraft8Headers(response, info, config2.windowMs, name, key2);
             break;
           }
           default: {
-            config.validations.headersDraftVersion(config.standardHeaders);
+            config2.validations.headersDraftVersion(config2.standardHeaders);
             break;
           }
         }
       }
-      if (config.skipFailedRequests || config.skipSuccessfulRequests) {
+      if (config2.skipFailedRequests || config2.skipSuccessfulRequests) {
         let decremented = false;
         const decrementKey = async () => {
           if (!decremented) {
-            await config.store.decrement(key2);
+            await config2.store.decrement(key2);
             decremented = true;
           }
         };
-        if (config.skipFailedRequests) {
+        if (config2.skipFailedRequests) {
           if (finishPromise) {
             void finishPromise.then(async () => {
-              if (!await config.requestWasSuccessful(request, response))
+              if (!await config2.requestWasSuccessful(request, response))
                 await decrementKey();
             });
           }
@@ -49476,21 +49462,21 @@ var rateLimit = (passedOptions) => {
             });
           }
         }
-        if (config.skipSuccessfulRequests) {
+        if (config2.skipSuccessfulRequests) {
           if (finishPromise) {
             void finishPromise.then(async () => {
-              if (await config.requestWasSuccessful(request, response))
+              if (await config2.requestWasSuccessful(request, response))
                 await decrementKey();
             });
           }
         }
       }
-      config.validations.disable();
+      config2.validations.disable();
       if (totalHits > limit) {
-        if (config.legacyHeaders || config.standardHeaders) {
-          setRetryAfterHeader(response, info, config.windowMs);
+        if (config2.legacyHeaders || config2.standardHeaders) {
+          setRetryAfterHeader(response, info, config2.windowMs);
         }
-        config.handler(request, response, next, options);
+        config2.handler(request, response, next, options);
         return;
       }
       next();
@@ -49499,20 +49485,20 @@ var rateLimit = (passedOptions) => {
   const getThrowFn = () => {
     throw new Error("The current store does not support the get/getKey method");
   };
-  middleware.resetKey = config.store.resetKey.bind(config.store);
-  middleware.getKey = typeof config.store.get === "function" ? config.store.get.bind(config.store) : getThrowFn;
+  middleware.resetKey = config2.store.resetKey.bind(config2.store);
+  middleware.getKey = typeof config2.store.get === "function" ? config2.store.get.bind(config2.store) : getThrowFn;
   return middleware;
 };
 var rate_limit_default = rateLimit;
 
 // src/app.ts
 var import_pino_http = __toESM(require_logger(), 1);
-import path6 from "node:path";
-import fs6 from "node:fs";
+import path5 from "node:path";
+import fs5 from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // src/routes/index.ts
-var import_express9 = __toESM(require_express2(), 1);
+var import_express10 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -49876,8 +49862,8 @@ function getErrorMap() {
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path7, errorMaps, issueData } = params;
-  const fullPath = [...path7, ...issueData.path || []];
+  const { data, path: path6, errorMaps, issueData } = params;
+  const fullPath = [...path6, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -49891,8 +49877,8 @@ var makeIssue = (params) => {
   }
   let errorMessage = "";
   const maps = errorMaps.filter((m) => !!m).slice().reverse();
-  for (const map of maps) {
-    errorMessage = map(fullIssue, { data, defaultError: errorMessage }).message;
+  for (const map2 of maps) {
+    errorMessage = map2(fullIssue, { data, defaultError: errorMessage }).message;
   }
   return {
     ...issueData,
@@ -49992,11 +49978,11 @@ var errorUtil;
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path7, key2) {
+  constructor(parent, value, path6, key2) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path7;
+    this._path = path6;
     this._key = key2;
   }
   get path() {
@@ -53398,21 +53384,46 @@ var HealthCheckResponse = objectType({
   status: stringType()
 });
 
+// src/lib/mysql.ts
+import mysql from "mysql2/promise";
+var pool;
+function config() {
+  const host = process.env["MYSQL_HOST"];
+  const database = process.env["MYSQL_DATABASE"];
+  const user = process.env["MYSQL_USER"];
+  const password = process.env["MYSQL_PASSWORD"];
+  const rawPort2 = process.env["MYSQL_PORT"];
+  if (!host || !database || !user || password === void 0) {
+    throw new Error("MYSQL_HOST, MYSQL_DATABASE, MYSQL_USER and MYSQL_PASSWORD are required");
+  }
+  const port2 = rawPort2 ? Number(rawPort2) : 3306;
+  if (!Number.isInteger(port2) || port2 < 1 || port2 > 65535) {
+    throw new Error("MYSQL_PORT must be a valid TCP port");
+  }
+  return { host, port: port2, database, user, password, waitForConnections: true, connectionLimit: 10, multipleStatements: true };
+}
+function getMysqlPool() {
+  pool ??= mysql.createPool(config());
+  return pool;
+}
+
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-08-15T00:33:03.285Z";
-router.get("/healthz", (_req, res) => {
-  const data = HealthCheckResponse.parse({ status: "ok" });
-  res.json(data);
+var BUILD_TIME = "2026-09-06T12:26:24.413Z";
+router.get("/healthz", async (_req, res) => {
+  try {
+    await getMysqlPool().query("SELECT 1");
+    res.json(HealthCheckResponse.parse({ status: "ok" }));
+  } catch {
+    res.status(503).json({ status: "error", database: "unavailable" });
+  }
 });
 router.get("/diag", (_req, res) => {
   const env = process.env;
   res.json({
     build_time: BUILD_TIME,
     node_env: env.NODE_ENV ?? "unset",
-    supabase_url: env.VITE_SUPABASE_URL ? env.VITE_SUPABASE_URL : "MISSING",
-    supabase_anon_key: env.VITE_SUPABASE_ANON_KEY ? "\u2713 present" : "MISSING",
-    supabase_service_role_key: env.SUPABASE_SERVICE_ROLE_KEY ? "\u2713 present" : "MISSING \u2014 fallback JWT actif",
+    mysql_configured: Boolean(env.MYSQL_HOST && env.MYSQL_DATABASE && env.MYSQL_USER && env.MYSQL_PASSWORD !== void 0),
     afribapay_api_user: env.AFRIBAPAY_API_USER ? "\u2713 present" : "MISSING",
     afribapay_api_key: env.AFRIBAPAY_API_KEY ? "\u2713 present" : "MISSING",
     afribapay_merchant_key: env.AFRIBAPAY_MERCHANT_KEY ? "\u2713 present" : "MISSING",
@@ -53425,323 +53436,154 @@ var health_default = router;
 // src/routes/smm.ts
 var import_express2 = __toESM(require_express2(), 1);
 init_logger();
+import crypto3 from "node:crypto";
 
 // src/lib/auth.ts
 init_logger();
-var SUPABASE_URL = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_ANON_KEY = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error("Missing required environment variables: SUPABASE_URL and SUPABASE_ANON_KEY must be set");
-}
+import crypto2 from "node:crypto";
 async function requireUser(req, res, next) {
-  const auth = req.headers.authorization || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  if (!token) return res.status(401).json({ error: "Authentification requise" });
+  const token = req.cookies?.["bb_session"];
+  if (!token) {
+    res.status(401).json({ error: "Authentification requise" });
+    return;
+  }
   try {
-    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` }
-    });
-    if (!r.ok) return res.status(401).json({ error: "Session invalide" });
-    const data = await r.json();
-    if (!data?.id) return res.status(401).json({ error: "Utilisateur introuvable" });
-    req.userId = data.id;
-    req.userToken = token;
+    const hash2 = crypto2.createHash("sha256").update(token).digest("hex");
+    const [rows] = await getMysqlPool().execute(
+      "SELECT user_id FROM auth_sessions WHERE token_hash = ? AND revoked_at IS NULL AND expires_at > NOW() LIMIT 1",
+      [hash2]
+    );
+    if (!rows[0]?.user_id) {
+      res.status(401).json({ error: "Session invalide" });
+      return;
+    }
+    req.userId = rows[0].user_id;
     next();
   } catch (err) {
     logger.error({ err }, "auth verification failed");
     res.status(500).json({ error: "Auth verification failed" });
+    return;
   }
 }
 async function requireAdmin(req, res, next) {
-  if (!req.userId || !req.userToken) {
-    return res.status(401).json({ error: "Authentification requise" });
+  if (!req.userId) {
+    res.status(401).json({ error: "Authentification requise" });
+    return;
   }
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/has_role`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${req.userToken}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ _user_id: req.userId, _role: "admin" })
-    });
-    if (!r.ok) return res.status(403).json({ error: "Acc\xE8s refus\xE9" });
-    const isAdmin = await r.json();
-    if (isAdmin !== true) return res.status(403).json({ error: "Acc\xE8s admin requis" });
+    const [rows] = await getMysqlPool().execute(
+      "SELECT role FROM user_roles WHERE user_id = ? AND role = 'admin' LIMIT 1",
+      [req.userId]
+    );
+    if (!rows[0]) {
+      res.status(403).json({ error: "Acc\xE8s admin requis" });
+      return;
+    }
     req.isAdmin = true;
     next();
   } catch (err) {
     logger.error({ err }, "admin role verification failed");
     res.status(500).json({ error: "Role verification failed" });
-  }
-}
-
-// src/routes/smm.ts
-init_smm_pricing();
-
-// src/lib/earnings.ts
-init_logger();
-import { promises as fs2 } from "node:fs";
-import path2 from "node:path";
-var COST_FCFA_PER_USD = 600;
-var USER_FCFA_PER_USD = 700;
-var REVENUE_MARGIN_RATIO = (USER_FCFA_PER_USD - COST_FCFA_PER_USD) / USER_FCFA_PER_USD;
-var FILE = path2.resolve(process.cwd(), "data", "earnings.jsonl");
-var SUPABASE_URL2 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-function supabaseEnabled() {
-  return Boolean(SUPABASE_URL2 && SUPABASE_SERVICE_ROLE_KEY);
-}
-function supabaseHeaders(extra = {}) {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY;
-  return {
-    apikey: key2,
-    Authorization: `Bearer ${key2}`,
-    "Content-Type": "application/json",
-    ...extra
-  };
-}
-var warnedAboutMissingKey = false;
-function warnOnceNoServiceRole() {
-  if (warnedAboutMissingKey) return;
-  warnedAboutMissingKey = true;
-  logger.warn(
-    "SUPABASE_SERVICE_ROLE_KEY not set \u2014 earnings ledger is writing to the local file fallback only (data/earnings.jsonl), which is NOT shared between preview and the published environment. Set SUPABASE_SERVICE_ROLE_KEY and apply migrations/003_earnings.sql so the admin earnings dashboard reflects real data in production."
-  );
-}
-function estimateGainFromRevenue(user_price_fcfa) {
-  const safe = Math.max(0, Math.round(Number(user_price_fcfa) || 0));
-  const gain_fcfa = Math.round(safe * REVENUE_MARGIN_RATIO);
-  const provider_cost_fcfa = safe - gain_fcfa;
-  return { provider_cost_fcfa, gain_fcfa };
-}
-async function appendToSupabase(rec) {
-  try {
-    const r = await fetch(`${SUPABASE_URL2}/rest/v1/earnings`, {
-      method: "POST",
-      headers: supabaseHeaders({ Prefer: "resolution=ignore-duplicates,return=minimal" }),
-      body: JSON.stringify({
-        ts: rec.ts,
-        provider_order_id: String(rec.provider_order_id),
-        user_id: rec.user_id || "",
-        service: rec.service,
-        service_name: rec.service_name || "",
-        quantity: rec.quantity,
-        rate_usd: rec.rate_usd,
-        user_price_fcfa: rec.user_price_fcfa,
-        provider_cost_usd: rec.provider_cost_usd,
-        provider_cost_fcfa: rec.provider_cost_fcfa,
-        gain_fcfa: rec.gain_fcfa,
-        provider: rec.provider ?? 1
-      })
-    });
-    if (!r.ok) {
-      const body = await r.text().catch(() => "");
-      logger.error(
-        { status: r.status, body: body.slice(0, 200), provider_order_id: rec.provider_order_id },
-        "earnings supabase insert failed"
-      );
-      return false;
-    }
-    return true;
-  } catch (err) {
-    logger.error({ err, provider_order_id: rec.provider_order_id }, "earnings supabase insert threw");
-    return false;
-  }
-}
-async function appendToFile(rec) {
-  try {
-    await fs2.mkdir(path2.dirname(FILE), { recursive: true });
-    await fs2.appendFile(FILE, JSON.stringify(rec) + "\n", "utf8");
-    return true;
-  } catch (err) {
-    logger.error({ err, provider_order_id: rec.provider_order_id }, "earnings file fallback also failed");
-    return false;
-  }
-}
-async function appendEarning(rec) {
-  if (supabaseEnabled()) {
-    if (await appendToSupabase(rec)) return;
-    logger.warn(
-      { provider_order_id: rec.provider_order_id },
-      "earnings supabase write failed, falling back to local file (data/earnings.jsonl)"
-    );
-    await appendToFile(rec);
     return;
   }
-  warnOnceNoServiceRole();
-  await appendToFile(rec);
 }
-async function findOwnerInSupabase(providerOrderId, provider) {
+
+// src/lib/smm-pricing.ts
+var cache = {};
+async function loadPricing(providerId = 1) {
+  if (cache[providerId]) return cache[providerId];
   try {
-    const providerFilter = typeof provider === "number" ? `&provider=eq.${provider}` : "";
-    const url = `${SUPABASE_URL2}/rest/v1/earnings?provider_order_id=eq.${encodeURIComponent(providerOrderId)}${providerFilter}&select=user_id&limit=1`;
-    const r = await fetch(url, { headers: supabaseHeaders() });
-    if (!r.ok) {
-      const body = await r.text().catch(() => "");
-      logger.error({ status: r.status, body: body.slice(0, 200) }, "earnings supabase ownership lookup failed");
-      return null;
-    }
-    const rows = await r.json();
-    return rows[0]?.user_id ?? null;
+    const [rows] = await getMysqlPool().execute(
+      "SELECT service_id,price_minor,hidden,featured,updated_at FROM smm_pricing WHERE provider=?",
+      [providerId]
+    );
+    cache[providerId] = Object.fromEntries(rows.map((r) => [String(r.service_id), {
+      price_fcfa: Number(r.price_minor),
+      hidden: Boolean(r.hidden),
+      featured: Boolean(r.featured),
+      updated_at: new Date(r.updated_at).toISOString()
+    }]));
   } catch (err) {
-    logger.error({ err }, "earnings supabase ownership lookup threw");
-    return null;
+    cache[providerId] = {};
+    throw err;
   }
+  return cache[providerId];
 }
-async function findOwnerInFile(providerOrderId, provider) {
-  try {
-    const txt = await fs2.readFile(FILE, "utf8");
-    const lines = txt.split("\n").filter((l) => l.trim());
-    for (const line of lines) {
-      try {
-        const rec = JSON.parse(line);
-        if (rec.provider_order_id !== providerOrderId) continue;
-        if (typeof provider === "number" && (rec.provider ?? 1) !== provider) continue;
-        return rec.user_id;
-      } catch {
-      }
-    }
-  } catch {
-  }
-  return null;
-}
-async function findEarningOwner(providerOrderId, provider) {
-  if (supabaseEnabled()) {
-    const owner = await findOwnerInSupabase(providerOrderId, provider);
-    if (owner) return owner;
-  }
-  return await findOwnerInFile(providerOrderId, provider);
-}
-async function findEarningInSupabase(providerOrderId, provider) {
-  try {
-    const providerFilter = typeof provider === "number" ? `&provider=eq.${provider}` : "";
-    const url = `${SUPABASE_URL2}/rest/v1/earnings?provider_order_id=eq.${encodeURIComponent(providerOrderId)}${providerFilter}&select=*&limit=1`;
-    const r = await fetch(url, { headers: supabaseHeaders() });
-    if (!r.ok) return null;
-    const rows = await r.json();
-    return rows[0] ? rowToRecord(rows[0]) : null;
-  } catch {
-    return null;
-  }
-}
-async function findEarningInFile(providerOrderId, provider) {
-  try {
-    const txt = await fs2.readFile(FILE, "utf8");
-    for (const line of txt.split("\n").filter((l) => l.trim())) {
-      try {
-        const rec = JSON.parse(line);
-        if (rec.provider_order_id !== providerOrderId) continue;
-        if (typeof provider === "number" && (rec.provider ?? 1) !== provider) continue;
-        return rec;
-      } catch {
-      }
-    }
-  } catch {
-  }
-  return null;
-}
-async function findEarning(providerOrderId, provider) {
-  if (supabaseEnabled()) {
-    const r = await findEarningInSupabase(providerOrderId, provider);
-    if (r) return r;
-  }
-  return await findEarningInFile(providerOrderId, provider);
-}
-async function readSupabase() {
-  const out = [];
-  const PAGE_SIZE3 = 1e3;
-  const MAX_PAGES = 1e4;
-  let page = 0;
-  for (; page < MAX_PAGES; page++) {
-    const from = page * PAGE_SIZE3;
-    const to = from + PAGE_SIZE3 - 1;
-    let r;
-    try {
-      r = await fetch(
-        `${SUPABASE_URL2}/rest/v1/earnings?select=*&order=ts.desc`,
-        {
-          headers: {
-            ...supabaseHeaders(),
-            Range: `${from}-${to}`,
-            "Range-Unit": "items"
-          }
-        }
-      );
-    } catch (err) {
-      logger.error({ err }, "earnings supabase read threw");
-      return out;
-    }
-    if (!r.ok && r.status !== 206) {
-      const body = await r.text().catch(() => "");
-      logger.error({ status: r.status, body: body.slice(0, 200) }, "earnings supabase read failed");
-      return out;
-    }
-    const batch = await r.json();
-    for (const r2 of batch) {
-      out.push(rowToRecord(r2));
-    }
-    if (batch.length < PAGE_SIZE3) return out;
-  }
-  logger.error(
-    { rows_loaded: out.length, max_pages: MAX_PAGES, page_size: PAGE_SIZE3 },
-    "earnings supabase read TRUNCATED at MAX_PAGES \u2014 admin journal incomplete; raise MAX_PAGES"
+async function setEntry(serviceId, entry, providerId = 1) {
+  await getMysqlPool().execute(
+    `INSERT INTO smm_pricing (provider,service_id,price_minor,hidden,featured) VALUES (?,?,?,?,?)
+     ON DUPLICATE KEY UPDATE price_minor=VALUES(price_minor),hidden=VALUES(hidden),featured=VALUES(featured)`,
+    [providerId, String(serviceId), Math.round(entry.price_fcfa), Boolean(entry.hidden), Boolean(entry.featured)]
   );
-  return out;
+  cache[providerId] = null;
+  return loadPricing(providerId);
 }
-function rowToRecord(r) {
-  const ts = r["ts"];
-  return {
-    ts: ts instanceof Date ? ts.toISOString() : String(ts ?? ""),
-    provider_order_id: String(r["provider_order_id"] ?? ""),
-    user_id: String(r["user_id"] ?? ""),
-    service: Number(r["service"] ?? 0),
-    service_name: String(r["service_name"] ?? ""),
-    quantity: Number(r["quantity"] ?? 0),
-    rate_usd: Number(r["rate_usd"] ?? 0),
-    user_price_fcfa: Number(r["user_price_fcfa"] ?? 0),
-    provider_cost_usd: Number(r["provider_cost_usd"] ?? 0),
-    provider_cost_fcfa: Number(r["provider_cost_fcfa"] ?? 0),
-    gain_fcfa: Number(r["gain_fcfa"] ?? 0),
-    provider: r["provider"] !== void 0 && r["provider"] !== null ? Number(r["provider"]) : 1
+async function deleteEntry(serviceId, providerId = 1) {
+  await getMysqlPool().execute("DELETE FROM smm_pricing WHERE provider=? AND service_id=?", [providerId, String(serviceId)]);
+  cache[providerId] = null;
+  return loadPricing(providerId);
+}
+var USD_TO_LOCAL_RATES = {
+  peakerr: { XAF: 1e3, XOF: 1111, GMD: 80, CDF: 9e3, GNF: 9e3 },
+  default: { XAF: 900, XOF: 1e3, GMD: 73, CDF: 8100, GNF: 7300 }
+};
+var _usdRatesOverride = null;
+function getUsdRates() {
+  return _usdRatesOverride ?? USD_TO_LOCAL_RATES;
+}
+function setUsdRatesOverride(rates) {
+  _usdRatesOverride = {
+    default: { ...USD_TO_LOCAL_RATES.default, ...rates.default },
+    peakerr: { ...USD_TO_LOCAL_RATES.peakerr, ...rates.peakerr }
   };
 }
-async function readFile() {
-  try {
-    const txt = await fs2.readFile(FILE, "utf8");
-    return txt.split("\n").filter((l) => l.trim()).map((l) => {
-      try {
-        return JSON.parse(l);
-      } catch {
-        return null;
-      }
-    }).filter((r) => r !== null);
-  } catch {
-    return [];
-  }
+function clearUsdRatesOverride() {
+  _usdRatesOverride = null;
 }
-async function readEarnings() {
-  const result = [];
-  const seen = /* @__PURE__ */ new Set();
-  const keyOf = (r) => `${r.provider ?? 1}::${r.provider_order_id}`;
-  const push = (recs) => {
-    for (const r of recs) {
-      if (!r.provider_order_id) continue;
-      const k = keyOf(r);
-      if (seen.has(k)) continue;
-      seen.add(k);
-      result.push(r);
-    }
-  };
-  if (supabaseEnabled()) {
-    push(await readSupabase());
-  } else {
-    warnOnceNoServiceRole();
-  }
-  push(await readFile());
-  result.sort((a, b) => a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0);
-  return result;
+var FCFA_PER_LOCAL = {
+  XAF: 1,
+  XOF: 0.9,
+  GMD: 6.6667,
+  CDF: 0.1111,
+  GNF: 0.0625
+};
+function usdToLocalRate(providerId, currency2) {
+  const effective = getUsdRates();
+  const rates = providerId === 4 ? effective.peakerr : effective.default;
+  const cur = (currency2 ?? "XOF").toUpperCase();
+  return rates[cur] ?? rates["XOF"];
+}
+function usdToFcfaRate(providerId) {
+  return usdToLocalRate(providerId, "XAF");
+}
+function defaultPriceFcfaForCurrency(rateUsd, providerId, currency2) {
+  const cur = (currency2 ?? "XOF").toUpperCase();
+  const localRate = usdToLocalRate(providerId, cur);
+  const fcfaPerUnit = FCFA_PER_LOCAL[cur] ?? 1;
+  return Math.round(Number(rateUsd) * localRate * fcfaPerUnit / 10) * 10;
+}
+function defaultPriceFcfa(rateUsd, providerId) {
+  return defaultPriceFcfaForCurrency(rateUsd, providerId, "XAF");
+}
+async function enrichServices(services, providerId = 1) {
+  const map2 = await loadPricing(providerId);
+  const enriched = services.map((s) => {
+    const override = map2[String(s.service)];
+    const customPrice = override?.price_fcfa;
+    return {
+      ...s,
+      provider: providerId,
+      price_fcfa: typeof customPrice === "number" ? customPrice : defaultPriceFcfa(s.rate, providerId),
+      price_is_custom: typeof customPrice === "number",
+      hidden: !!override?.hidden,
+      featured: !!override?.featured
+    };
+  });
+  return enriched.sort((a, b) => {
+    if (a.featured && !b.featured) return -1;
+    if (!a.featured && b.featured) return 1;
+    return 0;
+  });
 }
 
 // src/lib/smm-providers.ts
@@ -53809,37 +53651,19 @@ var DEFAULT_CONFIG = [
   { provider_id: 4, display_order: 3, enabled: true, header_title: "Peakerr \u2014 Livraison rapide", header_text: "Fournisseur premium \xE0 livraison instantan\xE9e \u2014 id\xE9al pour les commandes urgentes." },
   { provider_id: 5, display_order: 4, enabled: true, header_title: "ExoSupplier", header_text: "Fournisseur ExoSupplier \u2014 large catalogue de services SMM \xE0 tarifs comp\xE9titifs." }
 ];
-var SUPABASE_URL3 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY2 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var cfgCache = null;
 var CFG_TTL_MS = 3e4;
 function invalidateProviderConfigCache() {
   cfgCache = null;
 }
-function srHeaders() {
-  return {
-    apikey: SUPABASE_SERVICE_ROLE_KEY2,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY2}`,
-    "Content-Type": "application/json"
-  };
-}
 async function loadProviderConfig() {
   if (cfgCache && Date.now() - cfgCache.ts < CFG_TTL_MS) return cfgCache.data;
-  if (!SUPABASE_URL3 || !SUPABASE_SERVICE_ROLE_KEY2) {
-    cfgCache = { ts: Date.now(), data: DEFAULT_CONFIG };
-    return DEFAULT_CONFIG;
-  }
   try {
-    const r = await fetch(
-      `${SUPABASE_URL3}/rest/v1/smm_providers_config?select=*&order=display_order.asc`,
-      { headers: srHeaders() }
+    await getMysqlPool().query(
+      "INSERT IGNORE INTO smm_providers_config (provider_id,display_order,enabled,header_title,header_text) VALUES ?",
+      [DEFAULT_CONFIG.map((d) => [d.provider_id, d.display_order, d.enabled, d.header_title, d.header_text])]
     );
-    if (!r.ok) {
-      logger.warn({ status: r.status }, "smm_providers_config read failed \u2014 using defaults");
-      cfgCache = { ts: Date.now(), data: DEFAULT_CONFIG };
-      return DEFAULT_CONFIG;
-    }
-    const rows = await r.json();
+    const [rows] = await getMysqlPool().query("SELECT provider_id,display_order,enabled,header_title,header_text FROM smm_providers_config ORDER BY display_order");
     if (!rows.length) {
       cfgCache = { ts: Date.now(), data: DEFAULT_CONFIG };
       return DEFAULT_CONFIG;
@@ -53852,8 +53676,8 @@ async function loadProviderConfig() {
         const def = byId.get(id);
         byId.set(id, {
           provider_id: id,
-          display_order: typeof row.display_order === "number" ? row.display_order : def.display_order,
-          enabled: typeof row.enabled === "boolean" ? row.enabled : def.enabled,
+          display_order: Number.isFinite(Number(row.display_order)) ? Number(row.display_order) : def.display_order,
+          enabled: row.enabled === void 0 || row.enabled === null ? def.enabled : Boolean(row.enabled),
           header_title: typeof row.header_title === "string" ? row.header_title : def.header_title,
           header_text: typeof row.header_text === "string" ? row.header_text : def.header_text
         });
@@ -53863,35 +53687,24 @@ async function loadProviderConfig() {
     cfgCache = { ts: Date.now(), data };
     return data;
   } catch (err) {
-    logger.warn({ err }, "smm_providers_config load threw \u2014 using defaults");
-    cfgCache = { ts: Date.now(), data: DEFAULT_CONFIG };
-    return DEFAULT_CONFIG;
+    logger.error({ err }, "smm_providers_config load failed");
+    throw err;
   }
 }
 async function updateProviderConfig(providerId, patch) {
-  if (!SUPABASE_URL3 || !SUPABASE_SERVICE_ROLE_KEY2) {
-    return { ok: false, error: "Configuration serveur manquante (SUPABASE_SERVICE_ROLE_KEY)" };
+  const columns = Object.entries(patch).filter(([, v]) => v !== void 0);
+  if (!columns.length) return { ok: true };
+  try {
+    await getMysqlPool().execute(
+      `UPDATE smm_providers_config SET ${columns.map(([k]) => `${k}=?`).join(",")} WHERE provider_id=?`,
+      [...columns.map(([, v]) => v), providerId]
+    );
+    invalidateProviderConfigCache();
+    return { ok: true };
+  } catch (err) {
+    logger.error({ err, providerId }, "smm provider config update failed");
+    return { ok: false, error: "Mise \xE0 jour impossible" };
   }
-  const body = {};
-  if (typeof patch.display_order === "number") body["display_order"] = patch.display_order;
-  if (typeof patch.enabled === "boolean") body["enabled"] = patch.enabled;
-  if (typeof patch.header_title === "string") body["header_title"] = patch.header_title;
-  if (typeof patch.header_text === "string") body["header_text"] = patch.header_text;
-  if (Object.keys(body).length === 0) return { ok: true };
-  const r = await fetch(
-    `${SUPABASE_URL3}/rest/v1/smm_providers_config?provider_id=eq.${providerId}`,
-    {
-      method: "PATCH",
-      headers: { ...srHeaders(), Prefer: "return=minimal" },
-      body: JSON.stringify(body)
-    }
-  );
-  if (!r.ok) {
-    const txt = await r.text().catch(() => "");
-    return { ok: false, error: `${r.status}: ${txt.slice(0, 200)}` };
-  }
-  invalidateProviderConfigCache();
-  return { ok: true };
 }
 
 // src/lib/smm-status.ts
@@ -53919,27 +53732,69 @@ function isSupportedServiceType(t) {
   return SUPPORTED_SERVICE_TYPES.has(v);
 }
 
-// src/routes/smm.ts
-var router2 = (0, import_express2.Router)();
-var SUPABASE_URL4 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_ANON_KEY2 = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
-var SUPABASE_SERVICE_ROLE_KEY3 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-function serviceRoleHeaders() {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY3;
+// src/lib/earnings.ts
+import { randomUUID } from "node:crypto";
+var COST_FCFA_PER_USD = 600;
+var USER_FCFA_PER_USD = 700;
+function estimateGainFromRevenue(user_price_fcfa) {
+  const safe = Math.max(0, Math.round(Number(user_price_fcfa) || 0));
+  const gain_fcfa = Math.round(safe * (USER_FCFA_PER_USD - COST_FCFA_PER_USD) / USER_FCFA_PER_USD);
+  return { provider_cost_fcfa: safe - gain_fcfa, gain_fcfa };
+}
+function record(row) {
   return {
-    apikey: key2,
-    Authorization: `Bearer ${key2}`,
-    "Content-Type": "application/json",
-    Prefer: "return=representation"
+    ts: new Date(row.created_at).toISOString(),
+    provider_order_id: String(row.provider_order_id),
+    user_id: String(row.user_id),
+    service: Number(row.service),
+    service_name: String(row.service_name),
+    quantity: Number(row.quantity),
+    rate_usd: Number(row.rate_usd),
+    user_price_fcfa: Number(row.user_price_minor) / 100,
+    provider_cost_usd: Number(row.provider_cost_usd),
+    provider_cost_fcfa: Number(row.provider_cost_minor) / 100,
+    gain_fcfa: Number(row.gain_minor) / 100,
+    provider: Number(row.provider)
   };
 }
-if (!SUPABASE_URL4 || !SUPABASE_ANON_KEY2) {
-  logger.warn(
-    "Supabase is not configured for SMM orders: set SUPABASE_URL (or VITE_SUPABASE_URL) and SUPABASE_ANON_KEY (or VITE_SUPABASE_ANON_KEY) as server secrets. Order requests will return HTTP 503 until these are provided."
+async function appendEarning(rec) {
+  await getMysqlPool().execute(
+    `INSERT INTO earnings (id,user_id,order_id,provider_order_id,service,service_name,quantity,rate_usd,user_price_minor,provider_cost_usd,provider_cost_minor,gain_minor,currency,provider,created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+     ON DUPLICATE KEY UPDATE provider_order_id=provider_order_id`,
+    [
+      randomUUID(),
+      rec.user_id,
+      rec.order_id ?? null,
+      String(rec.provider_order_id),
+      rec.service,
+      rec.service_name || "",
+      rec.quantity,
+      rec.rate_usd,
+      Math.round(rec.user_price_fcfa * 100),
+      rec.provider_cost_usd,
+      Math.round(rec.provider_cost_fcfa * 100),
+      Math.round(rec.gain_fcfa * 100),
+      rec.currency ?? "XOF",
+      rec.provider ?? 1,
+      new Date(rec.ts)
+    ]
   );
 }
+async function readEarnings() {
+  const [rows] = await getMysqlPool().query("SELECT * FROM earnings ORDER BY created_at DESC");
+  return rows.map(record);
+}
+
+// src/routes/smm.ts
+var router2 = (0, import_express2.Router)();
 var CACHE_TTL_MS = 30 * 6e4;
 var svcCache = /* @__PURE__ */ new Map();
+var enrichedCache = /* @__PURE__ */ new Map();
+var orderHits = /* @__PURE__ */ new Map();
+var COUNTRY_TO_CURRENCY = { BJ: "XOF", BF: "XOF", CI: "XOF", GW: "XOF", ML: "XOF", NE: "XOF", SN: "XOF", TG: "XOF", CM: "XAF", CF: "XAF", TD: "XAF", CG: "XAF", GQ: "XAF", GA: "XAF", CD: "CDF", GN: "GNF", GM: "GMD" };
+var fcfaToMinor = (value) => Math.round(value * 100);
+var minorToFcfa = (value) => Number(value || 0) / 100;
 async function getRawServices(providerId) {
   const hit = svcCache.get(providerId);
   if (hit && Date.now() - hit.ts < CACHE_TTL_MS) return hit.data;
@@ -53947,161 +53802,108 @@ async function getRawServices(providerId) {
   svcCache.set(providerId, { ts: Date.now(), data });
   return data;
 }
-var enrichedCache = /* @__PURE__ */ new Map();
-var enrichedInflight = /* @__PURE__ */ new Map();
 async function getEnrichedServices(providerId) {
   const hit = enrichedCache.get(providerId);
   if (hit && Date.now() - hit.ts < CACHE_TTL_MS) return hit;
-  const ongoing = enrichedInflight.get(providerId);
-  if (ongoing) return ongoing;
-  const p = (async () => {
-    const raw = await getRawServices(providerId);
-    const enriched = await enrichServices(raw, providerId);
-    const services = enriched.filter(
-      (s) => !s.hidden && isSupportedServiceType(s.type)
-    );
-    const etag = `"${providerId}-${Date.now()}"`;
-    const entry = { ts: Date.now(), services, etag };
-    enrichedCache.set(providerId, entry);
-    return entry;
-  })().finally(() => enrichedInflight.delete(providerId));
-  enrichedInflight.set(providerId, p);
-  return p;
+  const services = (await enrichServices(await getRawServices(providerId), providerId)).filter((s) => !s.hidden && isSupportedServiceType(s.type));
+  const result = { ts: Date.now(), services, etag: `"${providerId}-${Date.now()}"` };
+  enrichedCache.set(providerId, result);
+  return result;
 }
 async function warmServicesCache() {
-  for (const pid of ALL_PROVIDER_IDS) {
-    try {
-      await getEnrichedServices(pid);
-      logger.info({ providerId: pid }, "services cache warmed");
-    } catch (err) {
-      logger.warn({ err, providerId: pid }, "services cache warm failed");
-    }
+  for (const id of ALL_PROVIDER_IDS) try {
+    await getEnrichedServices(id);
+  } catch (err) {
+    logger.warn({ err, id }, "services cache warm failed");
   }
 }
-var orderHits = /* @__PURE__ */ new Map();
 function rateLimitOrders(req, res, next) {
-  const key2 = req.userId || req.ip || "anon";
-  const now = Date.now();
-  const entry = orderHits.get(key2);
-  if (!entry || entry.resetAt < now) {
+  const key2 = req.userId || req.ip || "anon", now = Date.now(), hit = orderHits.get(key2);
+  if (!hit || hit.resetAt < now) {
     orderHits.set(key2, { count: 1, resetAt: now + 6e4 });
     return next();
   }
-  if (entry.count >= 10) {
-    return res.status(429).json({ error: "Trop de commandes, r\xE9essayez dans 1 minute" });
-  }
-  entry.count += 1;
+  if (hit.count >= 10) return res.status(429).json({ error: "Trop de commandes, r\xE9essayez dans 1 minute" });
+  hit.count++;
   next();
 }
-function supabaseHeaders2(userToken) {
-  return {
-    apikey: SUPABASE_ANON_KEY2,
-    Authorization: `Bearer ${userToken}`,
-    "Content-Type": "application/json",
-    Prefer: "return=representation"
-  };
+async function profile(userId) {
+  const [rows] = await getMysqlPool().execute("SELECT country, currency, balance_minor FROM profiles WHERE user_id = ? LIMIT 1", [userId]);
+  return rows[0] ?? null;
 }
-function serviceWriteHeaders() {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY3 || SUPABASE_ANON_KEY2;
-  return {
-    apikey: key2,
-    Authorization: `Bearer ${key2}`,
-    "Content-Type": "application/json",
-    Prefer: "return=representation"
-  };
+function currency(country, configured) {
+  return configured || (country ? COUNTRY_TO_CURRENCY[country.toUpperCase()] : void 0) || "XOF";
 }
-var COUNTRY_TO_CURRENCY = {
-  BJ: "XOF",
-  BF: "XOF",
-  CI: "XOF",
-  GW: "XOF",
-  ML: "XOF",
-  NE: "XOF",
-  SN: "XOF",
-  TG: "XOF",
-  CM: "XAF",
-  CF: "XAF",
-  TD: "XAF",
-  CG: "XAF",
-  GQ: "XAF",
-  GA: "XAF",
-  CD: "CDF",
-  GN: "GNF",
-  GM: "GMD"
-};
-function countryToCurrency(country) {
-  if (!country) return "XOF";
-  return COUNTRY_TO_CURRENCY[country.toUpperCase()] ?? "XOF";
+function orderView(row) {
+  return { ...row, price: minorToFcfa(row.charge_minor), balance_before: row.balance_before_minor == null ? null : minorToFcfa(row.balance_before_minor), balance_after: row.balance_after_minor == null ? null : minorToFcfa(row.balance_after_minor), external_order_id: row.external_order_id ?? row.provider_order_id };
 }
-async function getUserCountry(userId, userToken) {
+async function refundOrderAtomic(orderId, requestedMinor) {
+  const conn = await getMysqlPool().getConnection();
   try {
-    const url = `${SUPABASE_URL4}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=country&limit=1`;
-    const r = await fetch(url, { headers: supabaseHeaders2(userToken) });
-    if (!r.ok) return null;
-    const rows = await r.json();
-    return rows[0]?.country ?? null;
-  } catch {
-    return null;
+    await conn.beginTransaction();
+    const [orders] = await conn.execute("SELECT * FROM orders WHERE id = ? FOR UPDATE", [orderId]);
+    const order = orders[0];
+    if (!order || order.refunded_at) {
+      await conn.rollback();
+      return { refunded: false, amountMinor: 0 };
+    }
+    const amount = Math.max(0, Math.min(Math.round(requestedMinor ?? Number(order.charge_minor)), Number(order.charge_minor)));
+    if (!amount) {
+      await conn.rollback();
+      return { refunded: false, amountMinor: 0 };
+    }
+    const [profiles] = await conn.execute("SELECT balance_minor FROM profiles WHERE user_id = ? FOR UPDATE", [order.user_id]);
+    if (!profiles[0]) throw new Error("Profile introuvable");
+    const before = Number(profiles[0].balance_minor), after = before + amount, now = /* @__PURE__ */ new Date();
+    await conn.execute("UPDATE profiles SET balance_minor = ? WHERE user_id = ?", [after, order.user_id]);
+    await conn.execute("UPDATE orders SET refunded_at = ?, refunded_amount_minor = ? WHERE id = ?", [now, amount, order.id]);
+    await conn.execute("INSERT INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?,?,'refund','order',?)", [crypto3.randomUUID(), order.user_id, amount, after, order.currency, order.id]);
+    await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason) VALUES (?,?,?,'smm_order_refund')", [order.user_id, before, after]);
+    await conn.commit();
+    return { refunded: true, amountMinor: amount, newBalanceMinor: after, userId: String(order.user_id) };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
 }
-async function getUserBalance(userId, userToken) {
-  const url = `${SUPABASE_URL4}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=balance`;
-  const r = await fetch(url, { headers: supabaseHeaders2(userToken) });
-  if (!r.ok) return null;
-  const rows = await r.json();
-  if (!rows || rows.length === 0) return null;
-  return Number(rows[0].balance);
-}
-async function debitBalance(userId, userToken, currentBalance, amount) {
-  const newBalance = currentBalance - amount;
-  const url = `${SUPABASE_URL4}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&balance=eq.${currentBalance}`;
-  const r = await fetch(url, {
-    method: "PATCH",
-    headers: serviceWriteHeaders(),
-    body: JSON.stringify({ balance: newBalance })
-  });
-  if (!r.ok) return null;
-  const rows = await r.json();
-  if (!rows || rows.length === 0) return null;
-  return Number(rows[0].balance);
-}
-async function refundBalance(userId, userToken, amount) {
-  const MAX_ATTEMPTS = 5;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const current = await getUserBalance(userId, userToken);
-    if (current === null) {
-      logger.error({ userId }, "refund: could not read balance");
-      return;
-    }
-    const newBalance = current + amount;
-    const url = `${SUPABASE_URL4}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&balance=eq.${current}`;
-    const r = await fetch(url, {
-      method: "PATCH",
-      headers: serviceWriteHeaders(),
-      body: JSON.stringify({ balance: newBalance })
-    });
-    if (!r.ok) {
-      logger.error({ userId, attempt }, "refund: PATCH request failed");
-      return;
-    }
-    const rows = await r.json();
-    if (rows && rows.length > 0) return;
-    await new Promise((resolve) => setTimeout(resolve, 10 * (attempt + 1)));
+async function debitAndCreate(input) {
+  const conn = await getMysqlPool().getConnection(), id = crypto3.randomUUID();
+  try {
+    await conn.beginTransaction();
+    const [profiles] = await conn.execute("SELECT balance_minor FROM profiles WHERE user_id = ? FOR UPDATE", [input.userId]);
+    const p = profiles[0];
+    if (!p) throw Object.assign(new Error("Profil introuvable"), { code: "PROFILE" });
+    const before = Number(p.balance_minor);
+    if (before < input.chargeMinor) throw Object.assign(new Error("Solde insuffisant. Rechargez votre compte."), { code: "FUNDS" });
+    const after = before - input.chargeMinor;
+    await conn.execute("UPDATE profiles SET balance_minor = ? WHERE user_id = ?", [after, input.userId]);
+    await conn.execute(`INSERT INTO orders (id,user_id,provider,service_id,service_name,service_category,link,quantity,charge_minor,currency,balance_before_minor,balance_after_minor,client_request_id,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 'pending')`, [id, input.userId, input.provider, String(input.service), input.name, input.category, input.link, input.quantity, input.chargeMinor, input.currency, before, after, input.clientRequestId]);
+    await conn.execute("INSERT INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?,?,'order_debit','order',?)", [crypto3.randomUUID(), input.userId, -input.chargeMinor, after, input.currency, id]);
+    await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason) VALUES (?,?,?,'smm_order_debit')", [input.userId, before, after]);
+    await conn.commit();
+    return { id, before, after };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
-  logger.error({ userId }, "refund: exhausted CAS retries, balance may not be restored");
+}
+async function compensateFailedPlacement(orderId) {
+  await getMysqlPool().execute("UPDATE orders SET status = 'failed' WHERE id = ?", [orderId]);
+  try {
+    await refundOrderAtomic(orderId);
+  } catch (err) {
+    logger.error({ err, orderId }, "order placement compensation deferred to refund scanner");
+  }
 }
 router2.get("/smm/providers", async (_req, res) => {
   try {
     const cfg = await loadProviderConfig();
-    const visible = cfg.filter((p) => p.enabled && getProvider(p.provider_id)?.configured).map((p) => ({
-      provider_id: p.provider_id,
-      display_order: p.display_order,
-      header_title: p.header_title,
-      header_text: p.header_text
-    }));
-    res.json({ providers: visible });
+    res.json({ providers: cfg.filter((p) => p.enabled && getProvider(p.provider_id)?.configured).map((p) => ({ provider_id: p.provider_id, display_order: p.display_order, header_title: p.header_title, header_text: p.header_text })) });
   } catch (err) {
-    logger.error({ err }, "smm providers list error");
     res.status(500).json({ error: err.message });
   }
 });
@@ -54109,548 +53911,249 @@ router2.get("/smm/currency-rates", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ usd_rates: getUsdRates() });
 });
-var popularCache = /* @__PURE__ */ new Map();
-var POPULAR_TTL_MS = 10 * 6e4;
 router2.get("/smm/popular-services", async (req, res) => {
-  const providerId = parseProviderId(req.query["provider"]);
-  const cached = popularCache.get(providerId);
-  if (cached && Date.now() - cached.ts < POPULAR_TTL_MS) {
-    res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
-    return res.json({ scores: cached.scores, provider: providerId });
-  }
-  if (!SUPABASE_URL4 || !SUPABASE_SERVICE_ROLE_KEY3) {
-    return res.json({ scores: {}, provider: providerId });
-  }
+  const provider = parseProviderId(req.query["provider"]);
   try {
-    const url = `${SUPABASE_URL4}/rest/v1/orders?select=service_name&status=eq.completed&provider=eq.${providerId}&order=created_at.desc&limit=2000`;
-    const r = await fetch(url, {
-      headers: { ...serviceRoleHeaders(), Range: "0-1999", "Range-Unit": "items" }
-    });
-    if (!r.ok) {
-      logger.warn({ status: r.status, providerId }, "popular-services: orders fetch failed");
-      return res.json({ scores: {}, provider: providerId });
-    }
-    const rows = await r.json();
+    const [rows] = await getMysqlPool().execute("SELECT service_name FROM orders WHERE provider = ? AND status = 'completed' ORDER BY created_at DESC LIMIT 2000", [provider]);
     const scores = {};
-    for (const row of rows) {
-      const key2 = (row.service_name ?? "").trim().toLowerCase();
-      if (key2) scores[key2] = (scores[key2] ?? 0) + 1;
-    }
-    popularCache.set(providerId, { ts: Date.now(), scores });
-    res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
-    return res.json({ scores, provider: providerId });
+    rows.forEach((r) => {
+      const k = String(r.service_name || "").trim().toLowerCase();
+      if (k) scores[k] = (scores[k] || 0) + 1;
+    });
+    res.json({ scores, provider });
   } catch (err) {
-    logger.error({ err, providerId }, "popular-services error");
-    return res.json({ scores: {}, provider: providerId });
+    logger.error({ err }, "popular-services failed");
+    res.json({ scores: {}, provider });
   }
 });
 router2.get("/smm/services", async (req, res) => {
-  const providerId = parseProviderId(req.query["provider"]);
+  const provider = parseProviderId(req.query["provider"]);
   try {
-    const { services, etag } = await getEnrichedServices(providerId);
+    const data = await getEnrichedServices(provider);
     res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=1800");
-    res.setHeader("ETag", etag);
-    if (req.headers["if-none-match"] === etag) {
-      res.sendStatus(304);
-      return;
-    }
-    res.json({ services, provider: providerId });
+    res.setHeader("ETag", data.etag);
+    if (req.headers["if-none-match"] === data.etag) return res.sendStatus(304);
+    return res.json({ services: data.services, provider });
   } catch (err) {
-    logger.error({ err, providerId }, "SMM services error");
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 router2.get("/smm/balance", requireUser, requireAdmin, async (req, res) => {
-  const providerId = parseProviderId(req.query["provider"]);
+  const provider = parseProviderId(req.query["provider"]);
   try {
-    const data = await callProvider(providerId, "balance");
-    res.json({ ...data, provider: providerId });
+    res.json({ ...await callProvider(provider, "balance"), provider });
   } catch (err) {
-    logger.error({ err, providerId }, "SMM balance error");
     res.status(500).json({ error: err.message });
   }
 });
 router2.post("/smm/order", requireUser, rateLimitOrders, async (req, res) => {
-  const { service, link, quantity, provider } = req.body || {};
-  const providerId = parseProviderId(provider);
-  const serviceNum = Number(service);
-  const qtyNum = Number(quantity);
-  const linkStr = typeof link === "string" ? link.trim() : "";
-  if (!Number.isInteger(serviceNum) || serviceNum <= 0) {
-    return res.status(400).json({ error: "service invalide" });
-  }
-  if (!Number.isInteger(qtyNum) || qtyNum < 1 || qtyNum > 1e7) {
-    return res.status(400).json({ error: "quantity invalide (1 \u2014 10 000 000)" });
-  }
-  if (!linkStr || linkStr.length < 5 || linkStr.length > 500 || !/^https?:\/\//i.test(linkStr)) {
-    return res.status(400).json({ error: "link doit \xEAtre une URL http(s) valide" });
-  }
-  const providerRuntime = getProvider(providerId);
-  if (!providerRuntime?.configured) {
-    return res.status(400).json({ error: `Fournisseur SMM #${providerId} non configur\xE9` });
-  }
-  const cfgList = await loadProviderConfig();
-  const cfgRow = cfgList.find((c) => c.provider_id === providerId);
-  if (cfgRow && cfgRow.enabled === false) {
-    return res.status(403).json({ error: `Fournisseur SMM #${providerId} actuellement d\xE9sactiv\xE9` });
-  }
-  const userId = req.userId;
-  const userToken = req.userToken;
-  if (!SUPABASE_URL4 || !SUPABASE_ANON_KEY2) {
-    logger.error("SMM order rejected: Supabase env vars missing");
-    return res.status(503).json({ error: "Service temporairement indisponible \u2014 configuration serveur incompl\xE8te" });
-  }
+  const { service, link, quantity, provider } = req.body || {}, providerId = parseProviderId(provider), serviceNum = Number(service), qty = Number(quantity), linkStr = typeof link === "string" ? link.trim() : "";
+  const suppliedRequestId = typeof req.body?.client_request_id === "string" ? req.body.client_request_id.trim() : "";
+  const clientRequestId = suppliedRequestId || crypto3.randomUUID();
+  if (!/^[A-Za-z0-9_-]{16,128}$/.test(clientRequestId)) return res.status(400).json({ error: "client_request_id invalide" });
+  if (!Number.isInteger(serviceNum) || serviceNum <= 0) return res.status(400).json({ error: "service invalide" });
+  if (!Number.isInteger(qty) || qty < 1 || qty > 1e7) return res.status(400).json({ error: "quantity invalide (1 \u2014 10 000 000)" });
+  if (!/^https?:\/\//i.test(linkStr) || linkStr.length > 500) return res.status(400).json({ error: "link doit \xEAtre une URL http(s) valide" });
+  if (!getProvider(providerId)?.configured) return res.status(400).json({ error: `Fournisseur SMM #${providerId} non configur\xE9` });
   try {
-    const raw = await getRawServices(providerId);
-    const svc = raw.find((s) => Number(s.service) === serviceNum);
-    if (!svc) {
-      return res.status(404).json({ error: "Service introuvable" });
+    const [existingRows] = await getMysqlPool().execute("SELECT * FROM orders WHERE user_id=? AND client_request_id=? LIMIT 1", [req.userId, clientRequestId]);
+    if (existingRows[0]) {
+      const existing = existingRows[0];
+      return res.json({ order: existing.provider_order_id ?? existing.external_order_id ?? void 0, provider: Number(existing.provider), local_order_id: String(existing.id), status: String(existing.status), reused: true });
     }
-    if (!isSupportedServiceType(svc.type)) {
-      return res.status(400).json({
-        error: "Type de service non support\xE9 (param\xE8tres additionnels requis)"
-      });
-    }
-    const pricingMap = await loadPricing(providerId);
-    const override = pricingMap[String(serviceNum)];
-    if (override?.hidden) {
-      return res.status(403).json({ error: "Service non disponible" });
-    }
-    const userCountry = await getUserCountry(userId, userToken);
-    const userCurrency = countryToCurrency(userCountry);
-    const pricePerK = typeof override?.price_fcfa === "number" ? override.price_fcfa : defaultPriceFcfaForCurrency(svc.rate, providerId, userCurrency);
-    const totalPrice = Math.ceil(qtyNum / 1e3 * pricePerK);
-    const currentBalance = await getUserBalance(userId, userToken);
-    if (currentBalance === null) {
-      return res.status(500).json({ error: "Impossible de lire votre solde" });
-    }
-    if (currentBalance < totalPrice) {
-      return res.status(402).json({ error: "Solde insuffisant. Rechargez votre compte." });
-    }
-    const newBalance = await debitBalance(userId, userToken, currentBalance, totalPrice);
-    if (newBalance === null) {
-      return res.status(409).json({ error: "Solde modifi\xE9 entre-temps, veuillez r\xE9essayer." });
+    const config2 = (await loadProviderConfig()).find((c) => c.provider_id === providerId);
+    if (config2 && !config2.enabled) return res.status(403).json({ error: `Fournisseur SMM #${providerId} actuellement d\xE9sactiv\xE9` });
+    const svc = (await getRawServices(providerId)).find((s) => Number(s.service) === serviceNum);
+    if (!svc) return res.status(404).json({ error: "Service introuvable" });
+    if (!isSupportedServiceType(svc.type)) return res.status(400).json({ error: "Type de service non support\xE9 (param\xE8tres additionnels requis)" });
+    const override = (await loadPricing(providerId))[String(serviceNum)];
+    if (override?.hidden) return res.status(403).json({ error: "Service non disponible" });
+    const p = await profile(req.userId);
+    if (!p) return res.status(500).json({ error: "Impossible de lire votre solde" });
+    const priceFcfa = typeof override?.price_fcfa === "number" ? override.price_fcfa : defaultPriceFcfaForCurrency(svc.rate, providerId, currency(p.country, p.currency));
+    const totalFcfa = Math.ceil(qty / 1e3 * priceFcfa), chargeMinor = fcfaToMinor(totalFcfa);
+    let created;
+    try {
+      created = await debitAndCreate({ userId: req.userId, provider: providerId, service: serviceNum, name: String(svc.name ?? serviceNum), category: String(svc.category ?? ""), link: linkStr, quantity: qty, chargeMinor, currency: currency(p.country, p.currency), clientRequestId });
+    } catch (err) {
+      if (err?.code === "ER_DUP_ENTRY") {
+        const [duplicate] = await getMysqlPool().execute("SELECT * FROM orders WHERE user_id=? AND client_request_id=? LIMIT 1", [req.userId, clientRequestId]);
+        if (duplicate[0]) return res.json({ order: duplicate[0].provider_order_id ?? duplicate[0].external_order_id ?? void 0, provider: Number(duplicate[0].provider), local_order_id: String(duplicate[0].id), status: String(duplicate[0].status), reused: true });
+      }
+      return res.status(err.code === "FUNDS" ? 402 : 500).json({ error: err.message });
     }
     let providerData;
     try {
-      providerData = await callProvider(providerId, "add", { service: serviceNum, link: linkStr, quantity: qtyNum });
-    } catch (providerErr) {
-      logger.error({ err: providerErr, userId, providerId }, "SMM provider call failed \u2014 refunding");
-      await refundBalance(userId, userToken, totalPrice);
-      return res.status(502).json({ error: "Le fournisseur n'a pas accept\xE9 la commande" });
+      providerData = await callProvider(providerId, "add", { service: serviceNum, link: linkStr, quantity: qty });
+    } catch (err) {
+      await getMysqlPool().execute("UPDATE orders SET status='reconciliation_required' WHERE id=?", [created.id]);
+      logger.warn({ err, orderId: created.id, providerId }, "provider submission outcome unknown; retained for reconciliation");
+      return res.status(202).json({ error: "Soumission en cours de v\xE9rification; votre solde reste r\xE9serv\xE9.", provider: providerId, local_order_id: created.id, status: "reconciliation_required" });
     }
     if (providerData?.error) {
-      logger.warn({ providerData, userId, providerId }, "SMM provider returned error body \u2014 refunding");
-      await refundBalance(userId, userToken, totalPrice);
-      const rawMsg = String(providerData.error || "");
-      const isInsufficientFunds = /not\s*enough\s*funds|insufficient\s*(funds|balance)|solde\s*insuffisant/i.test(rawMsg);
-      if (isInsufficientFunds) {
-        return res.status(503).json({
-          error: "SERVICE MOMENTAN\xC9MENT INDISPONIBLE VEILLEZ CHANGER DE FOURNISSEURS",
-          provider_unavailable: true
-        });
-      }
-      return res.status(502).json({ error: rawMsg || "Le fournisseur n'a pas accept\xE9 la commande" });
+      await compensateFailedPlacement(created.id);
+      const msg2 = String(providerData.error);
+      return res.status(/not\s*enough\s*funds|insufficient\s*(funds|balance)|solde\s*insuffisant/i.test(msg2) ? 503 : 502).json(/not\s*enough\s*funds|insufficient\s*(funds|balance)|solde\s*insuffisant/i.test(msg2) ? { error: "SERVICE MOMENTAN\xC9MENT INDISPONIBLE VEILLEZ CHANGER DE FOURNISSEURS", provider_unavailable: true } : { error: msg2 || "Le fournisseur n'a pas accept\xE9 la commande" });
     }
-    const externalOrderId = String(providerData.order ?? providerData.id ?? "");
-    let localOrderId = null;
-    if (SUPABASE_URL4) {
-      try {
-        const insertHeaders = SUPABASE_SERVICE_ROLE_KEY3 ? serviceRoleHeaders() : supabaseHeaders2(userToken);
-        const insRes = await fetch(`${SUPABASE_URL4}/rest/v1/orders`, {
-          method: "POST",
-          headers: insertHeaders,
-          body: JSON.stringify({
-            user_id: userId,
-            service_name: String(svc.name ?? serviceNum),
-            service_category: String(svc.category ?? ""),
-            link: linkStr,
-            quantity: qtyNum,
-            price: totalPrice,
-            status: "processing",
-            external_order_id: externalOrderId,
-            provider: providerId,
-            balance_before: currentBalance,
-            balance_after: newBalance
-          })
-        });
-        if (insRes.ok) {
-          const rows = await insRes.json();
-          localOrderId = rows[0]?.id ?? null;
-          logger.info({ userId, externalOrderId, localOrderId, providerId }, "order: local record saved");
-        } else {
-          const txt = await insRes.text().catch(() => "");
-          logger.error(
-            { status: insRes.status, body: txt.slice(0, 300), userId, externalOrderId },
-            "order: local insert failed \u2014 order IS placed at provider, balance debited"
-          );
-        }
-      } catch (insErr) {
-        logger.error(
-          { err: insErr, userId, externalOrderId },
-          "order: local insert exception \u2014 order IS placed at provider, balance debited"
-        );
-      }
+    const external = String(providerData.order ?? providerData.id ?? "");
+    if (!external) {
+      await getMysqlPool().execute("UPDATE orders SET status='reconciliation_required' WHERE id=?", [created.id]);
+      return res.status(202).json({ error: "R\xE9ponse fournisseur ambigu\xEB; commande en v\xE9rification.", provider: providerId, local_order_id: created.id, status: "reconciliation_required" });
     }
-    res.json({ ...providerData, provider: providerId, local_order_id: localOrderId });
+    await getMysqlPool().execute("UPDATE orders SET provider_order_id=?, external_order_id=?, status='processing' WHERE id=?", [external, external, created.id]);
+    return res.json({ ...providerData, provider: providerId, local_order_id: created.id });
   } catch (err) {
-    logger.error({ err, userId, providerId }, "SMM order error");
-    res.status(500).json({ error: "Erreur interne lors de la commande" });
+    logger.error({ err, userId: req.userId, providerId }, "SMM order error");
+    return res.status(500).json({ error: "Erreur interne lors de la commande" });
   }
 });
 router2.get("/smm/user-orders", requireUser, async (req, res) => {
-  if (!SUPABASE_URL4) return res.json([]);
   try {
-    const userId = req.userId;
-    const hdrs = SUPABASE_SERVICE_ROLE_KEY3 ? serviceRoleHeaders() : supabaseHeaders2(req.userToken);
-    const r = await fetch(
-      `${SUPABASE_URL4}/rest/v1/orders?user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`,
-      { headers: hdrs }
-    );
-    if (!r.ok) {
-      const body = await r.text().catch(() => "");
-      req.log.error({ status: r.status, body: body.slice(0, 200), usingServiceRole: !!SUPABASE_SERVICE_ROLE_KEY3 }, "user-orders: supabase error");
-      return res.json([]);
-    }
-    const data = await r.json();
-    req.log.info({ count: Array.isArray(data) ? data.length : -1, usingServiceRole: !!SUPABASE_SERVICE_ROLE_KEY3 }, "user-orders: ok");
-    res.json(Array.isArray(data) ? data : []);
+    const [rows] = await getMysqlPool().execute("SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC", [req.userId]);
+    res.json(rows.map(orderView));
   } catch (err) {
-    req.log.error({ err }, "user-orders: exception");
+    req.log.error({ err }, "user-orders failed");
     res.json([]);
   }
 });
 router2.get("/smm/user-payments", requireUser, async (req, res) => {
-  if (!SUPABASE_URL4) return res.json([]);
   try {
-    const userId = req.userId;
-    const hdrs = SUPABASE_SERVICE_ROLE_KEY3 ? serviceRoleHeaders() : supabaseHeaders2(req.userToken);
-    const r = await fetch(
-      `${SUPABASE_URL4}/rest/v1/payments?user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`,
-      { headers: hdrs }
-    );
-    if (!r.ok) {
-      const body = await r.text().catch(() => "");
-      req.log.error({ status: r.status, body: body.slice(0, 200), usingServiceRole: !!SUPABASE_SERVICE_ROLE_KEY3 }, "user-payments: supabase error");
-      return res.json([]);
-    }
-    const data = await r.json();
-    req.log.info({ count: Array.isArray(data) ? data.length : -1, usingServiceRole: !!SUPABASE_SERVICE_ROLE_KEY3 }, "user-payments: ok");
-    res.json(Array.isArray(data) ? data : []);
+    const [rows] = await getMysqlPool().execute("SELECT *, amount_minor / 100 AS amount, fee_minor / 100 AS fee, bonus_amount_minor / 100 AS bonus_amount, charge_minor / 100 AS charge FROM payments WHERE user_id=? ORDER BY created_at DESC", [req.userId]);
+    res.json(rows);
   } catch (err) {
-    req.log.error({ err }, "user-payments: exception");
+    req.log.error({ err }, "user-payments failed");
     res.json([]);
   }
 });
 router2.get("/smm/quote", requireUser, async (req, res) => {
-  const providerId = parseProviderId(req.query["provider"]);
-  const serviceNum = Number(req.query["service"]);
-  const qtyNum = Number(req.query["quantity"]);
-  if (!Number.isInteger(serviceNum) || serviceNum <= 0) {
-    return res.status(400).json({ error: "service invalide" });
-  }
-  if (!Number.isInteger(qtyNum) || qtyNum < 1) {
-    return res.status(400).json({ error: "quantity invalide" });
-  }
+  const provider = parseProviderId(req.query["provider"]), service = Number(req.query["service"]), quantity = Number(req.query["quantity"]);
+  if (!Number.isInteger(service) || service <= 0) return res.status(400).json({ error: "service invalide" });
+  if (!Number.isInteger(quantity) || quantity < 1) return res.status(400).json({ error: "quantity invalide" });
   try {
-    const raw = await getRawServices(providerId);
-    const svc = raw.find((s) => Number(s.service) === serviceNum);
+    const svc = (await getRawServices(provider)).find((s) => Number(s.service) === service);
     if (!svc) return res.status(404).json({ error: "service introuvable" });
-    const map = await loadPricing(providerId);
-    const override = map[String(serviceNum)];
-    if (override?.hidden) return res.status(403).json({ error: "Service non disponible" });
-    const quoterCountry = await getUserCountry(req.userId, req.userToken);
-    const quoterCurrency = countryToCurrency(quoterCountry);
-    const pricePerK = typeof override?.price_fcfa === "number" ? override.price_fcfa : defaultPriceFcfaForCurrency(svc.rate, providerId, quoterCurrency);
-    const total = Math.ceil(qtyNum / 1e3 * pricePerK);
-    res.json({
-      service: serviceNum,
-      provider: providerId,
-      quantity: qtyNum,
-      price_per_1000_fcfa: pricePerK,
-      total_fcfa: total,
-      price_is_custom: typeof override?.price_fcfa === "number"
-    });
+    const ov = (await loadPricing(provider))[String(service)];
+    if (ov?.hidden) return res.status(403).json({ error: "Service non disponible" });
+    const p = await profile(req.userId);
+    const custom = typeof ov?.price_fcfa === "number";
+    const per = custom ? ov.price_fcfa : defaultPriceFcfaForCurrency(svc.rate, provider, currency(p?.country ?? null, p?.currency ?? null));
+    return res.json({ service, provider, quantity, price_per_1000_fcfa: per, total_fcfa: Math.ceil(quantity / 1e3 * per), price_is_custom: custom });
   } catch (err) {
-    logger.error({ err, providerId }, "SMM quote error");
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 router2.get("/smm/status", requireUser, async (req, res) => {
-  const order = req.query["order"];
-  if (!order) return res.status(400).json({ error: "order id required" });
-  const providerId = parseProviderId(req.query["provider"]);
-  const orderStr = String(order);
-  const userId = req.userId;
+  const external = String(req.query["order"] || ""), provider = parseProviderId(req.query["provider"]);
+  if (!external) return res.status(400).json({ error: "order id required" });
   try {
-    let ownerUserId = await findEarningOwner(orderStr, providerId);
-    if (!ownerUserId && SUPABASE_URL4 && SUPABASE_SERVICE_ROLE_KEY3) {
-      try {
-        const r = await fetch(
-          `${SUPABASE_URL4}/rest/v1/orders?external_order_id=eq.${encodeURIComponent(orderStr)}&provider=eq.${providerId}&select=user_id&limit=1`,
-          { headers: serviceRoleHeaders() }
-        );
-        if (r.ok) {
-          const rows = await r.json();
-          ownerUserId = rows[0]?.user_id ?? null;
-        }
-      } catch {
-      }
-    }
-    if (!ownerUserId || ownerUserId !== userId) {
-      return res.status(403).json({ error: "Commande introuvable ou acc\xE8s refus\xE9" });
-    }
-    const data = await callProvider(providerId, "status", { order: orderStr });
-    res.json({ ...data, provider: providerId });
+    const [rows] = await getMysqlPool().execute("SELECT user_id FROM orders WHERE provider=? AND (provider_order_id=? OR external_order_id=?) LIMIT 1", [provider, external, external]);
+    if (!rows[0] || String(rows[0].user_id) !== req.userId) return res.status(403).json({ error: "Commande introuvable ou acc\xE8s refus\xE9" });
+    return res.json({ ...await callProvider(provider, "status", { order: external }), provider });
   } catch (err) {
-    logger.error({ err, providerId }, "SMM status error");
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 async function syncOrderInternal(opts) {
-  const { localOrderId, externalId: extIn, providerId: providerIn, expectedUserId, forceRefund } = opts;
-  if (!SUPABASE_URL4 || !SUPABASE_SERVICE_ROLE_KEY3) {
-    return { ok: false, status: 503, error: "Configuration serveur manquante (SUPABASE_SERVICE_ROLE_KEY)" };
-  }
-  if (!localOrderId && !(extIn && providerIn)) {
-    return { ok: false, status: 400, error: "syncOrderInternal: localOrderId ou (externalId + providerId) requis" };
-  }
-  const lookupHeader = serviceRoleHeaders();
-  const lookupQuery = localOrderId ? `?id=eq.${encodeURIComponent(localOrderId)}` : `?external_order_id=eq.${encodeURIComponent(extIn)}&provider=eq.${providerIn}`;
-  const orderLookupUrl = `${SUPABASE_URL4}/rest/v1/orders` + lookupQuery + `&select=id,user_id,status,refunded_at,refunded_amount,provider,external_order_id,price,service_name,quantity&limit=1`;
-  const lookupRes = await fetch(orderLookupUrl, { headers: lookupHeader });
-  if (!lookupRes.ok) {
-    const txt = await lookupRes.text().catch(() => "");
-    logger.error({ status: lookupRes.status, body: txt.slice(0, 200), localOrderId, externalId: extIn, providerId: providerIn }, "sync: order lookup failed");
-    return { ok: false, status: 502, error: "Lecture commande impossible" };
-  }
-  const rows = await lookupRes.json();
-  if (!rows || rows.length === 0) {
-    return { ok: false, status: 404, error: "Commande introuvable" };
-  }
+  if (!opts.localOrderId && !(opts.externalId && opts.providerId)) return { ok: false, status: 400, error: "syncOrderInternal: localOrderId ou (externalId + providerId) requis" };
+  const sql = opts.localOrderId ? "SELECT * FROM orders WHERE id=? LIMIT 1" : "SELECT * FROM orders WHERE provider=? AND (provider_order_id=? OR external_order_id=?) LIMIT 1";
+  const args = opts.localOrderId ? [opts.localOrderId] : [opts.providerId, opts.externalId, opts.externalId];
+  const [rows] = await getMysqlPool().execute(sql, args);
   const order = rows[0];
-  const providerId = order.provider === 3 || order.provider === 4 || order.provider === 5 ? order.provider : 1;
-  const externalId = order.external_order_id || extIn || "";
-  if (!externalId) {
-    return { ok: false, status: 404, error: "Commande sans identifiant fournisseur" };
+  if (!order) return { ok: false, status: 404, error: "Commande introuvable" };
+  if (opts.expectedUserId && String(order.user_id) !== opts.expectedUserId) return { ok: false, status: 403, error: "Acc\xE8s refus\xE9" };
+  const provider = Number(order.provider), external = String(order.provider_order_id ?? order.external_order_id ?? "");
+  if (!external && !opts.forceRefund) return { ok: false, status: 409, error: "Commande en r\xE9conciliation: identifiant fournisseur requis" };
+  let status = opts.forceRefund ? "refunded" : String(order.status), remains;
+  if (!opts.forceRefund) try {
+    const data = await callProvider(provider, "status", { order: external });
+    if (data?.error) return { ok: false, status: 502, error: String(data.error) };
+    status = mapProviderStatus(data?.status) || status;
+    if (data?.remains != null && Number.isFinite(Number(data.remains))) remains = Number(data.remains);
+  } catch {
+    return { ok: false, status: 502, error: "Fournisseur SMM injoignable" };
   }
-  const earning = await findEarning(externalId, providerId);
-  const trustedUserId = earning?.user_id ?? order.user_id ?? null;
-  const earningsAmount = earning ? Math.max(0, Math.round(Number(earning.user_price_fcfa) || 0)) : 0;
-  const orderPriceFallback = Math.max(0, Math.round(Number(order.price) || 0));
-  const trustedAmount = earningsAmount > 0 ? earningsAmount : orderPriceFallback;
-  if (expectedUserId && !earning) {
-    return { ok: false, status: 404, error: "Commande introuvable dans le journal serveur" };
-  }
-  if (expectedUserId && trustedUserId && trustedUserId !== expectedUserId) {
-    return { ok: false, status: 403, error: "Acc\xE8s refus\xE9" };
-  }
-  if (!trustedUserId) {
-    logger.error({ orderId: order.id, externalId }, "sync: cannot determine wallet owner \u2014 skipping refund");
-  }
-  let providerStatus = "";
-  let providerRemains;
-  if (!forceRefund) {
-    try {
-      const provider = await callProvider(providerId, "status", { order: externalId });
-      if (provider?.error) {
-        return { ok: false, status: 502, error: String(provider.error) };
-      }
-      providerStatus = mapProviderStatus(provider?.status);
-      if (provider?.remains !== void 0 && provider.remains !== null) {
-        const r = Number(provider.remains);
-        if (Number.isFinite(r)) providerRemains = r;
-      }
-    } catch (err) {
-      logger.error({ err, externalId, providerId }, "sync: provider call failed");
-      return { ok: false, status: 502, error: "Fournisseur SMM injoignable" };
-    }
-  }
-  const newStatus = forceRefund ? "refunded" : providerStatus || order.status;
-  let refunded = false;
-  let refundedAmount;
-  if (newStatus && newStatus !== order.status) {
-    const patchUrl = `${SUPABASE_URL4}/rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`;
-    const patchRes = await fetch(patchUrl, {
-      method: "PATCH",
-      headers: { ...serviceRoleHeaders(), Prefer: "return=minimal" },
-      body: JSON.stringify({ status: newStatus, updated_at: (/* @__PURE__ */ new Date()).toISOString() })
+  if (status === "completed" && external) {
+    const revenueFcfa = minorToFcfa(order.charge_minor);
+    const gain = estimateGainFromRevenue(revenueFcfa);
+    await appendEarning({
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      provider_order_id: external,
+      user_id: String(order.user_id),
+      service: Number(order.service_id) || 0,
+      service_name: String(order.service_name ?? ""),
+      quantity: Number(order.quantity) || 0,
+      rate_usd: 0,
+      user_price_fcfa: revenueFcfa,
+      provider_cost_usd: 0,
+      ...gain,
+      provider,
+      order_id: String(order.id),
+      currency: String(order.currency ?? "XOF")
     });
-    if (!patchRes.ok) {
-      const txt = await patchRes.text().catch(() => "");
-      logger.warn({ status: patchRes.status, body: txt.slice(0, 200), id: order.id }, "sync: status PATCH failed");
-    }
   }
-  if (newStatus === "completed" && order.status !== "completed") {
-    try {
-      const userPriceFcfa = Math.max(0, Math.round(Number(order.price) || 0));
-      const { provider_cost_fcfa, gain_fcfa } = estimateGainFromRevenue(userPriceFcfa);
-      await appendEarning({
-        ts: (/* @__PURE__ */ new Date()).toISOString(),
-        provider_order_id: externalId,
-        user_id: order.user_id,
-        service: 0,
-        service_name: String(order.service_name ?? ""),
-        quantity: Number(order.quantity ?? 0),
-        rate_usd: 0,
-        user_price_fcfa: userPriceFcfa,
-        provider_cost_usd: 0,
-        provider_cost_fcfa,
-        gain_fcfa,
-        provider: providerId
-      });
-    } catch (e) {
-      logger.error({ err: e }, "earnings on completion failed (non-fatal)");
-    }
+  if (status !== order.status) await getMysqlPool().execute("UPDATE orders SET status=? WHERE id=?", [status, order.id]);
+  let refund = { refunded: false, amountMinor: 0 };
+  if ((FINAL_REFUND_STATUSES.has(status) || status === "partial" || opts.forceRefund) && !order.refunded_at) {
+    let amount = Number(order.charge_minor);
+    if (status === "partial" && !opts.forceRefund) amount = remains && Number(order.quantity) > 0 ? Math.round(remains / Number(order.quantity) * amount) : 0;
+    if (amount > 0) refund = await refundOrderAtomic(String(order.id), amount);
   }
-  const eligibleByProvider = FINAL_REFUND_STATUSES.has(newStatus);
-  const isPartialCompletion = newStatus === "partial" && !forceRefund;
-  let refundAmount = Math.round(trustedAmount);
-  if (isPartialCompletion) {
-    const qty = Number(order.quantity ?? 0);
-    if (providerRemains !== void 0 && providerRemains > 0 && qty > 0) {
-      refundAmount = Math.round(providerRemains / qty * trustedAmount);
-    } else {
-      refundAmount = 0;
-    }
-  }
-  if ((eligibleByProvider || isPartialCompletion || forceRefund) && !order.refunded_at && refundAmount > 0) {
-    const rpcRes = await fetch(`${SUPABASE_URL4}/rest/v1/rpc/smm_refund_order`, {
-      method: "POST",
-      headers: serviceRoleHeaders(),
-      body: JSON.stringify({ p_order_id: order.id, p_amount: refundAmount })
-    });
-    if (!rpcRes.ok) {
-      const txt = await rpcRes.text().catch(() => "");
-      logger.error(
-        { status: rpcRes.status, body: txt.slice(0, 300), orderId: order.id, userId: order.user_id, refundAmount, newStatus },
-        "auto-refund: RPC smm_refund_order failed \u2014 order NOT refunded, will retry on next sync"
-      );
-    } else {
-      const rrows = await rpcRes.json().catch(() => null);
-      const row = rrows && rrows[0];
-      if (row?.refunded) {
-        refunded = true;
-        refundedAmount = row.refunded_amount;
-        logger.info(
-          { orderId: order.id, userId: order.user_id, refundAmount, externalId, newBalance: row.new_balance, newStatus },
-          "auto-refund credited (atomic RPC)"
-        );
-      } else {
-        logger.info({ orderId: order.id }, "auto-refund: already refunded (idempotent no-op)");
-      }
-    }
-  }
-  return {
-    ok: true,
-    status: newStatus || order.status,
-    previous_status: order.status,
-    refunded,
-    refunded_amount: refundedAmount,
-    user_id: order.user_id,
-    provider: providerId
-  };
+  return { ok: true, status, previous_status: String(order.status), refunded: refund.refunded, refunded_amount: refund.refunded ? minorToFcfa(refund.amountMinor) : void 0, user_id: String(order.user_id), provider };
 }
-function parseProviderQuery(q) {
+function pquery(q) {
   const n = Number(q);
-  if (n === 1 || n === 3 || n === 4 || n === 5) return n;
-  return null;
+  return n === 1 || n === 3 || n === 4 || n === 5 ? n : null;
 }
-router2.post("/smm/orders/:externalId/sync", requireUser, async (req, res) => {
-  const externalId = String(req.params["externalId"] || "");
-  if (!externalId) return res.status(400).json({ error: "externalId requis" });
-  const providerId = parseProviderQuery(req.query["provider"]);
-  if (!providerId) return res.status(400).json({ error: "provider requis (1, 3, 4 ou 5)" });
-  const result = await syncOrderInternal({ externalId, providerId, expectedUserId: req.userId });
-  if (!result.ok) return res.status(result.status).json({ error: result.error });
-  return res.json({
-    status: result.status,
-    previous_status: result.previous_status,
-    refunded: result.refunded,
-    refunded_amount: result.refunded_amount,
-    provider: result.provider
-  });
-});
-router2.post("/admin/orders/:externalId/sync", requireUser, requireAdmin, async (req, res) => {
-  const externalId = String(req.params["externalId"] || "");
-  if (!externalId) return res.status(400).json({ error: "externalId requis" });
-  const providerId = parseProviderQuery(req.query["provider"]);
-  if (!providerId) return res.status(400).json({ error: "provider requis (1, 3, 4 ou 5)" });
-  const result = await syncOrderInternal({ externalId, providerId });
-  if (!result.ok) return res.status(result.status).json({ error: result.error });
-  return res.json({
-    status: result.status,
-    previous_status: result.previous_status,
-    refunded: result.refunded,
-    refunded_amount: result.refunded_amount,
-    user_id: result.user_id,
-    provider: result.provider
-  });
-});
-router2.post("/admin/orders/:externalId/refund", requireUser, requireAdmin, async (req, res) => {
-  const externalId = String(req.params["externalId"] || "");
-  if (!externalId) return res.status(400).json({ error: "externalId requis" });
-  const providerId = parseProviderQuery(req.query["provider"]);
-  if (!providerId) return res.status(400).json({ error: "provider requis (1, 3, 4 ou 5)" });
-  const result = await syncOrderInternal({ externalId, providerId, forceRefund: true });
-  if (!result.ok) return res.status(result.status).json({ error: result.error });
-  return res.json({
-    status: result.status,
-    previous_status: result.previous_status,
-    refunded: result.refunded,
-    refunded_amount: result.refunded_amount,
-    user_id: result.user_id,
-    provider: result.provider
-  });
-});
+async function syncRoute(req, res, admin, refund = false) {
+  const external = String(req.params["externalId"] || ""), provider = pquery(req.query["provider"]);
+  if (!external || !provider) return res.status(400).json({ error: !external ? "externalId requis" : "provider requis (1, 3, 4 ou 5)" });
+  const r = await syncOrderInternal({ externalId: external, providerId: provider, expectedUserId: admin ? void 0 : req.userId, forceRefund: refund });
+  return r.ok ? res.json(r) : res.status(r.status).json({ error: r.error });
+}
+router2.post("/smm/orders/:externalId/sync", requireUser, (req, res) => syncRoute(req, res, false));
+router2.post("/admin/orders/:externalId/sync", requireUser, requireAdmin, (req, res) => syncRoute(req, res, true));
+router2.post("/admin/orders/:externalId/refund", requireUser, requireAdmin, (req, res) => syncRoute(req, res, true, true));
 router2.post("/admin/orders/:externalId/cancel", requireUser, requireAdmin, async (req, res) => {
-  const externalId = String(req.params["externalId"] || "");
-  if (!externalId) return res.status(400).json({ error: "externalId requis" });
-  const providerId = parseProviderQuery(req.query["provider"]);
-  if (!providerId) return res.status(400).json({ error: "provider requis (1, 3, 4 ou 5)" });
-  let providerCancel = { ok: true };
+  const external = String(req.params["externalId"] || ""), provider = pquery(req.query["provider"]);
+  if (!external || !provider) return res.status(400).json({ error: "externalId et provider requis" });
+  let provider_cancel;
   try {
-    const raw = await callProvider(providerId, "cancel", { orders: externalId });
-    if (raw && typeof raw === "object" && "error" in raw && raw.error) {
-      providerCancel = { ok: false, raw, error: String(raw.error) };
-    } else if (Array.isArray(raw) && raw.length > 0 && raw[0].error) {
-      providerCancel = { ok: false, raw, error: String(raw[0].error) };
-    } else {
-      providerCancel = { ok: true, raw };
-    }
+    provider_cancel = { ok: true, raw: await callProvider(provider, "cancel", { orders: external }) };
   } catch (err) {
-    providerCancel = { ok: false, error: err.message };
+    provider_cancel = { ok: false, error: err.message };
   }
-  const result = await syncOrderInternal({ externalId, providerId, forceRefund: true });
-  if (!result.ok) {
-    return res.status(result.status).json({ error: result.error, provider_cancel: providerCancel });
-  }
-  return res.json({
-    status: result.status,
-    previous_status: result.previous_status,
-    refunded: result.refunded,
-    refunded_amount: result.refunded_amount,
-    user_id: result.user_id,
-    provider: result.provider,
-    provider_cancel: providerCancel
-  });
+  const r = await syncOrderInternal({ externalId: external, providerId: provider, forceRefund: true });
+  return r.ok ? res.json({ ...r, provider_cancel }) : res.status(r.status).json({ error: r.error, provider_cancel });
 });
 router2.post("/admin/orders/by-id/:id/refund", requireUser, requireAdmin, async (req, res) => {
-  const id = String(req.params["id"] || "");
-  if (!id) return res.status(400).json({ error: "id requis" });
-  const result = await syncOrderInternal({ localOrderId: id, forceRefund: true });
-  if (!result.ok) return res.status(result.status).json({ error: result.error });
-  return res.json({
-    status: result.status,
-    previous_status: result.previous_status,
-    refunded: result.refunded,
-    refunded_amount: result.refunded_amount,
-    user_id: result.user_id,
-    provider: result.provider
-  });
+  const r = await syncOrderInternal({ localOrderId: String(req.params["id"] || ""), forceRefund: true });
+  return r.ok ? res.json(r) : res.status(r.status).json({ error: r.error });
+});
+router2.get("/admin/orders", requireUser, requireAdmin, async (req, res) => {
+  const status = String(req.query["status"] || "reconciliation_required"), limit = Math.min(Math.max(Number(req.query["limit"]) || 200, 1), 1e3);
+  const [rows] = await getMysqlPool().execute(
+    "SELECT id,user_id,provider,service_id,service_name,quantity,charge_minor,currency,status,provider_order_id,external_order_id,created_at,updated_at FROM orders WHERE status=? ORDER BY created_at ASC LIMIT ?",
+    [status, limit]
+  );
+  return res.json({ orders: rows.map(orderView), status, count: rows.length });
+});
+router2.post("/admin/orders/by-id/:id/attach-provider-order", requireUser, requireAdmin, async (req, res) => {
+  const id = String(req.params["id"] || ""), external = String(req.body?.provider_order_id ?? req.body?.external_order_id ?? "").trim();
+  if (!external || external.length > 128) return res.status(400).json({ error: "provider_order_id confirm\xE9 requis (1\u2013128 caract\xE8res)" });
+  const [orders] = await getMysqlPool().execute("SELECT id,status FROM orders WHERE id=? LIMIT 1", [id]);
+  if (!orders[0]) return res.status(404).json({ error: "Commande introuvable" });
+  if (String(orders[0].status) !== "reconciliation_required") return res.status(409).json({ error: "Seules les commandes en r\xE9conciliation peuvent recevoir un identifiant fournisseur" });
+  try {
+    await getMysqlPool().execute("UPDATE orders SET provider_order_id=?,external_order_id=?,status='processing' WHERE id=?", [external, external, id]);
+  } catch (err) {
+    if (err?.code === "ER_DUP_ENTRY") return res.status(409).json({ error: "Cet identifiant fournisseur est d\xE9j\xE0 associ\xE9 \xE0 une commande" });
+    throw err;
+  }
+  const result = await syncOrderInternal({ localOrderId: id });
+  return result.ok ? res.json({ ok: true, attached_provider_order_id: external, ...result }) : res.status(result.status).json({ ok: false, attached_provider_order_id: external, error: result.error });
 });
 function invalidateServicesCache(providerId) {
-  if (typeof providerId === "number") {
+  if (providerId !== void 0) {
     svcCache.delete(providerId);
     enrichedCache.delete(providerId);
   } else {
@@ -54662,10 +54165,1732 @@ var smm_default = router2;
 
 // src/routes/admin.ts
 var import_express3 = __toESM(require_express2(), 1);
-init_logger();
-init_smm_pricing();
+import { randomUUID as randomUUID2 } from "node:crypto";
 
-// src/lib/deposits.ts
+// ../../node_modules/.pnpm/bcryptjs@3.0.3/node_modules/bcryptjs/index.js
+import nodeCrypto from "crypto";
+var randomFallback = null;
+function randomBytes(len) {
+  try {
+    return crypto.getRandomValues(new Uint8Array(len));
+  } catch {
+  }
+  try {
+    return nodeCrypto.randomBytes(len);
+  } catch {
+  }
+  if (!randomFallback) {
+    throw Error(
+      "Neither WebCryptoAPI nor a crypto module is available. Use bcrypt.setRandomFallback to set an alternative"
+    );
+  }
+  return randomFallback(len);
+}
+function setRandomFallback(random) {
+  randomFallback = random;
+}
+function genSaltSync(rounds, seed_length) {
+  rounds = rounds || GENSALT_DEFAULT_LOG2_ROUNDS;
+  if (typeof rounds !== "number")
+    throw Error(
+      "Illegal arguments: " + typeof rounds + ", " + typeof seed_length
+    );
+  if (rounds < 4) rounds = 4;
+  else if (rounds > 31) rounds = 31;
+  var salt = [];
+  salt.push("$2b$");
+  if (rounds < 10) salt.push("0");
+  salt.push(rounds.toString());
+  salt.push("$");
+  salt.push(base64_encode(randomBytes(BCRYPT_SALT_LEN), BCRYPT_SALT_LEN));
+  return salt.join("");
+}
+function genSalt(rounds, seed_length, callback) {
+  if (typeof seed_length === "function")
+    callback = seed_length, seed_length = void 0;
+  if (typeof rounds === "function") callback = rounds, rounds = void 0;
+  if (typeof rounds === "undefined") rounds = GENSALT_DEFAULT_LOG2_ROUNDS;
+  else if (typeof rounds !== "number")
+    throw Error("illegal arguments: " + typeof rounds);
+  function _async(callback2) {
+    nextTick(function() {
+      try {
+        callback2(null, genSaltSync(rounds));
+      } catch (err) {
+        callback2(err);
+      }
+    });
+  }
+  if (callback) {
+    if (typeof callback !== "function")
+      throw Error("Illegal callback: " + typeof callback);
+    _async(callback);
+  } else
+    return new Promise(function(resolve, reject) {
+      _async(function(err, res) {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(res);
+      });
+    });
+}
+function hashSync(password, salt) {
+  if (typeof salt === "undefined") salt = GENSALT_DEFAULT_LOG2_ROUNDS;
+  if (typeof salt === "number") salt = genSaltSync(salt);
+  if (typeof password !== "string" || typeof salt !== "string")
+    throw Error("Illegal arguments: " + typeof password + ", " + typeof salt);
+  return _hash(password, salt);
+}
+function hash(password, salt, callback, progressCallback) {
+  function _async(callback2) {
+    if (typeof password === "string" && typeof salt === "number")
+      genSalt(salt, function(err, salt2) {
+        _hash(password, salt2, callback2, progressCallback);
+      });
+    else if (typeof password === "string" && typeof salt === "string")
+      _hash(password, salt, callback2, progressCallback);
+    else
+      nextTick(
+        callback2.bind(
+          this,
+          Error("Illegal arguments: " + typeof password + ", " + typeof salt)
+        )
+      );
+  }
+  if (callback) {
+    if (typeof callback !== "function")
+      throw Error("Illegal callback: " + typeof callback);
+    _async(callback);
+  } else
+    return new Promise(function(resolve, reject) {
+      _async(function(err, res) {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(res);
+      });
+    });
+}
+function safeStringCompare(known, unknown) {
+  var diff = known.length ^ unknown.length;
+  for (var i = 0; i < known.length; ++i) {
+    diff |= known.charCodeAt(i) ^ unknown.charCodeAt(i);
+  }
+  return diff === 0;
+}
+function compareSync(password, hash2) {
+  if (typeof password !== "string" || typeof hash2 !== "string")
+    throw Error("Illegal arguments: " + typeof password + ", " + typeof hash2);
+  if (hash2.length !== 60) return false;
+  return safeStringCompare(
+    hashSync(password, hash2.substring(0, hash2.length - 31)),
+    hash2
+  );
+}
+function compare(password, hashValue, callback, progressCallback) {
+  function _async(callback2) {
+    if (typeof password !== "string" || typeof hashValue !== "string") {
+      nextTick(
+        callback2.bind(
+          this,
+          Error(
+            "Illegal arguments: " + typeof password + ", " + typeof hashValue
+          )
+        )
+      );
+      return;
+    }
+    if (hashValue.length !== 60) {
+      nextTick(callback2.bind(this, null, false));
+      return;
+    }
+    hash(
+      password,
+      hashValue.substring(0, 29),
+      function(err, comp) {
+        if (err) callback2(err);
+        else callback2(null, safeStringCompare(comp, hashValue));
+      },
+      progressCallback
+    );
+  }
+  if (callback) {
+    if (typeof callback !== "function")
+      throw Error("Illegal callback: " + typeof callback);
+    _async(callback);
+  } else
+    return new Promise(function(resolve, reject) {
+      _async(function(err, res) {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(res);
+      });
+    });
+}
+function getRounds(hash2) {
+  if (typeof hash2 !== "string")
+    throw Error("Illegal arguments: " + typeof hash2);
+  return parseInt(hash2.split("$")[2], 10);
+}
+function getSalt(hash2) {
+  if (typeof hash2 !== "string")
+    throw Error("Illegal arguments: " + typeof hash2);
+  if (hash2.length !== 60)
+    throw Error("Illegal hash length: " + hash2.length + " != 60");
+  return hash2.substring(0, 29);
+}
+function truncates(password) {
+  if (typeof password !== "string")
+    throw Error("Illegal arguments: " + typeof password);
+  return utf8Length(password) > 72;
+}
+var nextTick = typeof setImmediate === "function" ? setImmediate : typeof scheduler === "object" && typeof scheduler.postTask === "function" ? scheduler.postTask.bind(scheduler) : setTimeout;
+function utf8Length(string) {
+  var len = 0, c = 0;
+  for (var i = 0; i < string.length; ++i) {
+    c = string.charCodeAt(i);
+    if (c < 128) len += 1;
+    else if (c < 2048) len += 2;
+    else if ((c & 64512) === 55296 && (string.charCodeAt(i + 1) & 64512) === 56320) {
+      ++i;
+      len += 4;
+    } else len += 3;
+  }
+  return len;
+}
+function utf8Array(string) {
+  var offset = 0, c1, c2;
+  var buffer = new Array(utf8Length(string));
+  for (var i = 0, k = string.length; i < k; ++i) {
+    c1 = string.charCodeAt(i);
+    if (c1 < 128) {
+      buffer[offset++] = c1;
+    } else if (c1 < 2048) {
+      buffer[offset++] = c1 >> 6 | 192;
+      buffer[offset++] = c1 & 63 | 128;
+    } else if ((c1 & 64512) === 55296 && ((c2 = string.charCodeAt(i + 1)) & 64512) === 56320) {
+      c1 = 65536 + ((c1 & 1023) << 10) + (c2 & 1023);
+      ++i;
+      buffer[offset++] = c1 >> 18 | 240;
+      buffer[offset++] = c1 >> 12 & 63 | 128;
+      buffer[offset++] = c1 >> 6 & 63 | 128;
+      buffer[offset++] = c1 & 63 | 128;
+    } else {
+      buffer[offset++] = c1 >> 12 | 224;
+      buffer[offset++] = c1 >> 6 & 63 | 128;
+      buffer[offset++] = c1 & 63 | 128;
+    }
+  }
+  return buffer;
+}
+var BASE64_CODE = "./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".split("");
+var BASE64_INDEX = [
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  0,
+  1,
+  54,
+  55,
+  56,
+  57,
+  58,
+  59,
+  60,
+  61,
+  62,
+  63,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19,
+  20,
+  21,
+  22,
+  23,
+  24,
+  25,
+  26,
+  27,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  28,
+  29,
+  30,
+  31,
+  32,
+  33,
+  34,
+  35,
+  36,
+  37,
+  38,
+  39,
+  40,
+  41,
+  42,
+  43,
+  44,
+  45,
+  46,
+  47,
+  48,
+  49,
+  50,
+  51,
+  52,
+  53,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1
+];
+function base64_encode(b, len) {
+  var off = 0, rs = [], c1, c2;
+  if (len <= 0 || len > b.length) throw Error("Illegal len: " + len);
+  while (off < len) {
+    c1 = b[off++] & 255;
+    rs.push(BASE64_CODE[c1 >> 2 & 63]);
+    c1 = (c1 & 3) << 4;
+    if (off >= len) {
+      rs.push(BASE64_CODE[c1 & 63]);
+      break;
+    }
+    c2 = b[off++] & 255;
+    c1 |= c2 >> 4 & 15;
+    rs.push(BASE64_CODE[c1 & 63]);
+    c1 = (c2 & 15) << 2;
+    if (off >= len) {
+      rs.push(BASE64_CODE[c1 & 63]);
+      break;
+    }
+    c2 = b[off++] & 255;
+    c1 |= c2 >> 6 & 3;
+    rs.push(BASE64_CODE[c1 & 63]);
+    rs.push(BASE64_CODE[c2 & 63]);
+  }
+  return rs.join("");
+}
+function base64_decode(s, len) {
+  var off = 0, slen = s.length, olen = 0, rs = [], c1, c2, c3, c4, o, code;
+  if (len <= 0) throw Error("Illegal len: " + len);
+  while (off < slen - 1 && olen < len) {
+    code = s.charCodeAt(off++);
+    c1 = code < BASE64_INDEX.length ? BASE64_INDEX[code] : -1;
+    code = s.charCodeAt(off++);
+    c2 = code < BASE64_INDEX.length ? BASE64_INDEX[code] : -1;
+    if (c1 == -1 || c2 == -1) break;
+    o = c1 << 2 >>> 0;
+    o |= (c2 & 48) >> 4;
+    rs.push(String.fromCharCode(o));
+    if (++olen >= len || off >= slen) break;
+    code = s.charCodeAt(off++);
+    c3 = code < BASE64_INDEX.length ? BASE64_INDEX[code] : -1;
+    if (c3 == -1) break;
+    o = (c2 & 15) << 4 >>> 0;
+    o |= (c3 & 60) >> 2;
+    rs.push(String.fromCharCode(o));
+    if (++olen >= len || off >= slen) break;
+    code = s.charCodeAt(off++);
+    c4 = code < BASE64_INDEX.length ? BASE64_INDEX[code] : -1;
+    o = (c3 & 3) << 6 >>> 0;
+    o |= c4;
+    rs.push(String.fromCharCode(o));
+    ++olen;
+  }
+  var res = [];
+  for (off = 0; off < olen; off++) res.push(rs[off].charCodeAt(0));
+  return res;
+}
+var BCRYPT_SALT_LEN = 16;
+var GENSALT_DEFAULT_LOG2_ROUNDS = 10;
+var BLOWFISH_NUM_ROUNDS = 16;
+var MAX_EXECUTION_TIME = 100;
+var P_ORIG = [
+  608135816,
+  2242054355,
+  320440878,
+  57701188,
+  2752067618,
+  698298832,
+  137296536,
+  3964562569,
+  1160258022,
+  953160567,
+  3193202383,
+  887688300,
+  3232508343,
+  3380367581,
+  1065670069,
+  3041331479,
+  2450970073,
+  2306472731
+];
+var S_ORIG = [
+  3509652390,
+  2564797868,
+  805139163,
+  3491422135,
+  3101798381,
+  1780907670,
+  3128725573,
+  4046225305,
+  614570311,
+  3012652279,
+  134345442,
+  2240740374,
+  1667834072,
+  1901547113,
+  2757295779,
+  4103290238,
+  227898511,
+  1921955416,
+  1904987480,
+  2182433518,
+  2069144605,
+  3260701109,
+  2620446009,
+  720527379,
+  3318853667,
+  677414384,
+  3393288472,
+  3101374703,
+  2390351024,
+  1614419982,
+  1822297739,
+  2954791486,
+  3608508353,
+  3174124327,
+  2024746970,
+  1432378464,
+  3864339955,
+  2857741204,
+  1464375394,
+  1676153920,
+  1439316330,
+  715854006,
+  3033291828,
+  289532110,
+  2706671279,
+  2087905683,
+  3018724369,
+  1668267050,
+  732546397,
+  1947742710,
+  3462151702,
+  2609353502,
+  2950085171,
+  1814351708,
+  2050118529,
+  680887927,
+  999245976,
+  1800124847,
+  3300911131,
+  1713906067,
+  1641548236,
+  4213287313,
+  1216130144,
+  1575780402,
+  4018429277,
+  3917837745,
+  3693486850,
+  3949271944,
+  596196993,
+  3549867205,
+  258830323,
+  2213823033,
+  772490370,
+  2760122372,
+  1774776394,
+  2652871518,
+  566650946,
+  4142492826,
+  1728879713,
+  2882767088,
+  1783734482,
+  3629395816,
+  2517608232,
+  2874225571,
+  1861159788,
+  326777828,
+  3124490320,
+  2130389656,
+  2716951837,
+  967770486,
+  1724537150,
+  2185432712,
+  2364442137,
+  1164943284,
+  2105845187,
+  998989502,
+  3765401048,
+  2244026483,
+  1075463327,
+  1455516326,
+  1322494562,
+  910128902,
+  469688178,
+  1117454909,
+  936433444,
+  3490320968,
+  3675253459,
+  1240580251,
+  122909385,
+  2157517691,
+  634681816,
+  4142456567,
+  3825094682,
+  3061402683,
+  2540495037,
+  79693498,
+  3249098678,
+  1084186820,
+  1583128258,
+  426386531,
+  1761308591,
+  1047286709,
+  322548459,
+  995290223,
+  1845252383,
+  2603652396,
+  3431023940,
+  2942221577,
+  3202600964,
+  3727903485,
+  1712269319,
+  422464435,
+  3234572375,
+  1170764815,
+  3523960633,
+  3117677531,
+  1434042557,
+  442511882,
+  3600875718,
+  1076654713,
+  1738483198,
+  4213154764,
+  2393238008,
+  3677496056,
+  1014306527,
+  4251020053,
+  793779912,
+  2902807211,
+  842905082,
+  4246964064,
+  1395751752,
+  1040244610,
+  2656851899,
+  3396308128,
+  445077038,
+  3742853595,
+  3577915638,
+  679411651,
+  2892444358,
+  2354009459,
+  1767581616,
+  3150600392,
+  3791627101,
+  3102740896,
+  284835224,
+  4246832056,
+  1258075500,
+  768725851,
+  2589189241,
+  3069724005,
+  3532540348,
+  1274779536,
+  3789419226,
+  2764799539,
+  1660621633,
+  3471099624,
+  4011903706,
+  913787905,
+  3497959166,
+  737222580,
+  2514213453,
+  2928710040,
+  3937242737,
+  1804850592,
+  3499020752,
+  2949064160,
+  2386320175,
+  2390070455,
+  2415321851,
+  4061277028,
+  2290661394,
+  2416832540,
+  1336762016,
+  1754252060,
+  3520065937,
+  3014181293,
+  791618072,
+  3188594551,
+  3933548030,
+  2332172193,
+  3852520463,
+  3043980520,
+  413987798,
+  3465142937,
+  3030929376,
+  4245938359,
+  2093235073,
+  3534596313,
+  375366246,
+  2157278981,
+  2479649556,
+  555357303,
+  3870105701,
+  2008414854,
+  3344188149,
+  4221384143,
+  3956125452,
+  2067696032,
+  3594591187,
+  2921233993,
+  2428461,
+  544322398,
+  577241275,
+  1471733935,
+  610547355,
+  4027169054,
+  1432588573,
+  1507829418,
+  2025931657,
+  3646575487,
+  545086370,
+  48609733,
+  2200306550,
+  1653985193,
+  298326376,
+  1316178497,
+  3007786442,
+  2064951626,
+  458293330,
+  2589141269,
+  3591329599,
+  3164325604,
+  727753846,
+  2179363840,
+  146436021,
+  1461446943,
+  4069977195,
+  705550613,
+  3059967265,
+  3887724982,
+  4281599278,
+  3313849956,
+  1404054877,
+  2845806497,
+  146425753,
+  1854211946,
+  1266315497,
+  3048417604,
+  3681880366,
+  3289982499,
+  290971e4,
+  1235738493,
+  2632868024,
+  2414719590,
+  3970600049,
+  1771706367,
+  1449415276,
+  3266420449,
+  422970021,
+  1963543593,
+  2690192192,
+  3826793022,
+  1062508698,
+  1531092325,
+  1804592342,
+  2583117782,
+  2714934279,
+  4024971509,
+  1294809318,
+  4028980673,
+  1289560198,
+  2221992742,
+  1669523910,
+  35572830,
+  157838143,
+  1052438473,
+  1016535060,
+  1802137761,
+  1753167236,
+  1386275462,
+  3080475397,
+  2857371447,
+  1040679964,
+  2145300060,
+  2390574316,
+  1461121720,
+  2956646967,
+  4031777805,
+  4028374788,
+  33600511,
+  2920084762,
+  1018524850,
+  629373528,
+  3691585981,
+  3515945977,
+  2091462646,
+  2486323059,
+  586499841,
+  988145025,
+  935516892,
+  3367335476,
+  2599673255,
+  2839830854,
+  265290510,
+  3972581182,
+  2759138881,
+  3795373465,
+  1005194799,
+  847297441,
+  406762289,
+  1314163512,
+  1332590856,
+  1866599683,
+  4127851711,
+  750260880,
+  613907577,
+  1450815602,
+  3165620655,
+  3734664991,
+  3650291728,
+  3012275730,
+  3704569646,
+  1427272223,
+  778793252,
+  1343938022,
+  2676280711,
+  2052605720,
+  1946737175,
+  3164576444,
+  3914038668,
+  3967478842,
+  3682934266,
+  1661551462,
+  3294938066,
+  4011595847,
+  840292616,
+  3712170807,
+  616741398,
+  312560963,
+  711312465,
+  1351876610,
+  322626781,
+  1910503582,
+  271666773,
+  2175563734,
+  1594956187,
+  70604529,
+  3617834859,
+  1007753275,
+  1495573769,
+  4069517037,
+  2549218298,
+  2663038764,
+  504708206,
+  2263041392,
+  3941167025,
+  2249088522,
+  1514023603,
+  1998579484,
+  1312622330,
+  694541497,
+  2582060303,
+  2151582166,
+  1382467621,
+  776784248,
+  2618340202,
+  3323268794,
+  2497899128,
+  2784771155,
+  503983604,
+  4076293799,
+  907881277,
+  423175695,
+  432175456,
+  1378068232,
+  4145222326,
+  3954048622,
+  3938656102,
+  3820766613,
+  2793130115,
+  2977904593,
+  26017576,
+  3274890735,
+  3194772133,
+  1700274565,
+  1756076034,
+  4006520079,
+  3677328699,
+  720338349,
+  1533947780,
+  354530856,
+  688349552,
+  3973924725,
+  1637815568,
+  332179504,
+  3949051286,
+  53804574,
+  2852348879,
+  3044236432,
+  1282449977,
+  3583942155,
+  3416972820,
+  4006381244,
+  1617046695,
+  2628476075,
+  3002303598,
+  1686838959,
+  431878346,
+  2686675385,
+  1700445008,
+  1080580658,
+  1009431731,
+  832498133,
+  3223435511,
+  2605976345,
+  2271191193,
+  2516031870,
+  1648197032,
+  4164389018,
+  2548247927,
+  300782431,
+  375919233,
+  238389289,
+  3353747414,
+  2531188641,
+  2019080857,
+  1475708069,
+  455242339,
+  2609103871,
+  448939670,
+  3451063019,
+  1395535956,
+  2413381860,
+  1841049896,
+  1491858159,
+  885456874,
+  4264095073,
+  4001119347,
+  1565136089,
+  3898914787,
+  1108368660,
+  540939232,
+  1173283510,
+  2745871338,
+  3681308437,
+  4207628240,
+  3343053890,
+  4016749493,
+  1699691293,
+  1103962373,
+  3625875870,
+  2256883143,
+  3830138730,
+  1031889488,
+  3479347698,
+  1535977030,
+  4236805024,
+  3251091107,
+  2132092099,
+  1774941330,
+  1199868427,
+  1452454533,
+  157007616,
+  2904115357,
+  342012276,
+  595725824,
+  1480756522,
+  206960106,
+  497939518,
+  591360097,
+  863170706,
+  2375253569,
+  3596610801,
+  1814182875,
+  2094937945,
+  3421402208,
+  1082520231,
+  3463918190,
+  2785509508,
+  435703966,
+  3908032597,
+  1641649973,
+  2842273706,
+  3305899714,
+  1510255612,
+  2148256476,
+  2655287854,
+  3276092548,
+  4258621189,
+  236887753,
+  3681803219,
+  274041037,
+  1734335097,
+  3815195456,
+  3317970021,
+  1899903192,
+  1026095262,
+  4050517792,
+  356393447,
+  2410691914,
+  3873677099,
+  3682840055,
+  3913112168,
+  2491498743,
+  4132185628,
+  2489919796,
+  1091903735,
+  1979897079,
+  3170134830,
+  3567386728,
+  3557303409,
+  857797738,
+  1136121015,
+  1342202287,
+  507115054,
+  2535736646,
+  337727348,
+  3213592640,
+  1301675037,
+  2528481711,
+  1895095763,
+  1721773893,
+  3216771564,
+  62756741,
+  2142006736,
+  835421444,
+  2531993523,
+  1442658625,
+  3659876326,
+  2882144922,
+  676362277,
+  1392781812,
+  170690266,
+  3921047035,
+  1759253602,
+  3611846912,
+  1745797284,
+  664899054,
+  1329594018,
+  3901205900,
+  3045908486,
+  2062866102,
+  2865634940,
+  3543621612,
+  3464012697,
+  1080764994,
+  553557557,
+  3656615353,
+  3996768171,
+  991055499,
+  499776247,
+  1265440854,
+  648242737,
+  3940784050,
+  980351604,
+  3713745714,
+  1749149687,
+  3396870395,
+  4211799374,
+  3640570775,
+  1161844396,
+  3125318951,
+  1431517754,
+  545492359,
+  4268468663,
+  3499529547,
+  1437099964,
+  2702547544,
+  3433638243,
+  2581715763,
+  2787789398,
+  1060185593,
+  1593081372,
+  2418618748,
+  4260947970,
+  69676912,
+  2159744348,
+  86519011,
+  2512459080,
+  3838209314,
+  1220612927,
+  3339683548,
+  133810670,
+  1090789135,
+  1078426020,
+  1569222167,
+  845107691,
+  3583754449,
+  4072456591,
+  1091646820,
+  628848692,
+  1613405280,
+  3757631651,
+  526609435,
+  236106946,
+  48312990,
+  2942717905,
+  3402727701,
+  1797494240,
+  859738849,
+  992217954,
+  4005476642,
+  2243076622,
+  3870952857,
+  3732016268,
+  765654824,
+  3490871365,
+  2511836413,
+  1685915746,
+  3888969200,
+  1414112111,
+  2273134842,
+  3281911079,
+  4080962846,
+  172450625,
+  2569994100,
+  980381355,
+  4109958455,
+  2819808352,
+  2716589560,
+  2568741196,
+  3681446669,
+  3329971472,
+  1835478071,
+  660984891,
+  3704678404,
+  4045999559,
+  3422617507,
+  3040415634,
+  1762651403,
+  1719377915,
+  3470491036,
+  2693910283,
+  3642056355,
+  3138596744,
+  1364962596,
+  2073328063,
+  1983633131,
+  926494387,
+  3423689081,
+  2150032023,
+  4096667949,
+  1749200295,
+  3328846651,
+  309677260,
+  2016342300,
+  1779581495,
+  3079819751,
+  111262694,
+  1274766160,
+  443224088,
+  298511866,
+  1025883608,
+  3806446537,
+  1145181785,
+  168956806,
+  3641502830,
+  3584813610,
+  1689216846,
+  3666258015,
+  3200248200,
+  1692713982,
+  2646376535,
+  4042768518,
+  1618508792,
+  1610833997,
+  3523052358,
+  4130873264,
+  2001055236,
+  3610705100,
+  2202168115,
+  4028541809,
+  2961195399,
+  1006657119,
+  2006996926,
+  3186142756,
+  1430667929,
+  3210227297,
+  1314452623,
+  4074634658,
+  4101304120,
+  2273951170,
+  1399257539,
+  3367210612,
+  3027628629,
+  1190975929,
+  2062231137,
+  2333990788,
+  2221543033,
+  2438960610,
+  1181637006,
+  548689776,
+  2362791313,
+  3372408396,
+  3104550113,
+  3145860560,
+  296247880,
+  1970579870,
+  3078560182,
+  3769228297,
+  1714227617,
+  3291629107,
+  3898220290,
+  166772364,
+  1251581989,
+  493813264,
+  448347421,
+  195405023,
+  2709975567,
+  677966185,
+  3703036547,
+  1463355134,
+  2715995803,
+  1338867538,
+  1343315457,
+  2802222074,
+  2684532164,
+  233230375,
+  2599980071,
+  2000651841,
+  3277868038,
+  1638401717,
+  4028070440,
+  3237316320,
+  6314154,
+  819756386,
+  300326615,
+  590932579,
+  1405279636,
+  3267499572,
+  3150704214,
+  2428286686,
+  3959192993,
+  3461946742,
+  1862657033,
+  1266418056,
+  963775037,
+  2089974820,
+  2263052895,
+  1917689273,
+  448879540,
+  3550394620,
+  3981727096,
+  150775221,
+  3627908307,
+  1303187396,
+  508620638,
+  2975983352,
+  2726630617,
+  1817252668,
+  1876281319,
+  1457606340,
+  908771278,
+  3720792119,
+  3617206836,
+  2455994898,
+  1729034894,
+  1080033504,
+  976866871,
+  3556439503,
+  2881648439,
+  1522871579,
+  1555064734,
+  1336096578,
+  3548522304,
+  2579274686,
+  3574697629,
+  3205460757,
+  3593280638,
+  3338716283,
+  3079412587,
+  564236357,
+  2993598910,
+  1781952180,
+  1464380207,
+  3163844217,
+  3332601554,
+  1699332808,
+  1393555694,
+  1183702653,
+  3581086237,
+  1288719814,
+  691649499,
+  2847557200,
+  2895455976,
+  3193889540,
+  2717570544,
+  1781354906,
+  1676643554,
+  2592534050,
+  3230253752,
+  1126444790,
+  2770207658,
+  2633158820,
+  2210423226,
+  2615765581,
+  2414155088,
+  3127139286,
+  673620729,
+  2805611233,
+  1269405062,
+  4015350505,
+  3341807571,
+  4149409754,
+  1057255273,
+  2012875353,
+  2162469141,
+  2276492801,
+  2601117357,
+  993977747,
+  3918593370,
+  2654263191,
+  753973209,
+  36408145,
+  2530585658,
+  25011837,
+  3520020182,
+  2088578344,
+  530523599,
+  2918365339,
+  1524020338,
+  1518925132,
+  3760827505,
+  3759777254,
+  1202760957,
+  3985898139,
+  3906192525,
+  674977740,
+  4174734889,
+  2031300136,
+  2019492241,
+  3983892565,
+  4153806404,
+  3822280332,
+  352677332,
+  2297720250,
+  60907813,
+  90501309,
+  3286998549,
+  1016092578,
+  2535922412,
+  2839152426,
+  457141659,
+  509813237,
+  4120667899,
+  652014361,
+  1966332200,
+  2975202805,
+  55981186,
+  2327461051,
+  676427537,
+  3255491064,
+  2882294119,
+  3433927263,
+  1307055953,
+  942726286,
+  933058658,
+  2468411793,
+  3933900994,
+  4215176142,
+  1361170020,
+  2001714738,
+  2830558078,
+  3274259782,
+  1222529897,
+  1679025792,
+  2729314320,
+  3714953764,
+  1770335741,
+  151462246,
+  3013232138,
+  1682292957,
+  1483529935,
+  471910574,
+  1539241949,
+  458788160,
+  3436315007,
+  1807016891,
+  3718408830,
+  978976581,
+  1043663428,
+  3165965781,
+  1927990952,
+  4200891579,
+  2372276910,
+  3208408903,
+  3533431907,
+  1412390302,
+  2931980059,
+  4132332400,
+  1947078029,
+  3881505623,
+  4168226417,
+  2941484381,
+  1077988104,
+  1320477388,
+  886195818,
+  18198404,
+  3786409e3,
+  2509781533,
+  112762804,
+  3463356488,
+  1866414978,
+  891333506,
+  18488651,
+  661792760,
+  1628790961,
+  3885187036,
+  3141171499,
+  876946877,
+  2693282273,
+  1372485963,
+  791857591,
+  2686433993,
+  3759982718,
+  3167212022,
+  3472953795,
+  2716379847,
+  445679433,
+  3561995674,
+  3504004811,
+  3574258232,
+  54117162,
+  3331405415,
+  2381918588,
+  3769707343,
+  4154350007,
+  1140177722,
+  4074052095,
+  668550556,
+  3214352940,
+  367459370,
+  261225585,
+  2610173221,
+  4209349473,
+  3468074219,
+  3265815641,
+  314222801,
+  3066103646,
+  3808782860,
+  282218597,
+  3406013506,
+  3773591054,
+  379116347,
+  1285071038,
+  846784868,
+  2669647154,
+  3771962079,
+  3550491691,
+  2305946142,
+  453669953,
+  1268987020,
+  3317592352,
+  3279303384,
+  3744833421,
+  2610507566,
+  3859509063,
+  266596637,
+  3847019092,
+  517658769,
+  3462560207,
+  3443424879,
+  370717030,
+  4247526661,
+  2224018117,
+  4143653529,
+  4112773975,
+  2788324899,
+  2477274417,
+  1456262402,
+  2901442914,
+  1517677493,
+  1846949527,
+  2295493580,
+  3734397586,
+  2176403920,
+  1280348187,
+  1908823572,
+  3871786941,
+  846861322,
+  1172426758,
+  3287448474,
+  3383383037,
+  1655181056,
+  3139813346,
+  901632758,
+  1897031941,
+  2986607138,
+  3066810236,
+  3447102507,
+  1393639104,
+  373351379,
+  950779232,
+  625454576,
+  3124240540,
+  4148612726,
+  2007998917,
+  544563296,
+  2244738638,
+  2330496472,
+  2058025392,
+  1291430526,
+  424198748,
+  50039436,
+  29584100,
+  3605783033,
+  2429876329,
+  2791104160,
+  1057563949,
+  3255363231,
+  3075367218,
+  3463963227,
+  1469046755,
+  985887462
+];
+var C_ORIG = [
+  1332899944,
+  1700884034,
+  1701343084,
+  1684370003,
+  1668446532,
+  1869963892
+];
+function _encipher(lr, off, P, S) {
+  var n, l = lr[off], r = lr[off + 1];
+  l ^= P[0];
+  n = S[l >>> 24];
+  n += S[256 | l >> 16 & 255];
+  n ^= S[512 | l >> 8 & 255];
+  n += S[768 | l & 255];
+  r ^= n ^ P[1];
+  n = S[r >>> 24];
+  n += S[256 | r >> 16 & 255];
+  n ^= S[512 | r >> 8 & 255];
+  n += S[768 | r & 255];
+  l ^= n ^ P[2];
+  n = S[l >>> 24];
+  n += S[256 | l >> 16 & 255];
+  n ^= S[512 | l >> 8 & 255];
+  n += S[768 | l & 255];
+  r ^= n ^ P[3];
+  n = S[r >>> 24];
+  n += S[256 | r >> 16 & 255];
+  n ^= S[512 | r >> 8 & 255];
+  n += S[768 | r & 255];
+  l ^= n ^ P[4];
+  n = S[l >>> 24];
+  n += S[256 | l >> 16 & 255];
+  n ^= S[512 | l >> 8 & 255];
+  n += S[768 | l & 255];
+  r ^= n ^ P[5];
+  n = S[r >>> 24];
+  n += S[256 | r >> 16 & 255];
+  n ^= S[512 | r >> 8 & 255];
+  n += S[768 | r & 255];
+  l ^= n ^ P[6];
+  n = S[l >>> 24];
+  n += S[256 | l >> 16 & 255];
+  n ^= S[512 | l >> 8 & 255];
+  n += S[768 | l & 255];
+  r ^= n ^ P[7];
+  n = S[r >>> 24];
+  n += S[256 | r >> 16 & 255];
+  n ^= S[512 | r >> 8 & 255];
+  n += S[768 | r & 255];
+  l ^= n ^ P[8];
+  n = S[l >>> 24];
+  n += S[256 | l >> 16 & 255];
+  n ^= S[512 | l >> 8 & 255];
+  n += S[768 | l & 255];
+  r ^= n ^ P[9];
+  n = S[r >>> 24];
+  n += S[256 | r >> 16 & 255];
+  n ^= S[512 | r >> 8 & 255];
+  n += S[768 | r & 255];
+  l ^= n ^ P[10];
+  n = S[l >>> 24];
+  n += S[256 | l >> 16 & 255];
+  n ^= S[512 | l >> 8 & 255];
+  n += S[768 | l & 255];
+  r ^= n ^ P[11];
+  n = S[r >>> 24];
+  n += S[256 | r >> 16 & 255];
+  n ^= S[512 | r >> 8 & 255];
+  n += S[768 | r & 255];
+  l ^= n ^ P[12];
+  n = S[l >>> 24];
+  n += S[256 | l >> 16 & 255];
+  n ^= S[512 | l >> 8 & 255];
+  n += S[768 | l & 255];
+  r ^= n ^ P[13];
+  n = S[r >>> 24];
+  n += S[256 | r >> 16 & 255];
+  n ^= S[512 | r >> 8 & 255];
+  n += S[768 | r & 255];
+  l ^= n ^ P[14];
+  n = S[l >>> 24];
+  n += S[256 | l >> 16 & 255];
+  n ^= S[512 | l >> 8 & 255];
+  n += S[768 | l & 255];
+  r ^= n ^ P[15];
+  n = S[r >>> 24];
+  n += S[256 | r >> 16 & 255];
+  n ^= S[512 | r >> 8 & 255];
+  n += S[768 | r & 255];
+  l ^= n ^ P[16];
+  lr[off] = r ^ P[BLOWFISH_NUM_ROUNDS + 1];
+  lr[off + 1] = l;
+  return lr;
+}
+function _streamtoword(data, offp) {
+  for (var i = 0, word = 0; i < 4; ++i)
+    word = word << 8 | data[offp] & 255, offp = (offp + 1) % data.length;
+  return { key: word, offp };
+}
+function _key(key2, P, S) {
+  var offset = 0, lr = [0, 0], plen = P.length, slen = S.length, sw;
+  for (var i = 0; i < plen; i++)
+    sw = _streamtoword(key2, offset), offset = sw.offp, P[i] = P[i] ^ sw.key;
+  for (i = 0; i < plen; i += 2)
+    lr = _encipher(lr, 0, P, S), P[i] = lr[0], P[i + 1] = lr[1];
+  for (i = 0; i < slen; i += 2)
+    lr = _encipher(lr, 0, P, S), S[i] = lr[0], S[i + 1] = lr[1];
+}
+function _ekskey(data, key2, P, S) {
+  var offp = 0, lr = [0, 0], plen = P.length, slen = S.length, sw;
+  for (var i = 0; i < plen; i++)
+    sw = _streamtoword(key2, offp), offp = sw.offp, P[i] = P[i] ^ sw.key;
+  offp = 0;
+  for (i = 0; i < plen; i += 2)
+    sw = _streamtoword(data, offp), offp = sw.offp, lr[0] ^= sw.key, sw = _streamtoword(data, offp), offp = sw.offp, lr[1] ^= sw.key, lr = _encipher(lr, 0, P, S), P[i] = lr[0], P[i + 1] = lr[1];
+  for (i = 0; i < slen; i += 2)
+    sw = _streamtoword(data, offp), offp = sw.offp, lr[0] ^= sw.key, sw = _streamtoword(data, offp), offp = sw.offp, lr[1] ^= sw.key, lr = _encipher(lr, 0, P, S), S[i] = lr[0], S[i + 1] = lr[1];
+}
+function _crypt(b, salt, rounds, callback, progressCallback) {
+  var cdata = C_ORIG.slice(), clen = cdata.length, err;
+  if (rounds < 4 || rounds > 31) {
+    err = Error("Illegal number of rounds (4-31): " + rounds);
+    if (callback) {
+      nextTick(callback.bind(this, err));
+      return;
+    } else throw err;
+  }
+  if (salt.length !== BCRYPT_SALT_LEN) {
+    err = Error(
+      "Illegal salt length: " + salt.length + " != " + BCRYPT_SALT_LEN
+    );
+    if (callback) {
+      nextTick(callback.bind(this, err));
+      return;
+    } else throw err;
+  }
+  rounds = 1 << rounds >>> 0;
+  var P, S, i = 0, j;
+  if (typeof Int32Array === "function") {
+    P = new Int32Array(P_ORIG);
+    S = new Int32Array(S_ORIG);
+  } else {
+    P = P_ORIG.slice();
+    S = S_ORIG.slice();
+  }
+  _ekskey(salt, b, P, S);
+  function next() {
+    if (progressCallback) progressCallback(i / rounds);
+    if (i < rounds) {
+      var start = Date.now();
+      for (; i < rounds; ) {
+        i = i + 1;
+        _key(b, P, S);
+        _key(salt, P, S);
+        if (Date.now() - start > MAX_EXECUTION_TIME) break;
+      }
+    } else {
+      for (i = 0; i < 64; i++)
+        for (j = 0; j < clen >> 1; j++) _encipher(cdata, j << 1, P, S);
+      var ret = [];
+      for (i = 0; i < clen; i++)
+        ret.push((cdata[i] >> 24 & 255) >>> 0), ret.push((cdata[i] >> 16 & 255) >>> 0), ret.push((cdata[i] >> 8 & 255) >>> 0), ret.push((cdata[i] & 255) >>> 0);
+      if (callback) {
+        callback(null, ret);
+        return;
+      } else return ret;
+    }
+    if (callback) nextTick(next);
+  }
+  if (typeof callback !== "undefined") {
+    next();
+  } else {
+    var res;
+    while (true) if (typeof (res = next()) !== "undefined") return res || [];
+  }
+}
+function _hash(password, salt, callback, progressCallback) {
+  var err;
+  if (typeof password !== "string" || typeof salt !== "string") {
+    err = Error("Invalid string / salt: Not a string");
+    if (callback) {
+      nextTick(callback.bind(this, err));
+      return;
+    } else throw err;
+  }
+  var minor3, offset;
+  if (salt.charAt(0) !== "$" || salt.charAt(1) !== "2") {
+    err = Error("Invalid salt version: " + salt.substring(0, 2));
+    if (callback) {
+      nextTick(callback.bind(this, err));
+      return;
+    } else throw err;
+  }
+  if (salt.charAt(2) === "$") minor3 = String.fromCharCode(0), offset = 3;
+  else {
+    minor3 = salt.charAt(2);
+    if (minor3 !== "a" && minor3 !== "b" && minor3 !== "y" || salt.charAt(3) !== "$") {
+      err = Error("Invalid salt revision: " + salt.substring(2, 4));
+      if (callback) {
+        nextTick(callback.bind(this, err));
+        return;
+      } else throw err;
+    }
+    offset = 4;
+  }
+  if (salt.charAt(offset + 2) > "$") {
+    err = Error("Missing salt rounds");
+    if (callback) {
+      nextTick(callback.bind(this, err));
+      return;
+    } else throw err;
+  }
+  var r1 = parseInt(salt.substring(offset, offset + 1), 10) * 10, r2 = parseInt(salt.substring(offset + 1, offset + 2), 10), rounds = r1 + r2, real_salt = salt.substring(offset + 3, offset + 25);
+  password += minor3 >= "a" ? "\0" : "";
+  var passwordb = utf8Array(password), saltb = base64_decode(real_salt, BCRYPT_SALT_LEN);
+  function finish(bytes) {
+    var res = [];
+    res.push("$2");
+    if (minor3 >= "a") res.push(minor3);
+    res.push("$");
+    if (rounds < 10) res.push("0");
+    res.push(rounds.toString());
+    res.push("$");
+    res.push(base64_encode(saltb, saltb.length));
+    res.push(base64_encode(bytes, C_ORIG.length * 4 - 1));
+    return res.join("");
+  }
+  if (typeof callback == "undefined")
+    return finish(_crypt(passwordb, saltb, rounds));
+  else {
+    _crypt(
+      passwordb,
+      saltb,
+      rounds,
+      function(err2, bytes) {
+        if (err2) callback(err2, null);
+        else callback(null, finish(bytes));
+      },
+      progressCallback
+    );
+  }
+}
+function encodeBase64(bytes, length) {
+  return base64_encode(bytes, length);
+}
+function decodeBase64(string, length) {
+  return base64_decode(string, length);
+}
+var bcryptjs_default = {
+  setRandomFallback,
+  genSaltSync,
+  genSalt,
+  hashSync,
+  hash,
+  compareSync,
+  compare,
+  getRounds,
+  getSalt,
+  truncates,
+  encodeBase64,
+  decodeBase64
+};
+
+// src/routes/admin.ts
 init_logger();
 
 // src/lib/currency.ts
@@ -54756,530 +55981,960 @@ function toFcfa(localAmount, country) {
   return Math.round(localAmount * info.fcfaPerUnit);
 }
 
+// src/lib/deposits.ts
+init_logger();
+import crypto5 from "node:crypto";
+
 // src/lib/referrals.ts
 init_logger();
-var SUPABASE_URL5 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY4 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-function svcHeaders() {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY4 || "";
-  return {
-    apikey: key2,
-    Authorization: `Bearer ${key2}`,
-    "Content-Type": "application/json"
-  };
-}
+import crypto4 from "node:crypto";
 var DEFAULT_CONFIG2 = { referrerPct: 5, referredPct: 2, minDepositFcfa: 2e3 };
-var CONFIG_TTL_MS = 6e4;
 var configCache = null;
 async function getReferralConfig() {
-  if (configCache && Date.now() - configCache.at < CONFIG_TTL_MS) return configCache.cfg;
+  if (configCache && Date.now() - configCache.at < 6e4) return configCache.cfg;
   const cfg = { ...DEFAULT_CONFIG2 };
-  if (SUPABASE_URL5 && SUPABASE_SERVICE_ROLE_KEY4) {
-    try {
-      const r = await fetch(
-        `${SUPABASE_URL5}/rest/v1/settings?key=in.(referral_referrer_pct,referral_referred_pct,referral_min_deposit_fcfa)&select=key,value`,
-        { headers: svcHeaders() }
-      );
-      if (r.ok) {
-        const rows = await r.json();
-        for (const row of rows) {
-          const v = parseFloat(row.value);
-          if (!Number.isFinite(v) || v < 0) continue;
-          if (row.key === "referral_referrer_pct") cfg.referrerPct = v;
-          if (row.key === "referral_referred_pct") cfg.referredPct = v;
-          if (row.key === "referral_min_deposit_fcfa") cfg.minDepositFcfa = v;
-        }
-      }
-    } catch (err) {
-      logger.warn({ err }, "getReferralConfig: settings read failed \u2014 using defaults");
-    }
+  const [rows] = await getMysqlPool().execute(
+    "SELECT `key`,`value` FROM settings WHERE `key` IN ('referral_referrer_pct','referral_referred_pct','referral_min_deposit_fcfa')"
+  );
+  for (const row of rows) {
+    const n = Number(row.value);
+    if (!Number.isFinite(n) || n < 0) continue;
+    if (row.key === "referral_referrer_pct") cfg.referrerPct = n;
+    if (row.key === "referral_referred_pct") cfg.referredPct = n;
+    if (row.key === "referral_min_deposit_fcfa") cfg.minDepositFcfa = n;
   }
   configCache = { cfg, at: Date.now() };
   return cfg;
 }
-var REFERRAL_SELECT = "id,referrer_user_id,referred_user_id,status,referrer_bonus_fcfa,referred_bonus_fcfa,referrer_credited_at,referred_credited_at";
-async function settleLeg(referral, leg) {
-  const flagCol = leg === "referrer" ? "referrer_credited_at" : "referred_credited_at";
-  if (referral[flagCol]) return true;
-  try {
-    const r = await fetch(`${SUPABASE_URL5}/rest/v1/rpc/award_referral_leg`, {
-      method: "POST",
-      headers: svcHeaders(),
-      body: JSON.stringify({ p_referral_id: referral.id, p_leg: leg })
-    });
-    if (!r.ok) {
-      const body = await r.text();
-      if (r.status === 404 || body.includes("42883")) {
-        logger.error(
-          { referralId: referral.id },
-          "award_referral_leg RPC absente \u2014 migration 020 incompl\xE8te (ex\xE9cutez la version \xE0 jour)"
-        );
-      } else {
-        logger.error(
-          { referralId: referral.id, leg, status: r.status, body: body.slice(0, 150) },
-          "referral leg RPC failed \u2014 recovery will retry"
-        );
-      }
-      return false;
-    }
-    const out = await r.json();
-    if (out.ok) {
-      if (!out.already) {
-        logger.info({ referralId: referral.id, leg, credited: out.credited }, "referral leg credited (atomic)");
-      }
-      if (out.paid) logger.info({ referralId: referral.id }, "referral fully paid");
-      return true;
-    }
-    if (out.status === "paid") return true;
-    logger.error({ referralId: referral.id, leg, error: out.error }, "referral leg refused by RPC");
-    return false;
-  } catch (err) {
-    logger.error({ err, referralId: referral.id, leg }, "referral leg RPC threw \u2014 recovery will retry");
-    return false;
-  }
-}
-async function settleReferral(referral) {
-  await settleLeg(referral, "referrer");
-  await settleLeg(referral, "referred");
-}
+var minor = (n) => Math.round(n * 100);
 async function maybeAwardReferralBonus(referredUserId, paymentId, amountFcfa) {
-  if (!SUPABASE_URL5 || !SUPABASE_SERVICE_ROLE_KEY4) return;
   if (!Number.isFinite(amountFcfa) || amountFcfa <= 0) return;
-  const pr = await fetch(
-    `${SUPABASE_URL5}/rest/v1/referrals?referred_user_id=eq.${encodeURIComponent(referredUserId)}&status=in.(pending,processing)&select=${REFERRAL_SELECT}&limit=1`,
-    { headers: svcHeaders() }
-  );
-  if (!pr.ok) {
-    const body = await pr.text();
-    if (!body.includes("42P01")) {
-      logger.warn({ status: pr.status, body: body.slice(0, 150) }, "referral lookup failed");
-    }
-    return;
-  }
-  const found = await pr.json();
-  const referral = found[0];
-  if (!referral) return;
-  if (referral.status === "processing") {
-    await settleReferral(referral);
-    return;
-  }
   const cfg = await getReferralConfig();
-  if (amountFcfa < cfg.minDepositFcfa) {
-    logger.info(
-      { referredUserId, paymentId, amountFcfa, min: cfg.minDepositFcfa },
-      "referral: deposit below threshold \u2014 bonus stays pending"
+  const conn = await getMysqlPool().getConnection();
+  try {
+    await conn.beginTransaction();
+    const [found] = await conn.execute(
+      "SELECT * FROM referrals WHERE referred_user_id=? AND status IN ('pending','processing') FOR UPDATE",
+      [referredUserId]
     );
-    return;
-  }
-  const referrerBonus = Math.floor(amountFcfa * cfg.referrerPct / 100);
-  const referredBonus = Math.floor(amountFcfa * cfg.referredPct / 100);
-  const claim = await fetch(
-    `${SUPABASE_URL5}/rest/v1/referrals?id=eq.${encodeURIComponent(referral.id)}&status=eq.pending&select=${REFERRAL_SELECT}`,
-    {
-      method: "PATCH",
-      headers: { ...svcHeaders(), Prefer: "return=representation" },
-      body: JSON.stringify({
-        status: "processing",
-        qualifying_payment_id: paymentId,
-        qualifying_amount_fcfa: Math.round(amountFcfa),
-        referrer_bonus_fcfa: referrerBonus,
-        referred_bonus_fcfa: referredBonus
-      })
+    const r = found[0];
+    if (!r) {
+      await conn.commit();
+      return;
     }
-  );
-  if (!claim.ok) {
-    logger.error({ referralId: referral.id, status: claim.status }, "referral claim PATCH failed");
-    return;
+    if (r.status === "pending") {
+      if (amountFcfa < cfg.minDepositFcfa) {
+        await conn.commit();
+        return;
+      }
+      const referrerBonus = minor(Math.floor(amountFcfa * cfg.referrerPct / 100));
+      const referredBonus = minor(Math.floor(amountFcfa * cfg.referredPct / 100));
+      await conn.execute(
+        "UPDATE referrals SET status='processing',qualifying_payment_id=?,qualifying_amount_minor=?,referrer_bonus_minor=?,referred_bonus_minor=? WHERE id=?",
+        [paymentId, minor(Math.round(amountFcfa)), referrerBonus, referredBonus, r.id]
+      );
+      r.referrer_bonus_minor = referrerBonus;
+      r.referred_bonus_minor = referredBonus;
+    }
+    const ids = [String(r.referrer_user_id), String(r.referred_user_id)].sort();
+    const [profiles] = await conn.execute("SELECT user_id,balance_minor FROM profiles WHERE user_id IN (?,?) ORDER BY user_id FOR UPDATE", ids);
+    if (profiles.length !== 2) throw new Error("Referral profile missing");
+    const balances = new Map(profiles.map((p) => [String(p.user_id), Number(p.balance_minor)]));
+    const legs = [
+      ["referrer", String(r.referrer_user_id), Number(r.referrer_bonus_minor), "referral_referrer_bonus"],
+      ["referred", String(r.referred_user_id), Number(r.referred_bonus_minor), "referral_referred_bonus"]
+    ];
+    for (const [leg, userId, amount, type] of legs) {
+      const flag = `${leg}_credited_at`;
+      if (r[flag]) continue;
+      const before = balances.get(userId);
+      const after = before + amount;
+      const [insert] = await conn.execute(
+        "INSERT IGNORE INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?, 'XOF',?,'referral',?)",
+        [crypto4.randomUUID(), userId, amount, after, type, r.id]
+      );
+      if (insert.affectedRows) {
+        await conn.execute("UPDATE profiles SET balance_minor=?, affiliate_earnings_minor=affiliate_earnings_minor + ? WHERE user_id=?", [after, leg === "referrer" ? amount : 0, userId]);
+        await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason,actor_user_id) VALUES (?,?,?,?,NULL)", [userId, before, after, type]);
+        balances.set(userId, after);
+      }
+      await conn.execute(`UPDATE referrals SET ${flag}=COALESCE(${flag},NOW()) WHERE id=?`, [r.id]);
+    }
+    await conn.execute("UPDATE referrals SET status='paid',paid_at=COALESCE(paid_at,NOW()) WHERE id=? AND referrer_credited_at IS NOT NULL AND referred_credited_at IS NOT NULL", [r.id]);
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    logger.error({ err, referredUserId, paymentId }, "referral bonus failed");
+  } finally {
+    conn.release();
   }
-  const claimed = await claim.json();
-  if (!claimed[0]) return;
-  logger.info(
-    { referralId: referral.id, paymentId, amountFcfa, referrerBonus, referredBonus },
-    "referral qualified deposit claimed \u2014 crediting bonuses"
-  );
-  await settleReferral(claimed[0]);
 }
 async function recoverStuckReferrals(limit = 10) {
-  if (!SUPABASE_URL5 || !SUPABASE_SERVICE_ROLE_KEY4) return;
-  try {
-    const r = await fetch(
-      `${SUPABASE_URL5}/rest/v1/referrals?status=eq.processing&select=${REFERRAL_SELECT}&order=created_at.asc&limit=${limit}`,
-      { headers: svcHeaders() }
-    );
-    if (!r.ok) return;
-    const rows = await r.json();
-    for (const row of rows) {
-      logger.warn({ referralId: row.id }, "referral recovery: resuming stuck referral");
-      await settleReferral(row);
-    }
-  } catch (err) {
-    logger.warn({ err }, "referral recovery failed \u2014 will retry next scan");
-  }
+  const [rows] = await getMysqlPool().execute("SELECT referred_user_id,qualifying_payment_id,qualifying_amount_minor FROM referrals WHERE status='processing' ORDER BY created_at ASC LIMIT ?", [limit]);
+  for (const row of rows) await maybeAwardReferralBonus(String(row.referred_user_id), String(row.qualifying_payment_id), Number(row.qualifying_amount_minor) / 100);
 }
 var CODE_RE = /^[A-Z0-9]{4,20}$/;
 function normalizeCode(raw) {
-  if (typeof raw !== "string") return null;
-  const code = raw.trim().toUpperCase();
+  const code = typeof raw === "string" ? raw.trim().toUpperCase() : "";
   return CODE_RE.test(code) ? code : null;
 }
 async function findCodeOwner(code) {
-  if (!SUPABASE_URL5 || !SUPABASE_SERVICE_ROLE_KEY4) return null;
-  const r = await fetch(
-    `${SUPABASE_URL5}/rest/v1/profiles?referral_code=eq.${encodeURIComponent(code)}&select=user_id&limit=1`,
-    { headers: svcHeaders() }
-  );
-  if (!r.ok) return null;
-  const rows = await r.json();
-  return rows[0]?.user_id ?? null;
+  const [rows] = await getMysqlPool().execute("SELECT user_id FROM profiles WHERE referral_code=? LIMIT 1", [code]);
+  return rows[0] ? String(rows[0].user_id) : null;
 }
-var CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-function generateCodeJs() {
-  let out = "BB";
-  for (let i = 0; i < 6; i++) {
-    out += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
-  }
-  return out;
-}
+var alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 async function ensureReferralCode(userId) {
-  if (!SUPABASE_URL5 || !SUPABASE_SERVICE_ROLE_KEY4) return null;
-  const read = await fetch(
-    `${SUPABASE_URL5}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=referral_code`,
-    { headers: svcHeaders() }
-  );
-  if (!read.ok) return null;
-  const rows = await read.json();
+  const [rows] = await getMysqlPool().execute("SELECT referral_code FROM profiles WHERE user_id=? LIMIT 1", [userId]);
   if (!rows[0]) return null;
-  if (rows[0].referral_code) return rows[0].referral_code;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const code = generateCodeJs();
-    const w = await fetch(
-      `${SUPABASE_URL5}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&referral_code=is.null`,
-      {
-        method: "PATCH",
-        headers: { ...svcHeaders(), Prefer: "return=representation" },
-        body: JSON.stringify({ referral_code: code })
-      }
-    );
-    if (w.ok) {
-      const updated = await w.json();
-      if (updated.length > 0) return updated[0].referral_code;
-      const re = await fetch(
-        `${SUPABASE_URL5}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=referral_code`,
-        { headers: svcHeaders() }
-      );
-      if (re.ok) {
-        const rrows = await re.json();
-        return rrows[0]?.referral_code ?? null;
-      }
-      return null;
-    }
-    if (w.status !== 409) {
-      logger.warn({ userId, status: w.status }, "ensureReferralCode: PATCH failed");
-      return null;
+  if (rows[0].referral_code) return String(rows[0].referral_code);
+  for (let n = 0; n < 5; n++) {
+    let code = "BB";
+    for (let i = 0; i < 6; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
+    try {
+      const [result] = await getMysqlPool().execute("UPDATE profiles SET referral_code=? WHERE user_id=? AND referral_code IS NULL", [code, userId]);
+      if (result.affectedRows) return code;
+      const [again] = await getMysqlPool().execute("SELECT referral_code FROM profiles WHERE user_id=?", [userId]);
+      return again[0]?.referral_code ? String(again[0].referral_code) : null;
+    } catch (err) {
+      if (err?.code !== "ER_DUP_ENTRY") throw err;
     }
   }
   return null;
 }
 
 // src/lib/deposits.ts
-var SUPABASE_URL6 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_ANON_KEY3 = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
-var SUPABASE_SERVICE_ROLE_KEY5 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var BONUS_THRESHOLD_FCFA = 5e3;
 var BONUS_AMOUNT_FCFA = 200;
-function isEligibleForBonus(amount) {
-  return Number.isFinite(amount) && amount >= BONUS_THRESHOLD_FCFA;
-}
-function writeHeaders(userToken) {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY5 || SUPABASE_ANON_KEY3;
+var isEligibleForBonus = (amount) => Number.isFinite(amount) && amount >= BONUS_THRESHOLD_FCFA;
+var fcfa = (minor3) => Number(minor3) / 100;
+var minor2 = (amount) => Math.round(amount * 100);
+function mapPayment(r) {
   return {
-    apikey: key2,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY5 ? key2 : userToken || key2}`,
-    "Content-Type": "application/json"
+    id: String(r.id),
+    user_id: String(r.user_id),
+    amount: fcfa(r.amount_minor),
+    status: String(r.status),
+    reference: r.reference ?? null,
+    method: r.method ?? r.provider ?? "afribapay",
+    created_at: new Date(r.created_at).toISOString(),
+    order_id: r.order_id ?? null,
+    transaction_id: r.transaction_id ?? null,
+    bonus_amount: fcfa(r.bonus_amount_minor ?? 0),
+    bonus_status: r.bonus_status ?? null,
+    bonus_credited_at: r.bonus_credited_at ? new Date(r.bonus_credited_at).toISOString() : null,
+    credited_at: r.credited_at ? new Date(r.credited_at).toISOString() : null,
+    currency: r.currency ?? null,
+    country: r.country ?? null,
+    operator: r.operator ?? null
   };
 }
-function readHeaders(userToken) {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY5 || SUPABASE_ANON_KEY3;
-  return {
-    apikey: key2,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY5 ? key2 : userToken || key2}`
-  };
+async function fetchPayment(paymentId, _userToken) {
+  const [rows] = await getMysqlPool().execute("SELECT * FROM payments WHERE id = ? LIMIT 1", [paymentId]);
+  return rows[0] ? mapPayment(rows[0]) : null;
 }
-function hasServiceRoleKey() {
-  return Boolean(SUPABASE_SERVICE_ROLE_KEY5);
+async function fetchPaymentByOrderId(orderId) {
+  const [rows] = await getMysqlPool().execute("SELECT * FROM payments WHERE order_id = ? LIMIT 1", [orderId]);
+  return rows[0] ? mapPayment(rows[0]) : null;
 }
-async function fetchPayment(paymentId, userToken) {
-  if (!SUPABASE_URL6) return null;
-  const r = await fetch(
-    `${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}&select=*`,
-    { headers: readHeaders(userToken) }
+async function createPayment(input) {
+  const id = crypto5.randomUUID();
+  await getMysqlPool().execute(
+    `INSERT INTO payments (id,user_id,amount_minor,fee_minor,charge_minor,currency,status,provider,method,order_id,country,operator,phone_number)
+     VALUES (?,?,?,?,?,?, 'pending','afribapay','afribapay',?,?,?,?)`,
+    [
+      id,
+      input.userId,
+      minor2(input.amount),
+      minor2(input.feeAmount ?? 0),
+      input.chargeAmount == null ? null : minor2(input.chargeAmount),
+      input.currency,
+      input.orderId,
+      input.country,
+      input.operator,
+      input.phoneNumber
+    ]
   );
-  if (!r.ok) return null;
-  const rows = await r.json();
-  return rows[0] || null;
+  return id;
 }
-async function getBalance(userId, userToken) {
-  if (!SUPABASE_URL6) return null;
-  const r = await fetch(
-    `${SUPABASE_URL6}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=balance`,
-    { headers: readHeaders(userToken) }
-  );
-  if (!r.ok) return null;
-  const rows = await r.json();
-  if (!rows[0]) return null;
-  return Number(rows[0].balance);
-}
-async function creditBalance(userId, amount, userToken) {
-  if (!SUPABASE_URL6 || amount <= 0) return null;
-  const MAX_ATTEMPTS = 5;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const current = await getBalance(userId, userToken);
-    if (current === null) {
-      logger.error({ userId }, "creditBalance: could not read balance");
-      return null;
-    }
-    const next = current + amount;
-    const url = `${SUPABASE_URL6}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&balance=eq.${current}`;
-    const r = await fetch(url, {
-      method: "PATCH",
-      headers: { ...writeHeaders(userToken), Prefer: "return=representation" },
-      body: JSON.stringify({ balance: next })
-    });
-    if (!r.ok) {
-      logger.error({ userId, attempt, status: r.status }, "creditBalance: PATCH failed");
-      return null;
-    }
-    const rows = await r.json();
-    if (rows && rows.length > 0) return Number(rows[0].balance);
-    await new Promise((resolve) => setTimeout(resolve, 10 * (attempt + 1)));
-  }
-  logger.error({ userId }, "creditBalance: exhausted CAS retries");
-  return null;
+async function updatePaymentTransaction(paymentId, transactionId) {
+  await getMysqlPool().execute("UPDATE payments SET transaction_id = COALESCE(transaction_id, ?) WHERE id = ?", [transactionId, paymentId]);
 }
 async function ensureRatesLoaded() {
   if (isRateCacheValid()) return;
-  if (!SUPABASE_URL6) return;
+  const [rows] = await getMysqlPool().execute("SELECT `key`, `value` FROM settings WHERE `key` LIKE 'currency_rate_%'");
+  const overrides = {};
+  for (const row of rows) {
+    const m = /^currency_rate_([A-Z]{2})$/i.exec(String(row.key));
+    const value = Number(row.value);
+    if (m?.[1] && Number.isFinite(value) && value > 0) overrides[m[1].toUpperCase()] = value;
+  }
+  setRateOverrides(overrides);
+}
+async function creditDeposit(paymentId, opts) {
+  await ensureRatesLoaded();
+  const db = getMysqlPool();
+  const conn = await db.getConnection();
+  let outcome;
   try {
-    const key2 = SUPABASE_SERVICE_ROLE_KEY5 || SUPABASE_ANON_KEY3;
-    const r = await fetch(
-      `${SUPABASE_URL6}/rest/v1/settings?key=like.currency_rate_%25&select=key,value`,
-      { headers: { apikey: key2, Authorization: `Bearer ${key2}` } }
-    );
-    if (!r.ok) return;
-    const rows = await r.json();
-    const overrides = {};
-    for (const row of rows) {
-      const m = /^currency_rate_([A-Z]{2})$/i.exec(row.key);
-      if (m && m[1]) {
-        const parsed = parseFloat(row.value);
-        if (Number.isFinite(parsed) && parsed > 0) {
-          overrides[m[1].toUpperCase()] = parsed;
-        }
-      }
+    await conn.beginTransaction();
+    const [payments] = await conn.execute("SELECT * FROM payments WHERE id = ? FOR UPDATE", [paymentId]);
+    if (!payments[0]) {
+      await conn.rollback();
+      return { ok: false, error: "Paiement introuvable", status: 404 };
     }
-    setRateOverrides(overrides);
+    const row = payments[0];
+    const payment = mapPayment(row);
+    const localAmount = fcfa(row.amount_minor);
+    let amount = payment.currency ? toFcfaByCurrency(localAmount, payment.currency) : toFcfa(localAmount, payment.country ?? null);
+    amount = Math.round(amount);
+    const eligible = isEligibleForBonus(amount);
+    const bonus = eligible ? BONUS_AMOUNT_FCFA : 0;
+    const onlyBonus = Boolean(opts?.forceBonusCredit && row.credited_at && eligible && row.bonus_status !== "credited");
+    if (row.credited_at && !onlyBonus) {
+      await conn.commit();
+      return { ok: true, alreadyCredited: true, amountCredited: 0, bonusCredited: 0, newBalance: null, payment };
+    }
+    const totalMinor = minor2(onlyBonus ? bonus : amount + bonus);
+    const [profiles] = await conn.execute("SELECT balance_minor FROM profiles WHERE user_id = ? FOR UPDATE", [row.user_id]);
+    if (!profiles[0]) throw new Error("Profil introuvable");
+    const before = Number(profiles[0].balance_minor);
+    const after = before + totalMinor;
+    const type = onlyBonus ? "deposit_bonus" : "deposit";
+    const [insert] = await conn.execute(
+      `INSERT IGNORE INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id)
+       VALUES (?,?,?,?,? ,?,'payment',?)`,
+      [crypto5.randomUUID(), row.user_id, totalMinor, after, row.currency, type, paymentId]
+    );
+    if (insert.affectedRows === 0) {
+      await conn.commit();
+      return { ok: true, alreadyCredited: true, amountCredited: 0, bonusCredited: 0, newBalance: null, payment };
+    }
+    await conn.execute("UPDATE profiles SET balance_minor = ? WHERE user_id = ?", [after, row.user_id]);
+    await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason,actor_user_id) VALUES (?,?,?,?,NULL)", [row.user_id, before, after, type]);
+    if (onlyBonus) await conn.execute("UPDATE payments SET bonus_amount_minor=?, bonus_status='credited', bonus_credited_at=NOW(), balance_after_minor=? WHERE id=?", [minor2(bonus), after, paymentId]);
+    else await conn.execute(
+      "UPDATE payments SET status='completed', credited_at=NOW(), completed_at=NOW(), bonus_amount_minor=?, bonus_status=?, bonus_credited_at=?, balance_before_minor=?, balance_after_minor=? WHERE id=?",
+      [minor2(bonus), eligible ? "credited" : "not_eligible", eligible ? /* @__PURE__ */ new Date() : null, before, after, paymentId]
+    );
+    await conn.commit();
+    outcome = { ok: true, alreadyCredited: false, amountCredited: onlyBonus ? 0 : amount, bonusCredited: bonus, newBalance: fcfa(after), payment: await fetchPayment(paymentId) };
+    if (!onlyBonus) await maybeAwardReferralBonus(payment.user_id, paymentId, amount);
+    return outcome;
   } catch (err) {
-    logger.warn({ err }, "ensureRatesLoaded: could not load currency rates from settings \u2014 using defaults");
+    await conn.rollback();
+    logger.error({ err, paymentId }, "creditDeposit failed");
+    return { ok: false, error: "Cr\xE9dit du solde \xE9chou\xE9 (r\xE9essayez)", status: 500 };
+  } finally {
+    conn.release();
   }
 }
-async function fetchUserCountry(userId) {
-  if (!SUPABASE_URL6) return null;
+async function markPaymentStatus(paymentId, status, _userToken) {
+  const [result] = await getMysqlPool().execute("UPDATE payments SET status=? WHERE id=? AND credited_at IS NULL", [status, paymentId]);
+  if (result.affectedRows) return { ok: true };
+  const payment = await fetchPayment(paymentId);
+  return payment ? { ok: false, error: "Ce d\xE9p\xF4t a d\xE9j\xE0 \xE9t\xE9 cr\xE9dit\xE9 \u2014 un changement de statut n\xE9cessite un remboursement manuel.", status: 409 } : { ok: false, error: "Paiement introuvable", status: 404 };
+}
+
+// src/lib/operator-logos.ts
+init_logger();
+import crypto6 from "node:crypto";
+import path from "node:path";
+import { promises as fs } from "node:fs";
+var KEY_PREFIX = "operator_logo_";
+var CACHE_TTL_MS2 = 3e4;
+var LOGO_DIR = path.resolve(process.cwd(), "data", "operator-logos");
+var LOGO_URL_PREFIX = "/api/payments/operator-logos/file/";
+var cache2 = null;
+function bustOperatorLogosCache() {
+  cache2 = null;
+}
+async function fetchOperatorLogos() {
+  if (cache2 && cache2.expiresAt > Date.now()) return cache2.value;
   try {
-    const r = await fetch(
-      `${SUPABASE_URL6}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=country`,
-      { headers: readHeaders() }
+    const [rows] = await getMysqlPool().execute(
+      "SELECT `key`, `value` FROM settings WHERE `key` LIKE ?",
+      [`${KEY_PREFIX}%`]
     );
-    if (!r.ok) return null;
-    const rows = await r.json();
-    return rows[0]?.country ?? null;
+    const logos = {};
+    for (const row of rows) {
+      const code = row.key.slice(KEY_PREFIX.length);
+      if (code && row.value) logos[code] = row.value;
+    }
+    cache2 = { value: logos, expiresAt: Date.now() + CACHE_TTL_MS2 };
+    return logos;
+  } catch (err) {
+    logger.warn({ err }, "fetchOperatorLogos failed");
+    return {};
+  }
+}
+async function upsertOperatorLogo(operatorCode, logoUrl) {
+  const key2 = KEY_PREFIX + operatorCode;
+  await getMysqlPool().execute(
+    "INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)",
+    [key2, logoUrl]
+  );
+  bustOperatorLogosCache();
+}
+async function uploadOperatorLogoFile(operatorCode, fileBuffer, mimeType) {
+  const ext = mimeType.includes("svg") ? "svg" : mimeType.includes("png") ? "png" : "jpg";
+  const safeCode = operatorCode.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+  if (!safeCode) throw new Error("Invalid operator code");
+  const filename = `${safeCode}-${crypto6.randomBytes(8).toString("hex")}.${ext}`;
+  await fs.mkdir(LOGO_DIR, { recursive: true });
+  await fs.writeFile(path.join(LOGO_DIR, filename), fileBuffer, { flag: "wx" });
+  const publicUrl = `${LOGO_URL_PREFIX}${encodeURIComponent(filename)}?t=${Date.now()}`;
+  await upsertOperatorLogo(operatorCode, publicUrl);
+  return publicUrl;
+}
+async function deleteOperatorLogo(operatorCode) {
+  const key2 = KEY_PREFIX + operatorCode;
+  const [rows] = await getMysqlPool().execute(
+    "SELECT `value` FROM settings WHERE `key` = ?",
+    [key2]
+  );
+  await getMysqlPool().execute("DELETE FROM settings WHERE `key` = ?", [key2]);
+  const stored = String(rows[0]?.value || "");
+  if (stored.startsWith(LOGO_URL_PREFIX)) {
+    const filename = stored.slice(LOGO_URL_PREFIX.length).split("?")[0] || "";
+    if (/^[a-zA-Z0-9_-]{1,100}-[a-f0-9]{16}\.(svg|png|jpg)$/i.test(filename)) {
+      await fs.unlink(path.join(LOGO_DIR, filename)).catch(() => void 0);
+    }
+  }
+  bustOperatorLogosCache();
+}
+function operatorLogoPath(filename) {
+  return /^[a-zA-Z0-9_-]{1,100}-[a-f0-9]{16}\.(svg|png|jpg)$/i.test(filename) ? path.join(LOGO_DIR, filename) : null;
+}
+
+// src/routes/admin.ts
+var import_multer = __toESM(require_multer(), 1);
+var router3 = (0, import_express3.Router)();
+var MAIN_ADMIN_EMAIL = (process.env["MAIN_ADMIN_EMAIL"] || "jude@gmail.com").toLowerCase();
+var uploadLogo = (0, import_multer.default)({ storage: import_multer.default.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
+function actionCode(req, res, next) {
+  const expected = process.env["ADMIN_ACTION_CODE"];
+  if (!expected) return res.status(503).json({ error: "Code de confirmation non configur\xE9 c\xF4t\xE9 serveur (secret ADMIN_ACTION_CODE manquant)" });
+  const given = String(req.headers["x-admin-action-code"] || "");
+  if (!given) return res.status(428).json({ error: "Code de confirmation requis", code_required: true });
+  if (given !== expected) return res.status(403).json({ error: "Code de confirmation invalide", code_invalid: true });
+  return next();
+}
+async function setting(key2) {
+  const [rows] = await getMysqlPool().execute("SELECT `value` FROM settings WHERE `key`=?", [key2]);
+  return rows[0] ? String(rows[0].value) : null;
+}
+async function putSetting(key2, value, by) {
+  await getMysqlPool().execute("INSERT INTO settings (`key`,`value`,updated_by) VALUES (?,?,?) ON DUPLICATE KEY UPDATE `value`=VALUES(`value`),updated_by=VALUES(updated_by)", [key2, value, by ?? null]);
+}
+router3.get("/admin/earnings", requireUser, requireAdmin, async (req, res) => {
+  try {
+    const all = await readEarnings(), now = /* @__PURE__ */ new Date(), day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const one = 864e5, max = 3650;
+    const parseDay = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? /* @__PURE__ */ new Date(`${v}T00:00:00.000Z`) : null;
+    const to = parseDay(req.query.to) || day;
+    let from = parseDay(req.query.from);
+    if (!from && (req.query.all === "1" || req.query.all === "true") && all.length) from = new Date(Math.min(...all.map((x) => new Date(x.ts).getTime())));
+    if (!from) from = new Date(to.getTime() - (Math.min(Math.max(Number(req.query.days) || 30, 1), max) - 1) * one);
+    from = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()));
+    if (to.getTime() - from.getTime() > (max - 1) * one) from = new Date(to.getTime() - (max - 1) * one);
+    const buckets = /* @__PURE__ */ new Map();
+    for (let d = from.getTime(); d <= to.getTime(); d += one) buckets.set(new Date(d).toISOString().slice(0, 10), { gain: 0, revenue: 0, count: 0 });
+    const month = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)), year = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+    const summary = { today: { gain: 0, revenue: 0, orders: 0 }, month: { gain: 0, revenue: 0, orders: 0 }, year: { gain: 0, revenue: 0, orders: 0 }, total: { gain: 0, revenue: 0, orders: 0 } };
+    for (const r of all) {
+      const t = new Date(r.ts), add = (x) => {
+        x.gain += r.gain_fcfa;
+        x.revenue += r.user_price_fcfa;
+        x.orders++;
+      };
+      add(summary.total);
+      if (t >= year) add(summary.year);
+      if (t >= month) add(summary.month);
+      if (t >= day) add(summary.today);
+      const b = buckets.get(t.toISOString().slice(0, 10));
+      if (b) {
+        b.gain += r.gain_fcfa;
+        b.revenue += r.user_price_fcfa;
+        b.count++;
+      }
+    }
+    const series = [...buckets].map(([date, x]) => ({ date, ...x })), total = series.reduce((a, x) => ({ gain: a.gain + x.gain, revenue: a.revenue + x.revenue, orders: a.orders + x.count }), { gain: 0, revenue: 0, orders: 0 });
+    const avg = all.filter((x) => new Date(x.ts) >= new Date(day.getTime() - 29 * one)).reduce((a, x) => a + x.gain_fcfa, 0) / 30;
+    res.json({ summary, projections: { daily_avg_30d: Math.round(avg), quarterly: Math.round(avg * 90), semi_annual: Math.round(avg * 182), annual: Math.round(avg * 365), month_run_rate: Math.round(summary.month.gain / now.getUTCDate() * 30), year_run_rate: Math.round(summary.year.gain / (Math.floor((now.getTime() - year.getTime()) / one) + 1) * 365) }, window: { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10), days: series.length, total }, series });
+  } catch (err) {
+    logger.error({ err }, "admin earnings error");
+    res.status(500).json({ error: "Erreur lecture revenus" });
+  }
+});
+router3.post("/admin/earnings/backfill", requireUser, requireAdmin, async (_req, res) => {
+  try {
+    const existing = new Set((await readEarnings()).map((r) => `${r.provider ?? 1}:${r.provider_order_id}`));
+    const [orders] = await getMysqlPool().query("SELECT id,user_id,COALESCE(provider_order_id,external_order_id) external_id,provider,charge_minor,quantity,service_name,created_at FROM orders WHERE status='completed' AND COALESCE(provider_order_id,external_order_id) IS NOT NULL");
+    let inserted = 0, skipped = 0;
+    for (const o of orders) {
+      const key2 = `${o.provider}:${o.external_id}`;
+      if (existing.has(key2)) {
+        skipped++;
+        continue;
+      }
+      const revenueFcfa = Number(o.charge_minor) / 100;
+      const gain = estimateGainFromRevenue(revenueFcfa);
+      await appendEarning({ ts: new Date(o.created_at).toISOString(), provider_order_id: String(o.external_id), user_id: o.user_id, service: 0, service_name: o.service_name || "", quantity: Number(o.quantity), rate_usd: 0, user_price_fcfa: revenueFcfa, provider_cost_usd: 0, ...gain, provider: Number(o.provider) });
+      inserted++;
+    }
+    res.json({ ok: true, total_orders_scanned: orders.length, inserted, recomputed: 0, skipped_already_present: skipped, skipped_no_external_id: 0 });
+  } catch (err) {
+    logger.error({ err }, "earnings backfill error");
+    res.status(500).json({ error: "Erreur backfill" });
+  }
+});
+router3.get("/admin/smm-balance", requireUser, requireAdmin, async (req, res) => {
+  try {
+    const provider = parseProviderId(req.query.provider), raw = await callProvider(provider, "balance"), usd = Number(raw?.balance);
+    res.json({ balance_usd: Number.isFinite(usd) ? usd : null, balance_fcfa_equiv: Number.isFinite(usd) ? Math.round(usd * usdToFcfaRate(provider)) : null, currency: raw?.currency || "USD", provider, raw });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router3.get("/admin/smm-pricing", requireUser, requireAdmin, async (req, res) => {
+  try {
+    const provider = parseProviderId(req.query.provider);
+    res.json({ services: await enrichServices(await callProvider(provider, "services"), provider), provider });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router3.put("/admin/smm-pricing/:serviceId", requireUser, requireAdmin, async (req, res) => {
+  const provider = parseProviderId(req.query.provider), id = String(req.params.serviceId), b = req.body || {}, current = (await loadPricing(provider))[id];
+  if (!/^\d+$/.test(id)) return res.status(400).json({ error: "service invalide" });
+  const price = b.price_fcfa === void 0 ? current?.price_fcfa : Number(b.price_fcfa);
+  if (!Number.isFinite(price) || price < 0) return res.status(400).json({ error: "price_fcfa invalide" });
+  await setEntry(id, { price_fcfa: Math.round(price), hidden: typeof b.hidden === "boolean" ? b.hidden : current?.hidden, featured: typeof b.featured === "boolean" ? b.featured : current?.featured }, provider);
+  invalidateServicesCache(provider);
+  return res.json({ ok: true, service: Number(id), provider });
+});
+router3.delete("/admin/smm-pricing/:serviceId", requireUser, requireAdmin, async (req, res) => {
+  const provider = parseProviderId(req.query.provider);
+  await deleteEntry(String(req.params.serviceId), provider);
+  invalidateServicesCache(provider);
+  res.json({ ok: true, provider });
+});
+router3.post("/admin/smm-pricing/rescale", requireUser, requireAdmin, async (req, res) => {
+  const p = parseProviderId(req.query.provider), factor = Number(req.body?.factor);
+  if (!Number.isFinite(factor) || factor <= 0 || factor > 100) return res.status(400).json({ error: "factor invalide (attendu : nombre > 0 et \u2264 100)" });
+  let updated = 0;
+  for (const [id, e] of Object.entries(await loadPricing(p))) {
+    if (e.price_fcfa > 0) {
+      await setEntry(id, { ...e, price_fcfa: Math.round(e.price_fcfa * factor / 10) * 10 }, p);
+      updated++;
+    }
+  }
+  invalidateServicesCache(p);
+  return res.json({ ok: true, provider: p, factor, updated });
+});
+router3.get("/admin/providers", requireUser, requireAdmin, async (_req, res) => {
+  try {
+    res.json({ providers: (await loadProviderConfig()).map((c) => ({ ...c, configured: getProvider(c.provider_id)?.configured ?? false })) });
+  } catch {
+    res.status(500).json({ error: "Lecture fournisseurs impossible" });
+  }
+});
+router3.put("/admin/providers/:id", requireUser, requireAdmin, async (req, res) => {
+  const id = Number(req.params.id), b = req.body || {};
+  if (![1, 3, 4, 5].includes(id)) return res.status(400).json({ error: "provider id invalide (1, 3, 4 ou 5)" });
+  const patch = {};
+  for (const key2 of ["display_order", "enabled", "header_title", "header_text"]) if (b[key2] !== void 0) patch[key2] = b[key2];
+  const out = await updateProviderConfig(id, patch);
+  return out.ok ? res.json({ ok: true }) : res.status(500).json({ error: out.error });
+});
+router3.get("/admin/users/total-balance", requireUser, requireAdmin, async (_req, res) => {
+  try {
+    const [r] = await getMysqlPool().query("SELECT COALESCE(SUM(balance_minor),0) total_balance,COUNT(*) user_count FROM profiles");
+    res.json({ total_balance: Number(r[0].total_balance) / 100, user_count: Number(r[0].user_count), currency: "FCFA" });
+  } catch {
+    res.status(500).json({ error: "Lecture des soldes impossible" });
+  }
+});
+router3.get("/admin/users", requireUser, requireAdmin, async (req, res) => {
+  const authReq = req;
+  const search = String(req.query.search || "").trim(), limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 2e3), offset = Math.max(Number(req.query.offset) || 0, 0), term = `%${search}%`;
+  try {
+    const [requester] = await getMysqlPool().execute("SELECT email FROM users WHERE id=?", [authReq.userId]);
+    const main = String(requester[0]?.email || "").toLowerCase() === MAIN_ADMIN_EMAIL;
+    const where = search ? "WHERE (p.username LIKE ? OR p.email LIKE ? OR u.email LIKE ?)" : "";
+    const args = search ? [term, term, term] : [];
+    const [rows] = await getMysqlPool().execute(`SELECT p.user_id,p.username,COALESCE(p.email,u.email) email,p.country,p.currency,p.balance_minor balance,p.affiliate_earnings_minor affiliate_earnings,IF(u.disabled_at IS NULL,TRUE,FALSE) is_active,u.created_at,IF(ur.user_id IS NULL,'user','admin') role FROM profiles p JOIN users u ON u.id=p.user_id LEFT JOIN user_roles ur ON ur.user_id=p.user_id AND ur.role='admin' ${where} ORDER BY u.created_at DESC LIMIT ? OFFSET ?`, [...args, limit, offset]);
+    let users = rows.map((r) => ({ ...r, balance: Number(r.balance) / 100, affiliate_earnings: Number(r.affiliate_earnings) / 100, is_main_admin: String(r.email).toLowerCase() === MAIN_ADMIN_EMAIL }));
+    if (!main) users = users.filter((x) => !x.is_main_admin);
+    res.json({ users, total_count: null, has_more: rows.length === limit, requester_is_main_admin: main });
+  } catch (err) {
+    logger.error({ err }, "admin users list");
+    res.status(500).json({ error: "Lecture des utilisateurs impossible" });
+  }
+});
+router3.patch("/admin/users/:userId", requireUser, requireAdmin, actionCode, async (req, res) => {
+  const authReq = req;
+  const id = String(req.params.userId), b = req.body || {};
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: "user_id invalide" });
+  if (b.balance !== void 0 && (!Number.isFinite(Number(b.balance)) || Number(b.balance) < 0)) return res.status(400).json({ error: "Solde invalide" });
+  const db = getMysqlPool(), c = await db.getConnection();
+  try {
+    await c.beginTransaction();
+    const [profile2] = await c.execute("SELECT balance_minor FROM profiles WHERE user_id=? FOR UPDATE", [id]);
+    if (!profile2[0]) {
+      await c.rollback();
+      return res.status(404).json({ error: "Utilisateur introuvable" });
+    }
+    const before = Number(profile2[0].balance_minor), after = b.balance === void 0 ? before : Math.round(Number(b.balance) * 100);
+    const fields = [], values = [];
+    for (const [key2, col] of [["username", "username"], ["email", "email"], ["country", "country"]]) if (typeof b[key2] === "string") {
+      fields.push(`${col}=?`);
+      values.push(b[key2].trim());
+    }
+    if (b.balance !== void 0) {
+      fields.push("balance_minor=?");
+      values.push(after);
+    }
+    if (fields.length) await c.execute(`UPDATE profiles SET ${fields.join(",")} WHERE user_id=?`, [...values, id]);
+    if (typeof b.email === "string" && b.email.trim()) await c.execute("UPDATE users SET email=? WHERE id=?", [b.email.trim().toLowerCase(), id]);
+    if (typeof b.is_active === "boolean") await c.execute(`UPDATE users SET disabled_at=${b.is_active ? "NULL" : "NOW()"} WHERE id=?`, [id]);
+    if (after !== before) {
+      const paymentId = randomUUID2();
+      await c.execute("INSERT INTO payments (id,user_id,provider_reference,amount_minor,currency,status,method,credited_at,balance_before_minor,balance_after_minor) VALUES (?,?,?,?,?,'completed','admin_adjustment',NOW(),?,?)", [paymentId, id, `ADJ-${paymentId}`, after - before, "XAF", before, after]);
+      await c.execute("INSERT INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?,?,'admin_adjustment','payment',?)", [randomUUID2(), id, after - before, after, "XAF", paymentId]);
+      await c.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason,actor_user_id) VALUES (?,?,?,?,?)", [id, before, after, "admin_adjustment", authReq.userId]);
+    }
+    await c.commit();
+    return res.json({ ok: true });
+  } catch (err) {
+    await c.rollback();
+    logger.error({ err }, "admin user update");
+    return res.status(500).json({ error: "Mise \xE0 jour du profil impossible" });
+  } finally {
+    c.release();
+  }
+});
+router3.post("/admin/users/:userId/password", requireUser, requireAdmin, actionCode, async (req, res) => {
+  const pass = String(req.body?.password || "");
+  if (pass.length < 8 || pass.length > 200) return res.status(400).json({ error: "Le mot de passe doit contenir entre 8 et 200 caract\xE8res" });
+  await getMysqlPool().execute("UPDATE users SET password_hash=? WHERE id=?", [await bcryptjs_default.hash(pass, 12), req.params.userId]);
+  return res.json({ ok: true, user_id: req.params.userId });
+});
+router3.get("/admin/deposits", requireUser, requireAdmin, async (req, res) => {
+  try {
+    const q = req.query, limit = Math.min(Math.max(Number(q.limit) || 200, 1), 1e3), clauses = ["1=1"], args = [];
+    for (const key2 of ["status", "bonus_status"]) if (q[key2] && q[key2] !== "all") {
+      clauses.push(`p.${key2}=?`);
+      args.push(q[key2]);
+    }
+    if (q.min_amount) {
+      clauses.push("p.amount_minor>=?");
+      args.push(Math.round(Number(q.min_amount) * 100));
+    }
+    if (q.max_amount) {
+      clauses.push("p.amount_minor<=?");
+      args.push(Math.round(Number(q.max_amount) * 100));
+    }
+    if (q.search) {
+      clauses.push("(p.provider_reference LIKE ? OR p.user_id LIKE ? OR pr.username LIKE ? OR pr.email LIKE ?)");
+      args.push(...Array(4).fill(`%${q.search}%`));
+    }
+    const [rows] = await getMysqlPool().execute(`SELECT p.id,p.user_id,p.amount_minor amount,p.status,p.method,p.provider_reference reference,p.created_at,p.bonus_amount_minor bonus_amount,p.bonus_status,p.bonus_credited_at,p.credited_at,p.country,p.currency,pr.username user_username,pr.email user_email FROM payments p LEFT JOIN profiles pr ON pr.user_id=p.user_id WHERE ${clauses.join(" AND ")} ORDER BY p.created_at DESC LIMIT ?`, [...args, limit]);
+    const deposits = rows.map((r) => ({ ...r, amount: Number(r.amount) / 100, bonus_amount: Number(r.bonus_amount) / 100, bonus_status: String(r.bonus_status) }));
+    res.json({ deposits, counters: { total: deposits.length, total_amount_fcfa: deposits.reduce((a, r) => a + r.amount, 0), bonus_pending: deposits.filter((r) => r.bonus_status === "pending").length, bonus_credited: deposits.filter((r) => r.bonus_status === "credited").length, bonus_credited_fcfa: deposits.filter((r) => r.bonus_status === "credited").reduce((a, r) => a + r.bonus_amount, 0), bonus_eligible: deposits.filter((r) => r.amount >= BONUS_THRESHOLD_FCFA).length }, bonus_rule: { threshold_fcfa: BONUS_THRESHOLD_FCFA, bonus_fcfa: BONUS_AMOUNT_FCFA } });
+  } catch (err) {
+    logger.error({ err }, "deposits");
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+router3.post("/admin/deposits/:id/status", requireUser, requireAdmin, async (req, res) => {
+  const status = String(req.body?.status || "");
+  if (!["completed", "failed", "rejected", "pending"].includes(status)) return res.status(400).json({ error: "statut invalide" });
+  if (status !== "completed") {
+    const result2 = await markPaymentStatus(String(req.params.id), status);
+    return result2.ok ? res.json({ ok: true }) : res.status(result2.status ?? 500).json({ error: result2.error });
+  }
+  const result = await creditDeposit(String(req.params.id));
+  return result.ok ? res.json({ ok: true, already_credited: result.alreadyCredited, amount_credited: result.amountCredited, bonus_credited: result.bonusCredited, new_balance: result.newBalance }) : res.status(result.status ?? 500).json({ error: result.error });
+});
+router3.post("/admin/deposits/:id/credit-bonus", requireUser, requireAdmin, async (_req, res) => res.status(409).json({ error: "Le cr\xE9dit de bonus doit \xEAtre trait\xE9 par le service de paiement" }));
+router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) => {
+  try {
+    const limit = String(req.query.limit) === "all" ? 1e5 : Math.min(Math.max(Number(req.query.limit) || 200, 1), 1e3), offset = Math.max(Number(req.query.offset) || 0, 0), type = String(req.query.type || "all");
+    const [rows] = await getMysqlPool().query(`SELECT * FROM (SELECT CONCAT('o-',o.id) id,o.id local_order_id,'order' kind,o.created_at,o.charge_minor amount,o.status,o.refunded_at,o.user_id,COALESCE(p.username,p.email,o.user_id) user_label,p.email user_email,CONCAT_WS(' \xB7 ',o.service_category,o.service_name) detail,COALESCE(o.external_order_id,o.provider_order_id) reference,o.provider FROM orders o LEFT JOIN profiles p ON p.user_id=o.user_id UNION ALL SELECT CONCAT('p-',x.id),NULL,'deposit',x.created_at,x.amount_minor,x.status,NULL,x.user_id,COALESCE(p.username,p.email,x.user_id),p.email,CONCAT('D\xE9p\xF4t \xB7 ',COALESCE(x.method,'')),COALESCE(x.transaction_id,x.order_id,x.provider_reference),NULL FROM payments x LEFT JOIN profiles p ON p.user_id=x.user_id) t ${type === "all" ? "" : `WHERE kind='${type === "adjustment" ? "deposit" : type}'`} ORDER BY created_at DESC LIMIT ? OFFSET ?`, [limit, offset]);
+    return res.json({ rows: rows.map((r) => ({ ...r, amount: Number(r.amount) / 100 })), total_count: null, has_more: rows.length === limit });
+  } catch (err) {
+    logger.error({ err }, "transactions");
+    return res.status(500).json({ error: "Erreur lecture transactions" });
+  }
+});
+async function currencyOverrides() {
+  const [rows] = await getMysqlPool().query("SELECT `key`,`value` FROM settings WHERE `key` LIKE 'currency_rate_%'");
+  return Object.fromEntries(rows.map((r) => [String(r.key).slice(14), Number(r.value)]).filter(([, v]) => Number.isFinite(Number(v)) && Number(v) > 0));
+}
+router3.get("/admin/currencies", requireUser, requireAdmin, async (_req, res) => {
+  const o = await currencyOverrides();
+  setRateOverrides(o);
+  res.json({ rates: NON_CFA_COUNTRIES_INFO.map((c) => ({ country: c.code, name: c.name, currency: c.currency, symbol: c.symbol, fcfaPerUnit: o[c.code] ?? c.defaultFcfaPerUnit, default: c.defaultFcfaPerUnit })) });
+});
+router3.put("/admin/currencies", requireUser, requireAdmin, async (req, res) => {
+  const country = String(req.body?.country || "").toUpperCase(), rate = Number(req.body?.fcfaPerUnit);
+  if (!NON_CFA_COUNTRIES_INFO.some((c) => c.code === country) || !Number.isFinite(rate) || rate <= 0) return res.status(400).json({ error: "Taux ou pays invalide" });
+  await putSetting(`currency_rate_${country}`, String(rate), req.userId);
+  setRateOverrides(await currencyOverrides());
+  return res.json({ ok: true, country, fcfaPerUnit: rate });
+});
+router3.delete("/admin/currencies/:country", requireUser, requireAdmin, async (req, res) => {
+  await getMysqlPool().execute("DELETE FROM settings WHERE `key`=?", [`currency_rate_${String(req.params.country).toUpperCase()}`]);
+  setRateOverrides(await currencyOverrides());
+  res.json({ ok: true });
+});
+async function savedUsdRates() {
+  try {
+    const v = await setting("smm_usd_rates");
+    const x = v && JSON.parse(v);
+    return x?.default && x?.peakerr ? x : null;
   } catch {
     return null;
   }
 }
-async function creditDeposit(paymentId, opts) {
-  if (!SUPABASE_URL6) return { ok: false, error: "Supabase non configur\xE9", status: 503 };
-  const userToken = opts?.userToken;
-  const payment = await fetchPayment(paymentId, userToken);
-  if (!payment) return { ok: false, error: "Paiement introuvable", status: 404 };
-  await ensureRatesLoaded();
-  const localAmount = Number(payment.amount);
-  let amount;
-  if (payment.currency) {
-    amount = toFcfaByCurrency(localAmount, payment.currency);
-  } else {
-    const userCountry = await fetchUserCountry(payment.user_id);
-    amount = toFcfa(localAmount, userCountry);
-  }
-  if (amount !== localAmount) {
-    logger.info(
-      {
-        paymentId,
-        userId: payment.user_id,
-        localAmount,
-        fcfaAmount: amount,
-        currency: payment.currency,
-        country: payment.country
-      },
-      "currency conversion applied for deposit"
-    );
-  } else {
-    logger.info(
-      { paymentId, userId: payment.user_id, amount, currency: payment.currency ?? "unknown" },
-      "deposit amount in FCFA (no conversion needed)"
-    );
-  }
-  const eligible = isEligibleForBonus(amount);
-  const bonus = eligible ? BONUS_AMOUNT_FCFA : 0;
-  if (opts?.forceBonusCredit && payment.status === "completed" && eligible && payment.bonus_status !== "credited") {
-    const claimUrl2 = `${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}&bonus_status=neq.credited`;
-    const claim2 = await fetch(claimUrl2, {
-      method: "PATCH",
-      headers: { ...writeHeaders(userToken), Prefer: "return=representation" },
-      body: JSON.stringify({
-        bonus_status: "credited",
-        bonus_amount: BONUS_AMOUNT_FCFA,
-        bonus_credited_at: (/* @__PURE__ */ new Date()).toISOString()
-      })
-    });
-    if (!claim2.ok) {
-      const body = await claim2.text();
-      logger.error({ paymentId, status: claim2.status, body: body.slice(0, 200) }, "bonus claim PATCH failed");
-      return { ok: false, error: "Impossible de r\xE9clamer le bonus", status: 502 };
-    }
-    const claimed2 = await claim2.json();
-    if (claimed2.length === 0) {
-      return { ok: true, alreadyCredited: true, amountCredited: 0, bonusCredited: 0, newBalance: null, payment };
-    }
-    const newBalance2 = await creditBalance(payment.user_id, BONUS_AMOUNT_FCFA, userToken);
-    if (newBalance2 === null) {
-      logger.error({ paymentId }, "bonus credit failed AFTER claim \u2014 rolling back claim");
-      await fetch(`${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
-        method: "PATCH",
-        headers: writeHeaders(userToken),
-        body: JSON.stringify({
-          bonus_status: "pending",
-          bonus_credited_at: null
-        })
-      }).catch((err) => logger.error({ err, paymentId }, "bonus claim rollback FAILED \u2014 manual reconciliation required"));
-      return { ok: false, error: "Cr\xE9dit du bonus \xE9chou\xE9 (r\xE9essayez)", status: 500 };
-    }
-    return { ok: true, alreadyCredited: false, amountCredited: 0, bonusCredited: BONUS_AMOUNT_FCFA, newBalance: newBalance2, payment: claimed2[0] };
-  }
-  const claimUrl = `${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}&credited_at=is.null`;
-  const nowIso = (/* @__PURE__ */ new Date()).toISOString();
-  const patch = {
-    status: "completed",
-    credited_at: nowIso,
-    bonus_amount: bonus,
-    bonus_status: eligible ? "credited" : "not_eligible",
-    bonus_credited_at: eligible ? nowIso : null
-  };
-  const claim = await fetch(claimUrl, {
-    method: "PATCH",
-    headers: { ...writeHeaders(userToken), Prefer: "return=representation" },
-    body: JSON.stringify(patch)
-  });
-  if (!claim.ok) {
-    const body = await claim.text();
-    logger.error({ paymentId, status: claim.status, body: body.slice(0, 200) }, "deposit claim PATCH failed");
-    return { ok: false, error: "Impossible de marquer le d\xE9p\xF4t comme cr\xE9dit\xE9", status: 502 };
-  }
-  const claimed = await claim.json();
-  if (claimed.length === 0) {
-    return { ok: true, alreadyCredited: true, amountCredited: 0, bonusCredited: 0, newBalance: null, payment };
-  }
-  const total = amount + bonus;
-  const newBalance = await creditBalance(payment.user_id, total, userToken);
-  if (newBalance === null) {
-    logger.error({ paymentId, userId: payment.user_id, total }, "creditDeposit: balance update FAILED after claim \u2014 rolling back claim");
-    const rollback = await fetch(`${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
-      method: "PATCH",
-      headers: writeHeaders(userToken),
-      body: JSON.stringify({
-        status: payment.status,
-        credited_at: null,
-        bonus_amount: payment.bonus_amount ?? 0,
-        bonus_status: payment.bonus_status ?? (eligible ? "pending" : "not_eligible"),
-        bonus_credited_at: null
-      })
-    }).catch((err) => {
-      logger.error({ err, paymentId }, "deposit claim rollback FAILED \u2014 manual reconciliation required");
-      return null;
-    });
-    if (!rollback || !rollback.ok) {
-      logger.error({ paymentId }, "deposit claim rollback returned non-OK \u2014 manual reconciliation required");
-    }
-    return { ok: false, error: "Cr\xE9dit du solde \xE9chou\xE9 (r\xE9essayez)", status: 500 };
-  }
-  try {
-    await fetch(`${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
-      method: "PATCH",
-      headers: writeHeaders(userToken),
-      body: JSON.stringify({ balance_before: newBalance - total, balance_after: newBalance })
-    });
-  } catch (err) {
-    logger.warn({ err, paymentId }, "creditDeposit: could not record balance_before/after");
-  }
-  logger.info({ paymentId, userId: payment.user_id, amount, bonus, newBalance }, "deposit credited");
-  try {
-    await maybeAwardReferralBonus(payment.user_id, paymentId, amount);
-  } catch (err) {
-    logger.error({ err, paymentId }, "referral bonus hook failed (deposit credit unaffected)");
-  }
-  return { ok: true, alreadyCredited: false, amountCredited: amount, bonusCredited: bonus, newBalance, payment: claimed[0] };
+async function loadUsdRatesAtStartup() {
+  const x = await savedUsdRates();
+  if (x) setUsdRatesOverride(x);
 }
-async function markPaymentStatus(paymentId, status, userToken) {
-  if (!SUPABASE_URL6) return { ok: false, error: "Supabase non configur\xE9", status: 503 };
-  const payment = await fetchPayment(paymentId, userToken);
-  if (!payment) return { ok: false, error: "Paiement introuvable", status: 404 };
-  if (payment.credited_at) {
-    return {
-      ok: false,
-      error: "Ce d\xE9p\xF4t a d\xE9j\xE0 \xE9t\xE9 cr\xE9dit\xE9 \u2014 un changement de statut n\xE9cessite un remboursement manuel.",
-      status: 409
-    };
+router3.get("/admin/usd-rates", requireUser, requireAdmin, async (_req, res) => {
+  const x = await savedUsdRates();
+  if (x) setUsdRatesOverride(x);
+  res.json({ rates: x ?? getUsdRates(), defaults: USD_TO_LOCAL_RATES });
+});
+router3.put("/admin/usd-rates", requireUser, requireAdmin, async (req, res) => {
+  const rates = req.body?.rates;
+  if (!rates?.default || !rates?.peakerr || ![...Object.values(rates.default), ...Object.values(rates.peakerr)].every((v) => typeof v === "number" && v > 0)) return res.status(400).json({ error: "Format invalide" });
+  await putSetting("smm_usd_rates", JSON.stringify(rates), req.userId);
+  setUsdRatesOverride(rates);
+  return res.json({ ok: true, rates });
+});
+router3.delete("/admin/usd-rates", requireUser, requireAdmin, async (_req, res) => {
+  await getMysqlPool().execute("DELETE FROM settings WHERE `key`='smm_usd_rates'");
+  clearUsdRatesOverride();
+  res.json({ ok: true });
+});
+router3.get("/site-content", async (_req, res) => {
+  try {
+    const [rows] = await getMysqlPool().query("SELECT section,`key`,`value`,type,updated_at FROM site_content WHERE type IN ('text','image','url') ORDER BY section,`key`");
+    return res.json({ content: rows });
+  } catch (err) {
+    logger.error({ err }, "public site content");
+    return res.status(500).json({ error: "Contenu indisponible" });
   }
-  const r = await fetch(
-    `${SUPABASE_URL6}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}&credited_at=is.null`,
-    {
-      method: "PATCH",
-      headers: { ...writeHeaders(userToken), Prefer: "return=representation" },
-      body: JSON.stringify({ status })
-    }
+});
+router3.get("/admin/site-content", requireUser, requireAdmin, async (_req, res) => {
+  const [rows] = await getMysqlPool().query("SELECT id,section,`key`,label,`value`,type,updated_at FROM site_content ORDER BY section,`key`");
+  res.json({ content: rows });
+});
+router3.put("/admin/site-content/:key", requireUser, requireAdmin, async (req, res) => {
+  const key2 = String(req.params.key || "").trim(), b = req.body || {}, section = String(b.section || "").trim(), value = typeof b.value === "string" ? b.value : null;
+  if (!key2 || key2.length > 191 || !section || section.length > 96 || value === null) return res.status(400).json({ error: "Contenu invalide" });
+  await getMysqlPool().execute(
+    "INSERT INTO site_content (section,`key`,label,`value`,type,updated_by) VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE section=VALUES(section),label=VALUES(label),`value`=VALUES(`value`),type=VALUES(type),updated_by=VALUES(updated_by)",
+    [section, key2, String(b.label || ""), value, String(b.type || "text"), req.userId]
   );
-  if (!r.ok) {
-    const body = await r.text();
-    logger.error(
-      { paymentId, targetStatus: status, httpStatus: r.status, body: body.slice(0, 800) },
-      "markPaymentStatus PATCH failed"
-    );
-    if (body.includes("23514")) {
-      return {
-        ok: false,
-        error: "La base de donn\xE9es rejette ce statut (contrainte CHECK). Appliquer migrations/011_payments_status_check.sql.",
-        status: 500
-      };
-    }
-    return { ok: false, error: "Mise \xE0 jour du statut \xE9chou\xE9e", status: 502 };
+  return res.json({ ok: true, key: key2 });
+});
+router3.delete("/admin/site-content/:key", requireUser, requireAdmin, async (req, res) => {
+  await getMysqlPool().execute("DELETE FROM site_content WHERE `key`=?", [req.params.key]);
+  res.json({ ok: true });
+});
+router3.get("/admin/operator-logos", requireUser, requireAdmin, async (_req, res) => {
+  const logos = await fetchOperatorLogos();
+  return res.json({ operators: Object.entries(logos).map(([code, logo_url]) => ({ code, logo_url })) });
+});
+router3.post("/admin/operator-logos/:code/upload", requireUser, requireAdmin, uploadLogo.single("logo"), async (req, res) => {
+  const code = String(req.params.code || "");
+  const file = req.file;
+  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(code) || !file || !["image/png", "image/jpeg", "image/svg+xml"].includes(file.mimetype)) return res.status(400).json({ error: "Image ou code op\xE9rateur invalide" });
+  try {
+    return res.json({ logo_url: await uploadOperatorLogoFile(code, file.buffer, file.mimetype) });
+  } catch (err) {
+    logger.error({ err, code }, "operator logo upload");
+    return res.status(500).json({ error: "Enregistrement du logo impossible" });
   }
-  const updated = await r.json();
-  if (updated.length === 0) {
-    return {
-      ok: false,
-      error: "Ce d\xE9p\xF4t a \xE9t\xE9 cr\xE9dit\xE9 entre-temps \u2014 un changement de statut n\xE9cessite un remboursement manuel.",
-      status: 409
-    };
+});
+router3.delete("/admin/operator-logos/:code", requireUser, requireAdmin, async (req, res) => {
+  const code = String(req.params.code || "");
+  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(code)) return res.status(400).json({ error: "Code op\xE9rateur invalide" });
+  await deleteOperatorLogo(code);
+  return res.json({ ok: true });
+});
+var admin_default = router3;
+
+// src/routes/support.ts
+var import_express4 = __toESM(require_express2(), 1);
+init_logger();
+
+// src/lib/support.ts
+init_logger();
+import crypto7 from "node:crypto";
+import path2 from "node:path";
+import { promises as fs2 } from "node:fs";
+var SupportError = class extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
   }
-  return { ok: true };
+};
+var UPLOADS = path2.resolve(process.cwd(), "data", "support", "uploads");
+var TTL_DAYS = 7;
+var CLEANUP_INTERVAL_MS = 60 * 60 * 1e3;
+var msg = (r) => ({ id: String(r.id), ts: new Date(r.ts).toISOString(), sender: r.sender, sender_user_id: String(r.sender_user_id), text: String(r.text), image_filename: r.image_filename ?? void 0 });
+async function readThread(userId) {
+  const [rows] = await getMysqlPool().execute(
+    "SELECT id, ts, sender, sender_user_id, text, image_filename FROM support_messages WHERE user_id = ? AND ts >= DATE_SUB(NOW(), INTERVAL 7 DAY) ORDER BY ts ASC",
+    [userId]
+  );
+  return rows.map(msg);
+}
+async function appendMessage(userId, input) {
+  const text = String(input.text || "").slice(0, 4e3).trim();
+  if (!text && !input.image_filename) throw new SupportError("Message vide", 400);
+  const [counts] = await getMysqlPool().execute(
+    "SELECT COUNT(*) AS n FROM support_messages WHERE user_id = ? AND ts >= DATE_SUB(NOW(), INTERVAL 7 DAY)",
+    [userId]
+  );
+  if (Number(counts[0]?.n || 0) >= 200) throw new SupportError("Limite de messages atteinte pour ce fil de support (max 200)", 429);
+  const id = crypto7.randomUUID();
+  await getMysqlPool().execute("INSERT INTO support_messages (id, user_id, sender, sender_user_id, text, image_filename) VALUES (?, ?, ?, ?, ?, ?)", [id, userId, input.sender, input.sender_user_id, text, input.image_filename ?? null]);
+  return { id, ts: (/* @__PURE__ */ new Date()).toISOString(), sender: input.sender, sender_user_id: input.sender_user_id, text, image_filename: input.image_filename };
+}
+async function markSeen(userId, who) {
+  const col = who === "user" ? "user_seen_at" : "admin_seen_at";
+  await getMysqlPool().execute(`INSERT INTO support_thread_reads (user_id, ${col}) VALUES (?, NOW()) ON DUPLICATE KEY UPDATE ${col} = NOW()`, [userId]);
+}
+async function countUnreadForUser(userId) {
+  const [rows] = await getMysqlPool().execute(
+    `SELECT COUNT(*) AS n FROM support_messages m LEFT JOIN support_thread_reads r ON r.user_id=m.user_id
+     WHERE m.user_id=? AND m.sender='admin' AND m.ts > COALESCE(r.user_seen_at, '1970-01-01') AND m.ts >= DATE_SUB(NOW(), INTERVAL 7 DAY)`,
+    [userId]
+  );
+  return Number(rows[0]?.n || 0);
+}
+async function listThreads() {
+  const [rows] = await getMysqlPool().query(
+    `SELECT m.user_id, m.id, m.ts, m.sender, m.sender_user_id, m.text, m.image_filename,
+       (SELECT COUNT(*) FROM support_messages c WHERE c.user_id=m.user_id AND c.ts >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS message_count,
+       (SELECT COUNT(*) FROM support_messages u LEFT JOIN support_thread_reads r ON r.user_id=u.user_id WHERE u.user_id=m.user_id AND u.sender='user' AND u.ts > COALESCE(r.admin_seen_at, '1970-01-01') AND u.ts >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS unread_for_admin
+     FROM support_messages m INNER JOIN (SELECT user_id, MAX(ts) last_ts FROM support_messages WHERE ts >= DATE_SUB(NOW(), INTERVAL 7 DAY) GROUP BY user_id) x ON x.user_id=m.user_id AND x.last_ts=m.ts ORDER BY m.ts DESC`
+  );
+  return rows.map((r) => ({ user_id: String(r.user_id), last_message: msg(r), message_count: Number(r.message_count), unread_for_admin: Number(r.unread_for_admin) }));
+}
+function uploadPath(filename) {
+  return /^[a-zA-Z0-9_-]{1,100}\.(jpg|jpeg|png|webp|gif)$/i.test(filename) ? path2.join(UPLOADS, filename) : null;
+}
+async function isOwnedBy(filename, userId) {
+  const [rows] = await getMysqlPool().execute("SELECT id FROM support_messages WHERE user_id=? AND image_filename=? LIMIT 1", [userId, filename]);
+  return !!rows[0];
+}
+async function saveImageDataUrl(userId, data) {
+  const m = /^data:image\/(jpeg|jpg|png|webp|gif);base64,([A-Za-z0-9+/=\s]+)$/i.exec(data);
+  if (!m) throw new SupportError("Format d'image invalide", 400);
+  const buffer = Buffer.from(m[2], "base64");
+  if (!buffer.length || buffer.length > 5 * 1024 * 1024) throw new SupportError("Image trop volumineuse (max 5 MB)", 413);
+  const ext = m[1].toLowerCase() === "jpeg" ? "jpg" : m[1].toLowerCase();
+  const name = `${userId.replace(/[^a-zA-Z0-9_-]/g, "")}-${crypto7.randomBytes(8).toString("hex")}.${ext}`;
+  await fs2.mkdir(UPLOADS, { recursive: true });
+  await fs2.writeFile(path2.join(UPLOADS, name), buffer, { flag: "wx" });
+  return name;
+}
+async function cleanupExpiredSupport() {
+  await getMysqlPool().execute(
+    "DELETE FROM support_messages WHERE ts < DATE_SUB(NOW(), INTERVAL ? DAY)",
+    [TTL_DAYS]
+  );
+  let files;
+  try {
+    files = await fs2.readdir(UPLOADS);
+  } catch (err) {
+    if (err?.code === "ENOENT") return;
+    throw err;
+  }
+  const [rows] = await getMysqlPool().query(
+    "SELECT image_filename FROM support_messages WHERE image_filename IS NOT NULL"
+  );
+  const retained = new Set(rows.map((row) => String(row.image_filename)));
+  await Promise.all(files.map(async (filename) => {
+    if (!retained.has(filename)) await fs2.unlink(path2.join(UPLOADS, filename)).catch(() => void 0);
+  }));
+}
+function startSupportCleanup() {
+  const run = () => {
+    void cleanupExpiredSupport().catch((err) => {
+      logger.error({ err }, "support retention cleanup failed");
+    });
+  };
+  run();
+  const timer4 = setInterval(run, CLEANUP_INTERVAL_MS);
+  timer4.unref();
 }
 
-// src/routes/admin.ts
-init_operator_health();
+// src/routes/support.ts
+import { promises as fs3 } from "node:fs";
+import path3 from "node:path";
+var router4 = (0, import_express4.Router)();
+var RATE_LIMIT_WINDOW_MS = 60 * 60 * 1e3;
+var RATE_LIMIT_MAX = 30;
+var rateLimitMap = /* @__PURE__ */ new Map();
+function checkRateLimit(userId) {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+  if (!entry || now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
+    rateLimitMap.set(userId, { count: 1, windowStart: now });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count += 1;
+  return true;
+}
+router4.get("/support/messages", requireUser, async (req, res) => {
+  try {
+    const msgs = await readThread(req.userId);
+    res.json({ messages: msgs, ttl_days: 7 });
+  } catch (err) {
+    logger.error({ err }, "support read error");
+    res.status(500).json({ error: err.message });
+  }
+});
+router4.get("/support/unread", requireUser, async (req, res) => {
+  try {
+    const count = await countUnreadForUser(req.userId);
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router4.post("/support/mark-read", requireUser, async (req, res) => {
+  try {
+    await markSeen(req.userId, "user");
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router4.post("/support/messages", requireUser, async (req, res) => {
+  try {
+    if (!checkRateLimit(req.userId)) {
+      return res.status(429).json({ error: "Trop de messages. R\xE9essayez dans une heure." });
+    }
+    const text = String(req.body?.text || "").slice(0, 4e3).trim();
+    const imageDataUrl = req.body?.image;
+    if (!text && !imageDataUrl) {
+      return res.status(400).json({ error: "Message vide" });
+    }
+    let image_filename;
+    if (imageDataUrl) {
+      image_filename = await saveImageDataUrl(req.userId, imageDataUrl);
+    }
+    const msg2 = await appendMessage(req.userId, {
+      sender: "user",
+      sender_user_id: req.userId,
+      text,
+      ...image_filename ? { image_filename } : {}
+    });
+    return res.json({ message: msg2 });
+  } catch (err) {
+    logger.error({ err }, "support send error");
+    const status = err instanceof SupportError ? err.statusCode : 500;
+    return res.status(status).json({ error: err.message });
+  }
+});
+router4.get("/support/uploads/:filename", requireUser, async (req, res) => {
+  const fname = String(req.params["filename"] || "");
+  const fp = uploadPath(fname);
+  if (!fp) return res.status(400).end();
+  if (!await isOwnedBy(fname, req.userId)) {
+    try {
+      const [roles] = await getMysqlPool().execute(
+        "SELECT role FROM user_roles WHERE user_id = ? AND role = 'admin' LIMIT 1",
+        [String(req.userId)]
+      );
+      if (!roles[0]) return res.status(403).end();
+    } catch {
+      return res.status(403).end();
+    }
+  }
+  try {
+    await fs3.access(fp);
+    const ext = path3.extname(fp).slice(1).toLowerCase();
+    const ct = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : "image/jpeg";
+    res.setHeader("Content-Type", ct);
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    return res.sendFile(fp);
+  } catch {
+    return res.status(404).end();
+  }
+});
+router4.get("/admin/support/threads", requireUser, requireAdmin, async (_req, res) => {
+  try {
+    res.json({ threads: await listThreads() });
+  } catch (err) {
+    logger.error({ err }, "support threads error");
+    res.status(500).json({ error: err.message });
+  }
+});
+router4.post("/admin/support/mark-read", requireUser, requireAdmin, async (req, res) => {
+  try {
+    const userId = String(req.body?.user_id || "");
+    if (!userId) return res.status(400).json({ error: "user_id requis" });
+    await markSeen(userId, "admin");
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+router4.get("/admin/support/messages", requireUser, requireAdmin, async (req, res) => {
+  try {
+    const userId = String(req.query["user_id"] || "");
+    if (!userId) return res.status(400).json({ error: "user_id requis" });
+    const msgs = await readThread(userId);
+    return res.json({ messages: msgs, ttl_days: 7 });
+  } catch (err) {
+    logger.error({ err }, "support admin read error");
+    return res.status(500).json({ error: err.message });
+  }
+});
+router4.post("/admin/support/reply", requireUser, requireAdmin, async (req, res) => {
+  try {
+    const userId = String(req.body?.user_id || "");
+    const text = String(req.body?.text || "").slice(0, 4e3).trim();
+    const imageDataUrl = req.body?.image;
+    if (!userId) return res.status(400).json({ error: "user_id requis" });
+    if (!text && !imageDataUrl) return res.status(400).json({ error: "R\xE9ponse vide" });
+    let image_filename;
+    if (imageDataUrl) {
+      image_filename = await saveImageDataUrl(userId, imageDataUrl);
+    }
+    const msg2 = await appendMessage(userId, {
+      sender: "admin",
+      sender_user_id: req.userId,
+      text,
+      ...image_filename ? { image_filename } : {}
+    });
+    return res.json({ message: msg2 });
+  } catch (err) {
+    logger.error({ err }, "support reply error");
+    const status = err instanceof SupportError ? err.statusCode : 500;
+    return res.status(status).json({ error: err.message });
+  }
+});
+var support_default = router4;
+
+// src/routes/payments.ts
+var import_express5 = __toESM(require_express2(), 1);
+init_logger();
 
 // src/lib/afribapay.ts
 init_logger();
 init_operator_health();
-import crypto from "node:crypto";
+import crypto8 from "node:crypto";
 var API_USER = process.env["AFRIBAPAY_API_USER"] ?? "";
 var API_KEY = process.env["AFRIBAPAY_API_KEY"] ?? "";
 var MERCHANT_KEY = process.env["AFRIBAPAY_MERCHANT_KEY"] ?? "";
@@ -55372,7 +57027,7 @@ function getTokenDiagnostics() {
     backoffActive: Date.now() < tokenBackoffUntil
   };
 }
-async function authedFetch(path7, init = {}) {
+async function authedFetch(path6, init = {}) {
   ensureConfigured();
   const token = await getToken();
   const headers = {
@@ -55381,7 +57036,7 @@ async function authedFetch(path7, init = {}) {
     Accept: "application/json",
     ...init.headers || {}
   };
-  const r = await fetch(`${API_BASE}${path7}`, { ...init, headers });
+  const r = await fetch(`${API_BASE}${path6}`, { ...init, headers });
   let body = null;
   const text = await r.text();
   try {
@@ -55393,7 +57048,7 @@ async function authedFetch(path7, init = {}) {
     cachedToken = null;
     const token2 = await getToken();
     headers.Authorization = `Bearer ${token2}`;
-    const r2 = await fetch(`${API_BASE}${path7}`, { ...init, headers });
+    const r2 = await fetch(`${API_BASE}${path6}`, { ...init, headers });
     const text2 = await r2.text();
     let body2 = null;
     try {
@@ -55410,10 +57065,6 @@ async function authedFetch(path7, init = {}) {
 var COUNTRIES_TTL_MS = 6e4;
 var countriesCache = null;
 var countriesInflight = null;
-function bustCountriesCache() {
-  countriesCache = null;
-  countriesInflight = null;
-}
 function isOperatorAvailable(op) {
   const truthy = (v) => v === true || v === 1 || v === "1" || v === "true";
   const falsy = (v) => v === false || v === 0 || v === "0" || v === "false";
@@ -55482,24 +57133,24 @@ async function fetchCountriesFresh() {
     } else if (Array.isArray(row.providers)) {
       ops = row.providers;
     }
-    let currency;
+    let currency2;
     if (row.currency) {
-      currency = String(row.currency);
+      currency2 = String(row.currency);
     } else if (row.currencies && typeof row.currencies === "object") {
-      currency = Object.keys(row.currencies)[0];
+      currency2 = Object.keys(row.currencies)[0];
     }
     return {
       code,
       name: String(row.name || row.country_name || code),
       prefix: String(row.prefix || row.dial_code || row.phone_prefix || "").replace(/^0+/, "") || void 0,
-      currency,
+      currency: currency2,
       operators: ops.filter((op) => isOperatorAvailable(op)).map((op) => ({
         code: String(op.code || op.operator_code || op.id || op.name || ""),
         name: String(op.name || op.operator_name || op.display_name || op.code || ""),
         otp_required: Boolean(
           op.otp_required === true || op.otp_required === 1 || op.otp_required === "1"
         ),
-        currency
+        currency: currency2
       })).filter((op) => op.code)
     };
   }).filter((c) => c.code && c.operators.length > 0);
@@ -55634,11 +57285,11 @@ function verifyWebhookSignature(rawBody, headerSign) {
   if (!API_KEY) return false;
   if (!headerSign) return false;
   const data = typeof rawBody === "string" ? rawBody : rawBody.toString("utf8");
-  const computed = crypto.createHmac("sha256", API_KEY).update(data, "utf8").digest("hex");
+  const computed = crypto8.createHmac("sha256", API_KEY).update(data, "utf8").digest("hex");
   const a = Buffer.from(computed, "utf8");
   const b = Buffer.from(String(headerSign).trim().toLowerCase(), "utf8");
   if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+  return crypto8.timingSafeEqual(a, b);
 }
 function isSuccessStatus(s) {
   if (!s) return false;
@@ -55651,2143 +57302,23 @@ function isFailureStatus(s) {
   return ["FAILED", "REJECTED", "CANCELLED", "CANCELED", "ERROR", "EXPIRED", "DECLINED"].includes(x);
 }
 
-// src/lib/operator-logos.ts
-init_logger();
-var SUPABASE_URL7 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY6 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-var KEY_PREFIX = "operator_logo_";
-var CACHE_TTL_MS2 = 3e4;
-function serviceRoleHeaders2() {
-  return {
-    apikey: SUPABASE_SERVICE_ROLE_KEY6,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY6}`,
-    "Content-Type": "application/json"
-  };
-}
-var cache2 = null;
-function bustOperatorLogosCache() {
-  cache2 = null;
-}
-async function fetchOperatorLogos() {
-  if (cache2 && cache2.expiresAt > Date.now()) return cache2.value;
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) return {};
-  try {
-    const r = await fetch(
-      `${SUPABASE_URL7}/rest/v1/settings?key=like.${encodeURIComponent(KEY_PREFIX + "*")}&select=key,value`,
-      { headers: serviceRoleHeaders2() }
-    );
-    if (!r.ok) return {};
-    const rows = await r.json();
-    const logos = {};
-    for (const row of rows) {
-      const code = row.key.slice(KEY_PREFIX.length);
-      if (code && row.value) logos[code] = row.value;
-    }
-    cache2 = { value: logos, expiresAt: Date.now() + CACHE_TTL_MS2 };
-    return logos;
-  } catch (err) {
-    logger.warn({ err }, "fetchOperatorLogos failed");
-    return {};
-  }
-}
-async function upsertOperatorLogo(operatorCode, logoUrl) {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
-    throw new Error("Supabase service role not configured");
-  }
-  const key2 = KEY_PREFIX + operatorCode;
-  const insertRes = await fetch(`${SUPABASE_URL7}/rest/v1/settings`, {
-    method: "POST",
-    headers: { ...serviceRoleHeaders2(), Prefer: "return=minimal" },
-    body: JSON.stringify({ key: key2, value: logoUrl })
-  });
-  if (insertRes.ok || insertRes.status === 201) {
-    bustOperatorLogosCache();
-    return;
-  }
-  if (insertRes.status === 409) {
-    const patchRes = await fetch(
-      `${SUPABASE_URL7}/rest/v1/settings?key=eq.${encodeURIComponent(key2)}`,
-      {
-        method: "PATCH",
-        headers: { ...serviceRoleHeaders2(), Prefer: "return=minimal" },
-        body: JSON.stringify({ value: logoUrl })
-      }
-    );
-    if (!patchRes.ok) {
-      const body2 = await patchRes.text();
-      throw new Error(`Supabase logo update failed (${patchRes.status}): ${body2.slice(0, 200)}`);
-    }
-    bustOperatorLogosCache();
-    return;
-  }
-  const body = await insertRes.text();
-  throw new Error(`Supabase logo insert failed (${insertRes.status}): ${body.slice(0, 200)}`);
-}
-var STORAGE_BUCKET = "operator-logos";
-async function uploadOperatorLogoFile(operatorCode, fileBuffer, mimeType) {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
-    throw new Error("Supabase service role not configured");
-  }
-  const storageHeaders2 = {
-    apikey: SUPABASE_SERVICE_ROLE_KEY6,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY6}`
-  };
-  await fetch(`${SUPABASE_URL7}/storage/v1/bucket`, {
-    method: "POST",
-    headers: { ...storageHeaders2, "Content-Type": "application/json" },
-    body: JSON.stringify({ id: STORAGE_BUCKET, name: STORAGE_BUCKET, public: true })
-  }).catch(() => {
-  });
-  const ext = mimeType.includes("svg") ? "svg" : mimeType.includes("png") ? "png" : "jpg";
-  const objectPath = `${operatorCode}.${ext}`;
-  const uploadRes = await fetch(
-    `${SUPABASE_URL7}/storage/v1/object/${STORAGE_BUCKET}/${objectPath}`,
-    {
-      method: "POST",
-      headers: {
-        ...storageHeaders2,
-        "Content-Type": mimeType,
-        "x-upsert": "true",
-        "cache-control": "public, max-age=3600"
-      },
-      body: fileBuffer
-    }
-  );
-  if (!uploadRes.ok) {
-    const body = await uploadRes.text();
-    throw new Error(`Storage upload failed (${uploadRes.status}): ${body.slice(0, 300)}`);
-  }
-  const publicUrl = `${SUPABASE_URL7}/storage/v1/object/public/${STORAGE_BUCKET}/${objectPath}?t=${Date.now()}`;
-  await upsertOperatorLogo(operatorCode, publicUrl);
-  return publicUrl;
-}
-async function deleteOperatorLogo(operatorCode) {
-  if (!SUPABASE_URL7 || !SUPABASE_SERVICE_ROLE_KEY6) {
-    throw new Error("Supabase service role not configured");
-  }
-  const key2 = KEY_PREFIX + operatorCode;
-  const r = await fetch(
-    `${SUPABASE_URL7}/rest/v1/settings?key=eq.${encodeURIComponent(key2)}`,
-    { method: "DELETE", headers: serviceRoleHeaders2() }
-  );
-  if (!r.ok) {
-    const body = await r.text();
-    throw new Error(`Supabase delete failed (${r.status}): ${body.slice(0, 200)}`);
-  }
-  bustOperatorLogosCache();
-}
-
-// src/routes/admin.ts
-var import_multer = __toESM(require_multer(), 1);
-var logoUpload = (0, import_multer.default)({
-  storage: import_multer.default.memoryStorage(),
-  limits: { fileSize: 3 * 1024 * 1024 },
-  // 3 MB max
-  fileFilter: (_req, file, cb) => {
-    if (/^image\/(png|jpeg|jpg|gif|svg\+xml|webp)$/.test(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Type de fichier non support\xE9 \u2014 utilisez PNG, JPG, SVG ou WebP"));
-    }
-  }
-});
-var router3 = (0, import_express3.Router)();
-var SUPABASE_URL8 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_ANON_KEY4 = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
-var SUPABASE_SERVICE_ROLE_KEY7 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-function serviceRoleHeaders3() {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY7;
-  return { apikey: key2, Authorization: `Bearer ${key2}`, "Content-Type": "application/json" };
-}
-var SUPABASE_PAGE_SIZE = 1e3;
-async function fetchAllRestRows(buildUrl, headers, label, isOptionalMissingResource = (body) => false) {
-  const rows = [];
-  for (let offset = 0; ; offset += SUPABASE_PAGE_SIZE) {
-    try {
-      const response = await fetch(buildUrl(offset), { headers });
-      if (!response.ok && response.status !== 206) {
-        const body = await response.text().catch(() => "");
-        if (!isOptionalMissingResource(body)) {
-          logger.error(
-            { status: response.status, body: body.slice(0, 400), offset },
-            `admin: ${label} query failed`
-          );
-        }
-        return isOptionalMissingResource(body) ? [] : null;
-      }
-      const page = await response.json();
-      if (!Array.isArray(page)) {
-        logger.error({ offset }, `admin: ${label} query returned an invalid payload`);
-        return null;
-      }
-      rows.push(...page);
-      if (page.length < SUPABASE_PAGE_SIZE) return rows;
-    } catch (err) {
-      logger.error({ err, offset }, `admin: ${label} query threw`);
-      return null;
-    }
-  }
-}
-var MAIN_ADMIN_EMAIL = (process.env["MAIN_ADMIN_EMAIL"] || "jude@gmail.com").toLowerCase();
-function requireActionCode(req, res, next) {
-  const expected = process.env["ADMIN_ACTION_CODE"] || "";
-  if (!expected) {
-    return res.status(503).json({
-      error: "Code de confirmation non configur\xE9 c\xF4t\xE9 serveur (secret ADMIN_ACTION_CODE manquant)"
-    });
-  }
-  const given = String(req.headers["x-admin-action-code"] || "");
-  if (!given) {
-    return res.status(428).json({ error: "Code de confirmation requis", code_required: true });
-  }
-  if (given !== expected) {
-    return res.status(403).json({ error: "Code de confirmation invalide", code_invalid: true });
-  }
-  next();
-}
-async function fetchAdminIds() {
-  const ids = /* @__PURE__ */ new Set();
-  try {
-    const r = await fetch(
-      `${SUPABASE_URL8}/rest/v1/user_roles?role=eq.admin&select=user_id&limit=1000`,
-      { headers: serviceRoleHeaders3() }
-    );
-    if (r.ok) {
-      for (const row of await r.json()) ids.add(row.user_id);
-    }
-  } catch (err) {
-    logger.error({ err }, "fetchAdminIds failed");
-  }
-  return ids;
-}
-async function fetchProfileEmail(userId) {
-  try {
-    const r = await fetch(
-      `${SUPABASE_URL8}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=email`,
-      { headers: serviceRoleHeaders3() }
-    );
-    if (!r.ok) return null;
-    const rows = await r.json();
-    return rows[0]?.email?.toLowerCase() || null;
-  } catch {
-    return null;
-  }
-}
-router3.get("/admin/earnings", requireUser, requireAdmin, async (req, res) => {
-  try {
-    const all = await readEarnings();
-    const now = /* @__PURE__ */ new Date();
-    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    const startOfYear = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
-    const ONE_DAY = 864e5;
-    const MAX_DAYS = 3650;
-    const parseDate = (v) => {
-      if (typeof v !== "string") return null;
-      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
-      if (!m) return null;
-      const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-      return isNaN(d.getTime()) ? null : d;
-    };
-    const wantAll = req.query.all === "1" || req.query.all === "true";
-    const fromQ = parseDate(req.query.from);
-    const toQ = parseDate(req.query.to) ?? startOfDay;
-    let windowStart;
-    let windowEnd = new Date(Date.UTC(toQ.getUTCFullYear(), toQ.getUTCMonth(), toQ.getUTCDate()));
-    if (wantAll) {
-      if (all.length > 0) {
-        const minTs = all.reduce((min, r) => {
-          const t = new Date(r.ts).getTime();
-          return t < min ? t : min;
-        }, Date.now());
-        const minDate = new Date(minTs);
-        windowStart = new Date(Date.UTC(minDate.getUTCFullYear(), minDate.getUTCMonth(), minDate.getUTCDate()));
-      } else {
-        windowStart = windowEnd;
-      }
-    } else if (fromQ) {
-      windowStart = fromQ;
-    } else {
-      const daysParam = Number(req.query.days);
-      const days = Number.isFinite(daysParam) && daysParam > 0 ? Math.min(Math.floor(daysParam), MAX_DAYS) : 30;
-      windowStart = new Date(windowEnd.getTime() - (days - 1) * ONE_DAY);
-    }
-    const spanDays = Math.floor((windowEnd.getTime() - windowStart.getTime()) / ONE_DAY) + 1;
-    if (spanDays > MAX_DAYS) {
-      windowStart = new Date(windowEnd.getTime() - (MAX_DAYS - 1) * ONE_DAY);
-    }
-    if (windowStart > windowEnd) windowStart = windowEnd;
-    let today = 0, month = 0, year = 0, total = 0;
-    let countToday = 0, countMonth = 0, countYear = 0, countTotal = 0;
-    let revenue_today = 0, revenue_month = 0, revenue_year = 0, revenue_total = 0;
-    const byDay = /* @__PURE__ */ new Map();
-    const totalDays = Math.floor((windowEnd.getTime() - windowStart.getTime()) / ONE_DAY) + 1;
-    for (let i = 0; i < totalDays; i++) {
-      const d = new Date(windowStart.getTime() + i * ONE_DAY);
-      const k = d.toISOString().slice(0, 10);
-      byDay.set(k, { gain: 0, revenue: 0, count: 0 });
-    }
-    const rolling30Start = new Date(startOfDay.getTime() - 29 * ONE_DAY);
-    let rolling30Gain = 0;
-    const windowEndExclusive = windowEnd.getTime() + ONE_DAY;
-    for (const r of all) {
-      const t = new Date(r.ts);
-      const ts = t.getTime();
-      total += r.gain_fcfa;
-      countTotal++;
-      revenue_total += r.user_price_fcfa;
-      if (t >= startOfYear) {
-        year += r.gain_fcfa;
-        countYear++;
-        revenue_year += r.user_price_fcfa;
-      }
-      if (t >= startOfMonth) {
-        month += r.gain_fcfa;
-        countMonth++;
-        revenue_month += r.user_price_fcfa;
-      }
-      if (t >= startOfDay) {
-        today += r.gain_fcfa;
-        countToday++;
-        revenue_today += r.user_price_fcfa;
-      }
-      if (t >= rolling30Start) rolling30Gain += r.gain_fcfa;
-      if (ts >= windowStart.getTime() && ts < windowEndExclusive) {
-        const k = t.toISOString().slice(0, 10);
-        const cur = byDay.get(k);
-        if (cur) {
-          cur.gain += r.gain_fcfa;
-          cur.revenue += r.user_price_fcfa;
-          cur.count++;
-        }
-      }
-    }
-    const dayOfMonth = now.getUTCDate();
-    const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / ONE_DAY) + 1;
-    const dailyAvg30 = rolling30Gain / 30;
-    const series = Array.from(byDay.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([date, v]) => ({ date, gain: v.gain, revenue: v.revenue, count: v.count }));
-    const window_total = series.reduce(
-      (acc, p) => {
-        acc.gain += p.gain;
-        acc.revenue += p.revenue;
-        acc.orders += p.count;
-        return acc;
-      },
-      { gain: 0, revenue: 0, orders: 0 }
-    );
-    res.json({
-      summary: {
-        today: { gain: today, revenue: revenue_today, orders: countToday },
-        month: { gain: month, revenue: revenue_month, orders: countMonth },
-        year: { gain: year, revenue: revenue_year, orders: countYear },
-        total: { gain: total, revenue: revenue_total, orders: countTotal }
-      },
-      projections: {
-        daily_avg_30d: Math.round(dailyAvg30),
-        quarterly: Math.round(dailyAvg30 * 90),
-        semi_annual: Math.round(dailyAvg30 * 182),
-        annual: Math.round(dailyAvg30 * 365),
-        month_run_rate: dayOfMonth > 0 ? Math.round(month / dayOfMonth * 30) : 0,
-        year_run_rate: dayOfYear > 0 ? Math.round(year / dayOfYear * 365) : 0
-      },
-      window: {
-        from: windowStart.toISOString().slice(0, 10),
-        to: windowEnd.toISOString().slice(0, 10),
-        days: totalDays,
-        total: window_total
-      },
-      series
-    });
-  } catch (err) {
-    logger.error({ err }, "admin earnings error");
-    res.status(500).json({ error: err.message });
-  }
-});
-router3.post("/admin/earnings/backfill", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL8 || !SUPABASE_ANON_KEY4) {
-    return res.status(503).json({ error: "Supabase non configur\xE9" });
-  }
-  const SERVICE_ROLE = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-  try {
-    const existing = await readEarnings();
-    const seenKey = (provider, orderId) => {
-      const p = provider === 3 || provider === 4 || provider === 5 ? provider : 1;
-      return `${p}::${orderId}`;
-    };
-    const seen = new Set(existing.map((r) => seenKey(r.provider, r.provider_order_id)));
-    let recomputed = 0;
-    if (SERVICE_ROLE) {
-      const headersSrv = {
-        apikey: SERVICE_ROLE,
-        Authorization: `Bearer ${SERVICE_ROLE}`,
-        "Content-Type": "application/json",
-        Prefer: "return=minimal"
-      };
-      for (const r of existing) {
-        if (r.gain_fcfa !== 0) continue;
-        if (!r.user_price_fcfa || r.user_price_fcfa <= 0) continue;
-        const { provider_cost_fcfa, gain_fcfa } = estimateGainFromRevenue(r.user_price_fcfa);
-        if (gain_fcfa === 0) continue;
-        try {
-          const recProvider = r.provider === 3 || r.provider === 4 || r.provider === 5 ? r.provider : 1;
-          const patch = await fetch(
-            `${SUPABASE_URL8}/rest/v1/earnings?provider_order_id=eq.${encodeURIComponent(r.provider_order_id)}&provider=eq.${recProvider}`,
-            {
-              method: "PATCH",
-              headers: headersSrv,
-              body: JSON.stringify({ provider_cost_fcfa, gain_fcfa })
-            }
-          );
-          if (patch.ok) recomputed++;
-          else {
-            const txt = await patch.text().catch(() => "");
-            logger.warn(
-              { status: patch.status, body: txt.slice(0, 200), provider_order_id: r.provider_order_id },
-              "backfill: gain recompute PATCH failed"
-            );
-          }
-        } catch (err) {
-          logger.warn({ err, provider_order_id: r.provider_order_id }, "backfill: gain recompute threw");
-        }
-      }
-    }
-    const allOrders = [];
-    const PAGE_SIZE3 = 1e3;
-    const MAX_PAGES = 100;
-    for (let page = 0; page < MAX_PAGES; page++) {
-      const from = page * PAGE_SIZE3;
-      const to = from + PAGE_SIZE3 - 1;
-      const ordersRes = await fetch(
-        `${SUPABASE_URL8}/rest/v1/orders?select=id,user_id,external_order_id,price,quantity,service_name,created_at,provider&order=created_at.desc`,
-        {
-          headers: {
-            apikey: SUPABASE_ANON_KEY4,
-            Authorization: `Bearer ${req.userToken}`,
-            Range: `${from}-${to}`,
-            "Range-Unit": "items"
-          }
-        }
-      );
-      if (!ordersRes.ok && ordersRes.status !== 206) {
-        const txt = await ordersRes.text();
-        logger.error({ status: ordersRes.status, body: txt.slice(0, 200) }, "backfill: orders fetch failed");
-        return res.status(502).json({ error: "Impossible de lire les commandes Supabase" });
-      }
-      const batch = await ordersRes.json();
-      allOrders.push(...batch);
-      if (batch.length < PAGE_SIZE3) break;
-    }
-    let inserted = 0, skipped = 0, skipped_no_external_id = 0;
-    for (const o of allOrders) {
-      if (!o.external_order_id) {
-        skipped_no_external_id++;
-        continue;
-      }
-      const key2 = seenKey(o.provider, String(o.external_order_id));
-      if (seen.has(key2)) {
-        skipped++;
-        continue;
-      }
-      const userPrice = Number(o.price) || 0;
-      const { provider_cost_fcfa, gain_fcfa } = estimateGainFromRevenue(userPrice);
-      try {
-        const orderProvider = o.provider === 3 || o.provider === 4 || o.provider === 5 ? o.provider : 1;
-        await appendEarning({
-          ts: o.created_at,
-          provider_order_id: key2,
-          user_id: o.user_id || "",
-          service: 0,
-          service_name: o.service_name || "",
-          quantity: Number(o.quantity) || 0,
-          rate_usd: 0,
-          user_price_fcfa: userPrice,
-          provider_cost_usd: 0,
-          provider_cost_fcfa,
-          gain_fcfa,
-          provider: orderProvider
-        });
-        seen.add(key2);
-        inserted++;
-      } catch (e) {
-        logger.error({ err: e, orderId: o.id }, "backfill: insert failed for order");
-      }
-    }
-    res.json({
-      ok: true,
-      total_orders_scanned: allOrders.length,
-      inserted,
-      recomputed,
-      skipped_already_present: skipped,
-      skipped_no_external_id,
-      note: "Pour les commandes anciennes, le gain est estim\xE9 \xE0 partir du chiffre d'affaires en utilisant la marge par d\xE9faut de la plateforme (USD \xD7 700 utilisateur vs USD \xD7 600 fournisseur pour les fournisseurs 1/3/5, USD \xD7 1000 vs USD \xD7 600 pour Peakerr/4). Les nouvelles commandes calculent le gain exactement \xE0 partir du prix r\xE9ellement pay\xE9 et du co\xFBt r\xE9el fournisseur."
-    });
-  } catch (err) {
-    logger.error({ err }, "earnings backfill error");
-    res.status(500).json({ error: err.message });
-  }
-});
-router3.get("/admin/smm-balance", requireUser, requireAdmin, async (req, res) => {
-  const providerId = parseProviderId(req.query["provider"]);
-  try {
-    const data = await callProvider(providerId, "balance");
-    const usd = Number(data?.balance);
-    res.json({
-      balance_usd: Number.isFinite(usd) ? usd : null,
-      // Same USD→FCFA rate used everywhere user-facing for catalog pricing
-      // (see lib/smm-pricing.ts). Per-provider: Peakerr (4) = 1000, others = 700.
-      // Keeping a single rate per provider avoids confusing the admin: a $10
-      // balance shown as "≈ 10 000 FCFA" (Peakerr) or "≈ 7 000 FCFA" (autres)
-      // matches the per-1000 prices the user actually pays.
-      balance_fcfa_equiv: Number.isFinite(usd) ? Math.round(usd * usdToFcfaRate(providerId)) : null,
-      currency: data?.currency || "USD",
-      provider: providerId,
-      raw: data
-    });
-  } catch (err) {
-    logger.error({ err, providerId }, "admin smm balance error");
-    res.status(500).json({ error: err.message });
-  }
-});
-router3.get("/admin/smm-pricing", requireUser, requireAdmin, async (req, res) => {
-  const providerId = parseProviderId(req.query["provider"]);
-  try {
-    const raw = await callProvider(providerId, "services");
-    const enriched = await enrichServices(raw, providerId);
-    res.json({ services: enriched, provider: providerId });
-  } catch (err) {
-    logger.error({ err, providerId }, "admin pricing list error");
-    res.status(500).json({ error: err.message });
-  }
-});
-router3.put("/admin/smm-pricing/:serviceId", requireUser, requireAdmin, async (req, res) => {
-  const providerId = parseProviderId(req.query["provider"]);
-  const id = Number(req.params["serviceId"]);
-  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "service invalide" });
-  const { price_fcfa, hidden, featured } = req.body || {};
-  const entry = { price_fcfa: 0 };
-  if (price_fcfa !== void 0 && price_fcfa !== null && price_fcfa !== "") {
-    const p = Number(price_fcfa);
-    if (!Number.isFinite(p) || p < 0 || p > 1e8) {
-      return res.status(400).json({ error: "price_fcfa invalide" });
-    }
-    entry.price_fcfa = Math.round(p);
-  } else {
-    const map = await loadPricing(providerId);
-    const existing = map[String(id)];
-    if (!existing && hidden === void 0 && featured === void 0) {
-      return res.status(400).json({ error: "Rien \xE0 mettre \xE0 jour" });
-    }
-    entry.price_fcfa = existing?.price_fcfa ?? 0;
-  }
-  if (typeof hidden === "boolean") entry.hidden = hidden;
-  if (typeof featured === "boolean") entry.featured = featured;
-  await setEntry(id, entry, providerId);
-  invalidateServicesCache(providerId);
-  res.json({ ok: true, service: id, provider: providerId, ...entry });
-});
-router3.post("/admin/smm-pricing/rescale", requireUser, requireAdmin, async (req, res) => {
-  const providerId = parseProviderId(req.query["provider"]);
-  const factor = Number(req.body?.["factor"]);
-  if (!Number.isFinite(factor) || factor <= 0 || factor > 100) {
-    return res.status(400).json({ error: "factor invalide (attendu : nombre > 0 et \u2264 100)" });
-  }
-  const map = await loadPricing(providerId);
-  let updated = 0;
-  for (const [id, entry] of Object.entries(map)) {
-    if (typeof entry?.price_fcfa === "number" && entry.price_fcfa > 0) {
-      const next = Math.round(entry.price_fcfa * factor / 10) * 10;
-      if (next !== entry.price_fcfa) {
-        await setEntry(id, { ...entry, price_fcfa: next }, providerId);
-        updated++;
-      }
-    }
-  }
-  invalidateServicesCache(providerId);
-  logger.info({ providerId, factor, updated }, "admin smm-pricing rescaled");
-  res.json({ ok: true, provider: providerId, factor, updated });
-});
-router3.delete("/admin/smm-pricing/:serviceId", requireUser, requireAdmin, async (req, res) => {
-  const providerId = parseProviderId(req.query["provider"]);
-  const id = Number(req.params["serviceId"]);
-  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "service invalide" });
-  await deleteEntry(id, providerId);
-  invalidateServicesCache(providerId);
-  res.json({ ok: true, provider: providerId });
-});
-router3.get("/admin/providers", requireUser, requireAdmin, async (_req, res) => {
-  try {
-    const cfg = await loadProviderConfig();
-    const out = cfg.map((c) => ({
-      ...c,
-      configured: getProvider(c.provider_id)?.configured ?? false
-    }));
-    res.json({ providers: out });
-  } catch (err) {
-    logger.error({ err }, "admin providers list error");
-    res.status(500).json({ error: err.message });
-  }
-});
-router3.put("/admin/providers/:id", requireUser, requireAdmin, async (req, res) => {
-  const id = Number(req.params["id"]);
-  if (id !== 1 && id !== 3 && id !== 4 && id !== 5) {
-    return res.status(400).json({ error: "provider id invalide (1, 3, 4 ou 5)" });
-  }
-  const b = req.body || {};
-  const patch = {};
-  if (b["display_order"] !== void 0 && b["display_order"] !== null && b["display_order"] !== "") {
-    const n = Number(b["display_order"]);
-    if (!Number.isFinite(n) || n !== 1 && n !== 2 && n !== 3 && n !== 4) {
-      return res.status(400).json({ error: "display_order invalide (1, 2, 3 ou 4)" });
-    }
-    patch.display_order = n;
-  }
-  if (typeof b["enabled"] === "boolean") patch.enabled = b["enabled"];
-  if (typeof b["header_title"] === "string") {
-    const t = b["header_title"].trim();
-    if (t.length === 0 || t.length > 120) return res.status(400).json({ error: "header_title invalide (1\u2013120 caract\xE8res)" });
-    patch.header_title = t;
-  }
-  if (typeof b["header_text"] === "string") {
-    const t = b["header_text"];
-    if (t.length > 500) return res.status(400).json({ error: "header_text trop long (500 max)" });
-    patch.header_text = t;
-  }
-  if (Object.keys(patch).length === 0) return res.status(400).json({ error: "Rien \xE0 mettre \xE0 jour" });
-  if (typeof patch.display_order === "number") {
-    const all = await loadProviderConfig();
-    const me = all.find((p) => p.provider_id === id);
-    const other = all.find((p) => p.provider_id !== id && p.display_order === patch.display_order);
-    if (other && me && me.display_order !== patch.display_order) {
-      const previousOtherOrder = other.display_order;
-      const previousMyOrder = me.display_order;
-      const swap = await updateProviderConfig(other.provider_id, { display_order: previousMyOrder });
-      if (!swap.ok) return res.status(500).json({ error: swap.error || "\xC9chec du swap d'ordre" });
-      const out2 = await updateProviderConfig(id, patch);
-      if (!out2.ok) {
-        const rollback = await updateProviderConfig(other.provider_id, {
-          display_order: previousOtherOrder
-        });
-        return res.status(500).json({
-          error: out2.error || "Erreur serveur",
-          rollback: rollback.ok ? "ok" : "manual_check_required"
-        });
-      }
-      return res.json({ ok: true, provider: id });
-    }
-  }
-  const out = await updateProviderConfig(id, patch);
-  if (!out.ok) return res.status(500).json({ error: out.error || "Erreur serveur" });
-  res.json({ ok: true, provider: id });
-});
-function periodToFromIso(period) {
-  const now = /* @__PURE__ */ new Date();
-  switch ((period || "").toLowerCase()) {
-    case "today": {
-      const d = new Date(now);
-      d.setHours(0, 0, 0, 0);
-      return d.toISOString();
-    }
-    case "7d": {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 7);
-      return d.toISOString();
-    }
-    case "30d": {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 30);
-      return d.toISOString();
-    }
-    default:
-      return null;
-  }
-}
-router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
-    return res.status(503).json({ error: "Configuration serveur manquante (SUPABASE_SERVICE_ROLE_KEY)" });
-  }
-  const q = req.query;
-  const type = (q.type || "all").toLowerCase();
-  const statusF = (q.status || "").toLowerCase();
-  const userIdF = (q.user_id || "").trim();
-  const search = (q.search || "").replace(/[%,()]/g, "").trim();
-  const requestedAll = (q.limit || "").toLowerCase() === "all";
-  const limit = requestedAll ? Number.MAX_SAFE_INTEGER : Math.min(Math.max(parseInt(q.limit || "200", 10) || 200, 1), 1e3);
-  const offset = Math.max(parseInt(q.offset || "0", 10) || 0, 0);
-  const fromIso = q.from ? new Date(q.from).toISOString() : null;
-  const toIso = q.to ? (() => {
-    const d = new Date(q.to);
-    d.setHours(23, 59, 59, 999);
-    return d.toISOString();
-  })() : null;
-  const headers = serviceRoleHeaders3();
-  const buildOrderUrl = (pageOffset) => {
-    const p = new URLSearchParams();
-    p.set("select", "id,user_id,created_at,price,status,service_name,service_category,link,external_order_id,quantity,refunded_at,refunded_amount,provider,balance_before,balance_after");
-    p.set("order", "created_at.desc");
-    p.set("limit", String(SUPABASE_PAGE_SIZE));
-    p.set("offset", String(pageOffset));
-    if (userIdF) p.append("user_id", `eq.${userIdF}`);
-    if (fromIso) p.append("created_at", `gte.${fromIso}`);
-    if (toIso) p.append("created_at", `lte.${toIso}`);
-    if (statusF && type === "order") p.append("status", `eq.${statusF}`);
-    return `${SUPABASE_URL8}/rest/v1/orders?${p.toString()}`;
-  };
-  const buildPayUrl = (pageOffset) => {
-    const p = new URLSearchParams();
-    p.set("select", "id,user_id,created_at,amount,status,method,reference,operator,country,phone_number,transaction_id,order_id,currency,balance_before,balance_after");
-    p.set("order", "created_at.desc");
-    p.set("limit", String(SUPABASE_PAGE_SIZE));
-    p.set("offset", String(pageOffset));
-    if (userIdF) p.append("user_id", `eq.${userIdF}`);
-    if (fromIso) p.append("created_at", `gte.${fromIso}`);
-    if (toIso) p.append("created_at", `lte.${toIso}`);
-    if (statusF && (type === "deposit" || type === "adjustment")) p.append("status", `eq.${statusF}`);
-    if (type === "adjustment") p.append("method", "eq.admin_adjustment");
-    return `${SUPABASE_URL8}/rest/v1/payments?${p.toString()}`;
-  };
-  const buildRefUrl = (pageOffset) => {
-    const p = new URLSearchParams();
-    p.set("select", "id,referrer_user_id,referred_user_id,referrer_bonus_fcfa,referred_bonus_fcfa,referrer_credited_at,referred_credited_at");
-    p.set("order", "created_at.desc");
-    p.set("limit", String(SUPABASE_PAGE_SIZE));
-    p.set("offset", String(pageOffset));
-    p.append("or", "(referrer_credited_at.not.is.null,referred_credited_at.not.is.null)");
-    if (userIdF) p.append("or", `(referrer_user_id.eq.${userIdF},referred_user_id.eq.${userIdF})`);
-    return `${SUPABASE_URL8}/rest/v1/referrals?${p.toString()}`;
-  };
-  try {
-    const wantOrders = type === "all" || type === "order" || type === "refund";
-    const wantPays = type === "all" || type === "deposit" || type === "adjustment";
-    const wantComs = type === "all" || type === "commission";
-    const [orderRows, paymentRows, referralRows] = await Promise.all([
-      wantOrders ? fetchAllRestRows(buildOrderUrl, headers, "orders") : Promise.resolve([]),
-      wantPays ? fetchAllRestRows(buildPayUrl, headers, "payments") : Promise.resolve([]),
-      wantComs ? fetchAllRestRows(
-        buildRefUrl,
-        headers,
-        "referrals",
-        (body) => body.includes("42P01")
-      ) : Promise.resolve([])
-    ]);
-    const orders = orderRows || [];
-    const pays = paymentRows || [];
-    const refs = referralRows || [];
-    const userIds = Array.from(new Set([
-      ...orders.map((o) => o.user_id),
-      ...pays.map((p) => p.user_id),
-      ...refs.flatMap((c) => [c.referrer_user_id, c.referred_user_id])
-    ].filter(Boolean)));
-    const profiles = /* @__PURE__ */ new Map();
-    if (userIds.length > 0) {
-      const pr = await fetch(
-        `${SUPABASE_URL8}/rest/v1/profiles?user_id=in.(${userIds.join(",")})&select=user_id,username,email,country&limit=${userIds.length}`,
-        { headers }
-      );
-      if (pr.ok) {
-        for (const row of await pr.json()) {
-          profiles.set(row.user_id, { username: row.username, email: row.email, country: row.country });
-        }
-      }
-    }
-    const labelFor = (uid) => profiles.get(uid)?.username || profiles.get(uid)?.email || uid?.slice(0, 8) || "?";
-    const countryFor = (uid) => profiles.get(uid)?.country || null;
-    const all = [];
-    if (type === "all" || type === "order") {
-      for (const o of orders) {
-        all.push({
-          id: `o-${o.id}`,
-          kind: "order",
-          created_at: o.created_at,
-          amount: Number(o.price),
-          status: o.status,
-          user_id: o.user_id,
-          user_label: labelFor(o.user_id),
-          user_email: profiles.get(o.user_id)?.email,
-          detail: `${o.service_category || ""} \xB7 ${o.service_name || ""}`.replace(/^· /, "").trim(),
-          reference: o.external_order_id ? `#${o.external_order_id}` : null,
-          external_order_id: o.external_order_id || null,
-          refunded_at: o.refunded_at,
-          refunded_amount: o.refunded_amount,
-          provider: typeof o.provider === "number" ? o.provider : null,
-          country: countryFor(o.user_id),
-          currency: null,
-          balance_before: o.balance_before ?? null,
-          balance_after: o.balance_after ?? null
-        });
-      }
-    }
-    if (type === "all" || type === "refund") {
-      for (const o of orders) {
-        if (o.refunded_at && Number(o.refunded_amount) > 0) {
-          all.push({
-            id: `r-${o.id}`,
-            kind: "refund",
-            created_at: o.refunded_at,
-            amount: Number(o.refunded_amount),
-            status: "completed",
-            user_id: o.user_id,
-            user_label: labelFor(o.user_id),
-            user_email: profiles.get(o.user_id)?.email,
-            detail: `Remboursement \xB7 ${o.service_name || ""}`,
-            reference: o.external_order_id ? `#${o.external_order_id}` : null,
-            external_order_id: o.external_order_id || null,
-            country: countryFor(o.user_id),
-            currency: null
-          });
-        }
-      }
-    }
-    if (type === "all" || type === "deposit" || type === "adjustment") {
-      for (const p of pays) {
-        const isAdjustment = p.method === "admin_adjustment";
-        if (type === "deposit" && isAdjustment) continue;
-        if (type === "adjustment" && !isAdjustment) continue;
-        const parts = isAdjustment ? ["Ajustement administrateur"] : [`D\xE9p\xF4t \xB7 ${(p.method || "").toUpperCase()}`];
-        if (!isAdjustment) {
-          if (p.operator) parts.push(String(p.operator).toUpperCase());
-          if (p.country) parts.push(String(p.country).toUpperCase());
-          if (p.phone_number) parts.push(String(p.phone_number));
-        }
-        const ref = p.transaction_id || p.order_id || p.reference || null;
-        all.push({
-          id: `p-${p.id}`,
-          kind: isAdjustment ? "adjustment" : "deposit",
-          created_at: p.created_at,
-          amount: Number(p.amount),
-          status: p.status,
-          user_id: p.user_id,
-          user_label: labelFor(p.user_id),
-          user_email: profiles.get(p.user_id)?.email,
-          detail: parts.join(" \xB7 "),
-          reference: ref,
-          country: p.country || countryFor(p.user_id),
-          currency: p.currency || null,
-          balance_before: p.balance_before ?? null,
-          balance_after: p.balance_after ?? null
-        });
-      }
-    }
-    if (wantComs) {
-      const shortRef = (id) => String(id).replace(/-/g, "").slice(0, 8).toUpperCase();
-      const inRange = (iso) => {
-        const t = new Date(iso).getTime();
-        if (fromIso && t < new Date(fromIso).getTime()) return false;
-        if (toIso && t > new Date(toIso).getTime()) return false;
-        return true;
-      };
-      for (const c of refs) {
-        const legs = [
-          {
-            at: c.referrer_credited_at,
-            uid: c.referrer_user_id,
-            amt: Number(c.referrer_bonus_fcfa || 0),
-            suffix: "r",
-            detail: `Commission parrainage \xB7 filleul ${labelFor(c.referred_user_id)}`
-          },
-          {
-            at: c.referred_credited_at,
-            uid: c.referred_user_id,
-            amt: Number(c.referred_bonus_fcfa || 0),
-            suffix: "f",
-            detail: `Bonus de bienvenue parrainage \xB7 via ${labelFor(c.referrer_user_id)}`
-          }
-        ];
-        for (const leg of legs) {
-          if (!leg.at || leg.amt <= 0) continue;
-          if (userIdF && leg.uid !== userIdF) continue;
-          if (!inRange(leg.at)) continue;
-          all.push({
-            id: `c-${c.id}-${leg.suffix}`,
-            kind: "commission",
-            created_at: leg.at,
-            amount: leg.amt,
-            status: "completed",
-            user_id: leg.uid,
-            user_label: labelFor(leg.uid),
-            user_email: profiles.get(leg.uid)?.email,
-            detail: leg.detail,
-            reference: `PAR-${shortRef(c.id)}`,
-            country: countryFor(leg.uid),
-            currency: null
-          });
-        }
-      }
-    }
-    let merged = all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    if (search) {
-      const s = search.toLowerCase();
-      merged = merged.filter(
-        (r) => r.user_label.toLowerCase().includes(s) || (r.user_email || "").toLowerCase().includes(s) || r.detail.toLowerCase().includes(s) || (r.reference || "").toLowerCase().includes(s)
-      );
-    }
-    if (statusF && type === "all") {
-      merged = merged.filter((r) => r.status === statusF);
-    }
-    const total = merged.length;
-    const page = merged.slice(offset, offset + limit);
-    return res.json({ rows: page, total_count: total, has_more: offset + page.length < total });
-  } catch (err) {
-    logger.error({ err }, "admin/transactions failed");
-    return res.status(500).json({ error: "Erreur lecture transactions" });
-  }
-});
-router3.get("/admin/deposits", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL8 || !SUPABASE_ANON_KEY4) {
-    return res.status(503).json({ error: "Supabase non configur\xE9" });
-  }
-  const q = req.query;
-  const limit = Math.min(Math.max(parseInt(q.limit || "200", 10) || 200, 1), 1e3);
-  const headers = {
-    apikey: SUPABASE_ANON_KEY4,
-    Authorization: `Bearer ${req.userToken}`
-  };
-  let extraUserIds = [];
-  const cleanSearch = q.search ? q.search.replace(/[%,()]/g, "").trim() : "";
-  if (cleanSearch) {
-    try {
-      const pr = await fetch(
-        `${SUPABASE_URL8}/rest/v1/profiles?select=user_id&or=(username.ilike.*${cleanSearch}*,email.ilike.*${cleanSearch}*)&limit=200`,
-        { headers }
-      );
-      if (pr.ok) {
-        const rows = await pr.json();
-        extraUserIds = rows.map((r) => r.user_id).filter(Boolean);
-      }
-    } catch (err) {
-      logger.warn({ err }, "admin/deposits: search profiles lookup failed");
-    }
-  }
-  const params = new URLSearchParams();
-  params.set("select", "id,user_id,amount,status,method,reference,created_at,bonus_amount,bonus_status,bonus_credited_at,credited_at,country,currency");
-  params.set("order", "created_at.desc");
-  params.set("limit", String(limit));
-  if (q.status && q.status !== "all") params.append("status", `eq.${q.status}`);
-  if (q.bonus_status && q.bonus_status !== "all") params.append("bonus_status", `eq.${q.bonus_status}`);
-  const periodFrom = periodToFromIso(q.period);
-  if (periodFrom) params.append("created_at", `gte.${periodFrom}`);
-  else if (q.from) params.append("created_at", `gte.${new Date(q.from).toISOString()}`);
-  if (q.to) {
-    const end = new Date(q.to);
-    end.setHours(23, 59, 59, 999);
-    params.append("created_at", `lte.${end.toISOString()}`);
-  }
-  if (q.min_amount) params.append("amount", `gte.${parseInt(q.min_amount, 10)}`);
-  if (q.max_amount) params.append("amount", `lte.${parseInt(q.max_amount, 10)}`);
-  if (cleanSearch) {
-    const orParts = [`reference.ilike.*${cleanSearch}*`];
-    if (extraUserIds.length) orParts.push(`user_id.in.(${extraUserIds.join(",")})`);
-    orParts.push(`user_id.ilike.*${cleanSearch}*`);
-    params.append("or", `(${orParts.join(",")})`);
-  }
-  try {
-    const r = await fetch(`${SUPABASE_URL8}/rest/v1/payments?${params.toString()}`, { headers });
-    if (!r.ok) {
-      const body = await r.text();
-      logger.error({ status: r.status, body: body.slice(0, 200) }, "admin/deposits fetch failed");
-      return res.status(502).json({ error: "Lecture des d\xE9p\xF4ts \xE9chou\xE9e" });
-    }
-    let rows = await r.json();
-    const minN = parseInt(q.min_user_deposits || "", 10);
-    if (Number.isFinite(minN) && minN >= 1) {
-      try {
-        const allUserIds = Array.from(new Set(rows.map((p) => p.user_id))).filter(Boolean);
-        if (allUserIds.length) {
-          const cr = await fetch(
-            `${SUPABASE_URL8}/rest/v1/payments?select=user_id&status=eq.completed&user_id=in.(${allUserIds.join(",")})&limit=10000`,
-            { headers }
-          );
-          if (cr.ok) {
-            const counts = {};
-            for (const row of await cr.json()) {
-              counts[row.user_id] = (counts[row.user_id] || 0) + 1;
-            }
-            rows = rows.filter((p) => (counts[p.user_id] || 0) >= minN);
-          }
-        }
-      } catch (err) {
-        logger.warn({ err }, "admin/deposits: min_user_deposits lookup failed");
-      }
-    }
-    const userIds = Array.from(new Set(rows.map((p) => p.user_id))).filter(Boolean);
-    let profilesByUid = {};
-    if (userIds.length) {
-      try {
-        const pr = await fetch(
-          `${SUPABASE_URL8}/rest/v1/profiles?select=user_id,username,email&user_id=in.(${userIds.join(",")})`,
-          { headers }
-        );
-        if (pr.ok) {
-          for (const p of await pr.json()) {
-            profilesByUid[p.user_id] = p;
-          }
-        }
-      } catch (err) {
-        logger.warn({ err }, "admin/deposits: profile enrich failed");
-      }
-    }
-    let totalAmount = 0;
-    let bonusPending = 0;
-    let bonusCreditedCount = 0;
-    let bonusCreditedFcfa = 0;
-    let bonusEligibleCount = 0;
-    for (const p of rows) {
-      totalAmount += Number(p.amount || 0);
-      if (p.bonus_status === "pending") bonusPending++;
-      if (p.bonus_status === "credited") {
-        bonusCreditedCount++;
-        bonusCreditedFcfa += Number(p.bonus_amount || 0);
-      }
-      if (Number(p.amount || 0) >= BONUS_THRESHOLD_FCFA) bonusEligibleCount++;
-    }
-    const enriched = rows.map((p) => ({
-      ...p,
-      user_username: profilesByUid[p.user_id]?.username ?? null,
-      user_email: profilesByUid[p.user_id]?.email ?? null
-    }));
-    return res.json({
-      deposits: enriched,
-      counters: {
-        total: rows.length,
-        total_amount_fcfa: totalAmount,
-        bonus_pending: bonusPending,
-        bonus_credited: bonusCreditedCount,
-        bonus_credited_fcfa: bonusCreditedFcfa,
-        bonus_eligible: bonusEligibleCount
-      },
-      bonus_rule: { threshold_fcfa: BONUS_THRESHOLD_FCFA, bonus_fcfa: BONUS_AMOUNT_FCFA }
-    });
-  } catch (err) {
-    logger.error({ err }, "admin/deposits unexpected error");
-    return res.status(500).json({ error: "Erreur interne" });
-  }
-});
-router3.post("/admin/deposits/:id/status", requireUser, requireAdmin, async (req, res) => {
-  const id = String(req.params["id"]);
-  const status = String((req.body ?? {}).status || "").toLowerCase();
-  if (!id) return res.status(400).json({ error: "id manquant" });
-  if (!["completed", "failed", "rejected", "pending"].includes(status)) {
-    return res.status(400).json({ error: "statut invalide" });
-  }
-  if (status === "completed") {
-    const out2 = await creditDeposit(id, { userToken: req.userToken });
-    if (!out2.ok) return res.status(out2.status || 500).json({ error: out2.error });
-    return res.json({
-      ok: true,
-      already_credited: out2.alreadyCredited,
-      amount_credited: out2.amountCredited,
-      bonus_credited: out2.bonusCredited,
-      new_balance: out2.newBalance
-    });
-  }
-  const out = await markPaymentStatus(id, status, req.userToken);
-  if (!out.ok) return res.status(out.status || 500).json({ error: out.error });
-  return res.json({ ok: true });
-});
-router3.post("/admin/deposits/:id/credit-bonus", requireUser, requireAdmin, async (req, res) => {
-  const id = String(req.params["id"]);
-  if (!id) return res.status(400).json({ error: "id manquant" });
-  const out = await creditDeposit(id, { userToken: req.userToken, forceBonusCredit: true });
-  if (!out.ok) return res.status(out.status || 500).json({ error: out.error });
-  return res.json({
-    ok: true,
-    already_credited: out.alreadyCredited,
-    bonus_credited: out.bonusCredited,
-    new_balance: out.newBalance
-  });
-});
-async function fetchAuthUser(userId) {
-  const r = await fetch(`${SUPABASE_URL8}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
-    headers: serviceRoleHeaders3()
-  });
-  if (!r.ok) return null;
-  const data = await r.json();
-  return {
-    id: String(data.id ?? userId),
-    email: data.email ?? null,
-    phone: data.phone ?? null,
-    created_at: data.created_at ?? "",
-    last_sign_in_at: data.last_sign_in_at ?? null
-  };
-}
-router3.get("/admin/users/total-balance", requireUser, requireAdmin, async (_req, res) => {
-  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
-    return res.status(503).json({ error: "Configuration serveur manquante" });
-  }
-  try {
-    const params = new URLSearchParams();
-    params.set("select", "balance");
-    const r = await fetch(`${SUPABASE_URL8}/rest/v1/profiles?${params.toString()}`, {
-      headers: {
-        ...serviceRoleHeaders3(),
-        Range: "0-1000000",
-        "Range-Unit": "items",
-        Prefer: "count=exact"
-      }
-    });
-    if (!r.ok && r.status !== 206) {
-      const body = await r.text();
-      logger.error({ status: r.status, body: body.slice(0, 200) }, "admin/users/total-balance failed");
-      return res.status(502).json({ error: "Lecture des soldes impossible" });
-    }
-    const rows = await r.json();
-    const total = rows.reduce((sum, row) => sum + (Number(row.balance) || 0), 0);
-    const range = r.headers.get("content-range");
-    let count = rows.length;
-    if (range && /\/(\d+)$/.test(range)) {
-      count = Number(range.match(/\/(\d+)$/)[1]);
-    }
-    res.json({
-      total_balance: Math.round(total),
-      user_count: count,
-      currency: "FCFA"
-    });
-  } catch (err) {
-    logger.error({ err }, "admin/users/total-balance error");
-    res.status(500).json({ error: err.message });
-  }
-});
-router3.get("/admin/users", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
-    return res.status(503).json({ error: "Configuration serveur manquante" });
-  }
-  const q = req.query;
-  const search = (q.search || "").replace(/[%,()]/g, "").trim();
-  const limit = Math.min(Math.max(parseInt(q.limit || "100", 10) || 100, 1), 2e3);
-  const offset = Math.max(parseInt(q.offset || "0", 10) || 0, 0);
-  const params = new URLSearchParams();
-  params.set("select", "user_id,username,email,phone,whatsapp,country,balance,is_active,created_at,affiliate_earnings");
-  params.set("order", "created_at.desc");
-  if (search) {
-    const s = `*${search}*`;
-    params.set("or", `(username.ilike.${s},email.ilike.${s},phone.ilike.${s})`);
-  }
-  const r = await fetch(`${SUPABASE_URL8}/rest/v1/profiles?${params.toString()}`, {
-    headers: {
-      ...serviceRoleHeaders3(),
-      Range: `${offset}-${offset + limit - 1}`,
-      "Range-Unit": "items",
-      Prefer: "count=exact"
-    }
-  });
-  if (!r.ok && r.status !== 206) {
-    const body = await r.text();
-    logger.error({ status: r.status, body: body.slice(0, 200) }, "admin/users list failed");
-    return res.status(502).json({ error: "Lecture des utilisateurs impossible" });
-  }
-  let rows = await r.json();
-  const range = r.headers.get("content-range");
-  let totalCount = null;
-  if (range && /\/(\d+)$/.test(range)) {
-    totalCount = Number(range.match(/\/(\d+)$/)[1]);
-  }
-  const adminIds = await fetchAdminIds();
-  const requesterEmail = req.userId ? await fetchProfileEmail(req.userId) : null;
-  const requesterIsMain = requesterEmail === MAIN_ADMIN_EMAIL;
-  for (const row of rows) {
-    const uid = String(row["user_id"] || "");
-    const email = String(row["email"] || "").toLowerCase();
-    const isMain = email === MAIN_ADMIN_EMAIL;
-    row["role"] = adminIds.has(uid) || isMain ? "admin" : "user";
-    row["is_main_admin"] = isMain;
-  }
-  if (!requesterIsMain) {
-    const before = rows.length;
-    rows = rows.filter((row) => row["is_main_admin"] !== true);
-    if (totalCount !== null) totalCount -= before - rows.length;
-  }
-  const missing = rows.filter((r2) => !r2["email"] || String(r2["email"]).trim() === "");
-  if (missing.length > 0) {
-    const CONCURRENCY = 8;
-    for (let i = 0; i < missing.length; i += CONCURRENCY) {
-      const batch = missing.slice(i, i + CONCURRENCY);
-      await Promise.all(batch.map(async (row) => {
-        const id = String(row["user_id"] || "");
-        if (!id) return;
-        const au = await fetchAuthUser(id);
-        if (au?.email) row["email"] = au.email;
-      }));
-    }
-  }
-  res.json({ users: rows, total_count: totalCount, has_more: rows.length === limit, requester_is_main_admin: requesterIsMain });
-});
-router3.patch("/admin/users/:userId", requireUser, requireAdmin, requireActionCode, async (req, res) => {
-  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
-    return res.status(503).json({ error: "Configuration serveur manquante" });
-  }
-  const userId = req.params["userId"];
-  if (!userId || !/^[0-9a-fA-F-]{36}$/.test(userId)) {
-    return res.status(400).json({ error: "user_id invalide" });
-  }
-  const b = req.body || {};
-  const profilePatch = {};
-  if (typeof b.username === "string") profilePatch["username"] = b.username.trim();
-  if (typeof b.email === "string") {
-    const e = b.email.trim().toLowerCase();
-    if (e !== "") profilePatch["email"] = e;
-  }
-  if (typeof b.phone === "string") profilePatch["phone"] = b.phone.trim();
-  if (typeof b.whatsapp === "string") profilePatch["whatsapp"] = b.whatsapp.trim();
-  if (typeof b.country === "string") profilePatch["country"] = b.country.trim();
-  if (b.balance !== void 0 && b.balance !== null && b.balance !== "") {
-    const bal = Number(b.balance);
-    if (!Number.isFinite(bal) || bal < 0) return res.status(400).json({ error: "Solde invalide" });
-    profilePatch["balance"] = Math.round(bal);
-  }
-  if (typeof b.is_active === "boolean") profilePatch["is_active"] = b.is_active;
-  const newEmail = typeof profilePatch["email"] === "string" ? profilePatch["email"] : null;
-  if (newEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
-    return res.status(400).json({ error: "Email invalide" });
-  }
-  if (newEmail) {
-    const r = await fetch(
-      `${SUPABASE_URL8}/auth/v1/admin/users/${encodeURIComponent(userId)}`,
-      {
-        method: "PUT",
-        headers: serviceRoleHeaders3(),
-        body: JSON.stringify({ email: newEmail, email_confirm: true })
-      }
-    );
-    if (!r.ok) {
-      const body = await r.text();
-      logger.error({ status: r.status, body: body.slice(0, 300) }, "admin/users auth email update failed");
-      const friendly = /already|exists|taken|duplicate/i.test(body) ? "Cet email est d\xE9j\xE0 utilis\xE9 par un autre compte" : "Mise \xE0 jour de l'email impossible";
-      return res.status(502).json({ error: friendly });
-    }
-  }
-  let balanceBefore = null;
-  const wantsBalanceChange = profilePatch["balance"] !== void 0;
-  if (wantsBalanceChange) {
-    try {
-      const r = await fetch(
-        `${SUPABASE_URL8}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=balance`,
-        { headers: serviceRoleHeaders3() }
-      );
-      if (r.ok) {
-        const rows = await r.json();
-        if (rows.length > 0) balanceBefore = Math.round(Number(rows[0].balance) || 0);
-      }
-    } catch (err) {
-      logger.error({ err, userId }, "admin/users: could not read balance before adjustment");
-    }
-  }
-  if (Object.keys(profilePatch).length > 0) {
-    const r = await fetch(
-      `${SUPABASE_URL8}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}`,
-      {
-        method: "PATCH",
-        headers: { ...serviceRoleHeaders3(), Prefer: "return=representation" },
-        body: JSON.stringify(profilePatch)
-      }
-    );
-    if (!r.ok) {
-      const body = await r.text();
-      logger.error({ status: r.status, body: body.slice(0, 200) }, "admin/users patch profile failed");
-      return res.status(502).json({ error: "Mise \xE0 jour du profil impossible" });
-    }
-  }
-  if (wantsBalanceChange && balanceBefore !== null) {
-    const balanceAfter = Number(profilePatch["balance"]);
-    const delta = balanceAfter - balanceBefore;
-    if (delta !== 0) {
-      try {
-        const nowIso = (/* @__PURE__ */ new Date()).toISOString();
-        const ins = await fetch(`${SUPABASE_URL8}/rest/v1/payments`, {
-          method: "POST",
-          headers: serviceRoleHeaders3(),
-          body: JSON.stringify({
-            user_id: userId,
-            amount: delta,
-            currency: "XAF",
-            method: "admin_adjustment",
-            status: "completed",
-            reference: `ADJ-${Date.now()}`,
-            credited_at: nowIso,
-            balance_before: balanceBefore,
-            balance_after: balanceAfter
-          })
-        });
-        if (!ins.ok) {
-          const body = await ins.text();
-          logger.error({ status: ins.status, body: body.slice(0, 300), userId }, "admin adjustment journal insert failed");
-        }
-      } catch (err) {
-        logger.error({ err, userId }, "admin adjustment journal insert exception");
-      }
-    }
-  }
-  res.json({ ok: true });
-});
-router3.post("/admin/users/:userId/password", requireUser, requireAdmin, requireActionCode, async (req, res) => {
-  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
-    return res.status(503).json({ error: "Configuration serveur manquante" });
-  }
-  const userId = req.params["userId"];
-  if (!userId || !/^[0-9a-fA-F-]{36}$/.test(userId)) {
-    return res.status(400).json({ error: "user_id invalide" });
-  }
-  const password = req.body && typeof req.body.password === "string" ? req.body.password : "";
-  if (password.length < 8) {
-    return res.status(400).json({ error: "Le mot de passe doit contenir au moins 8 caract\xE8res" });
-  }
-  if (password.length > 200) {
-    return res.status(400).json({ error: "Mot de passe trop long" });
-  }
-  const r = await fetch(
-    `${SUPABASE_URL8}/auth/v1/admin/users/${encodeURIComponent(userId)}`,
-    {
-      method: "PUT",
-      headers: serviceRoleHeaders3(),
-      body: JSON.stringify({ password })
-    }
-  );
-  if (!r.ok) {
-    const body = await r.text();
-    logger.error({ status: r.status, body: body.slice(0, 300) }, "admin/users password update failed");
-    return res.status(502).json({ error: "R\xE9initialisation du mot de passe impossible : " + body.slice(0, 200) });
-  }
-  res.json({ ok: true, user_id: userId });
-});
-router3.get("/admin/operators/health", requireUser, requireAdmin, (_req, res) => {
-  res.set("Cache-Control", "no-store");
-  res.json({
-    cooldown_ms: COOLDOWN_MS,
-    unavailable: listUnavailableOperators()
-  });
-});
-router3.post("/admin/operators/health/clear", requireUser, requireAdmin, (req, res) => {
-  const country = req.body?.country ? String(req.body.country) : void 0;
-  const operator = req.body?.operator ? String(req.body.operator) : void 0;
-  const cleared = clearOperatorHealth(country, operator);
-  bustCountriesCache();
-  res.json({ ok: true, cleared });
-});
-async function fetchCurrencyRateSettings() {
-  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) return {};
-  try {
-    const keys = NON_CFA_COUNTRIES_INFO.map((c) => `currency_rate_${c.code}`);
-    const filter = keys.map((k) => `key=eq.${encodeURIComponent(k)}`).join(",");
-    const r = await fetch(
-      `${SUPABASE_URL8}/rest/v1/settings?or=(${filter})&select=key,value`,
-      { headers: serviceRoleHeaders3() }
-    );
-    if (!r.ok) return {};
-    const rows = await r.json();
-    const overrides = {};
-    for (const row of rows) {
-      const m = /^currency_rate_([A-Z]{2})$/i.exec(row.key);
-      if (m && m[1]) {
-        const parsed = parseFloat(row.value);
-        if (Number.isFinite(parsed) && parsed > 0) {
-          overrides[m[1].toUpperCase()] = parsed;
-        }
-      }
-    }
-    return overrides;
-  } catch (err) {
-    logger.error({ err }, "fetchCurrencyRateSettings failed");
-    return {};
-  }
-}
-router3.get("/admin/currencies", requireUser, requireAdmin, async (_req, res) => {
-  const overrides = await fetchCurrencyRateSettings();
-  setRateOverrides(overrides);
-  const rates = NON_CFA_COUNTRIES_INFO.map((c) => ({
-    country: c.code,
-    name: c.name,
-    currency: c.currency,
-    symbol: c.symbol,
-    fcfaPerUnit: overrides[c.code] ?? c.defaultFcfaPerUnit,
-    default: c.defaultFcfaPerUnit
-  }));
-  res.set("Cache-Control", "no-store");
-  res.json({ rates });
-});
-router3.put("/admin/currencies", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
-    return res.status(503).json({ error: "Configuration serveur manquante" });
-  }
-  const country = req.body?.country;
-  const fcfaPerUnit = req.body?.fcfaPerUnit;
-  if (typeof country !== "string" || !/^[A-Z]{2}$/.test(country.toUpperCase())) {
-    return res.status(400).json({ error: "Param\xE8tre country invalide (code ISO 2 lettres requis)" });
-  }
-  const upperCountry = country.toUpperCase();
-  const allowed = NON_CFA_COUNTRIES_INFO.map((c) => c.code);
-  if (!allowed.includes(upperCountry)) {
-    return res.status(400).json({ error: `Pays non modifiable : ${upperCountry}. Seuls ${allowed.join(", ")} sont configurables.` });
-  }
-  const rate = typeof fcfaPerUnit === "number" ? fcfaPerUnit : parseFloat(String(fcfaPerUnit));
-  if (!Number.isFinite(rate) || rate <= 0 || rate > 1e6) {
-    return res.status(400).json({ error: "Taux invalide (doit \xEAtre un nombre positif)" });
-  }
-  const settingKey = `currency_rate_${upperCountry}`;
-  const r = await fetch(
-    `${SUPABASE_URL8}/rest/v1/settings?on_conflict=key`,
-    {
-      method: "POST",
-      headers: { ...serviceRoleHeaders3(), Prefer: "resolution=merge-duplicates,return=representation" },
-      body: JSON.stringify({ key: settingKey, value: String(rate) })
-    }
-  );
-  if (!r.ok) {
-    const body = await r.text();
-    logger.error({ status: r.status, body: body.slice(0, 300) }, "admin/currencies upsert failed");
-    return res.status(502).json({ error: "Impossible de sauvegarder le taux" });
-  }
-  const latest = await fetchCurrencyRateSettings();
-  setRateOverrides(latest);
-  logger.info({ country: upperCountry, fcfaPerUnit: rate }, "admin: currency rate updated");
-  res.json({ ok: true, country: upperCountry, fcfaPerUnit: rate });
-});
-router3.delete("/admin/currencies/:country", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
-    return res.status(503).json({ error: "Configuration serveur manquante" });
-  }
-  const upperCountry = String(req.params["country"] ?? "").toUpperCase();
-  const allowed = NON_CFA_COUNTRIES_INFO.map((c) => c.code);
-  if (!allowed.includes(upperCountry)) {
-    return res.status(400).json({ error: `Pays non modifiable : ${upperCountry}` });
-  }
-  const settingKey = `currency_rate_${upperCountry}`;
-  const r = await fetch(
-    `${SUPABASE_URL8}/rest/v1/settings?key=eq.${encodeURIComponent(settingKey)}`,
-    { method: "DELETE", headers: serviceRoleHeaders3() }
-  );
-  if (!r.ok) {
-    return res.status(502).json({ error: "Suppression impossible" });
-  }
-  const latest = await fetchCurrencyRateSettings();
-  setRateOverrides(latest);
-  logger.info({ country: upperCountry }, "admin: currency rate reset to default");
-  res.json({ ok: true });
-});
-var USD_RATES_SETTINGS_KEY = "smm_usd_rates";
-async function fetchUsdRatesFromSettings() {
-  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) return null;
-  try {
-    const r = await fetch(
-      `${SUPABASE_URL8}/rest/v1/settings?key=eq.${encodeURIComponent(USD_RATES_SETTINGS_KEY)}&select=value`,
-      { headers: serviceRoleHeaders3() }
-    );
-    if (!r.ok) return null;
-    const rows = await r.json();
-    if (!rows[0]?.value) return null;
-    const parsed = JSON.parse(rows[0].value);
-    if (parsed?.default && parsed?.peakerr) return parsed;
-    return null;
-  } catch {
-    return null;
-  }
-}
-async function loadUsdRatesAtStartup() {
-  const saved = await fetchUsdRatesFromSettings();
-  if (saved) {
-    setUsdRatesOverride(saved);
-    logger.info({ rates: saved }, "USD rates loaded from settings at startup");
-  } else {
-    logger.info("No saved USD rates in settings \u2014 using hardcoded defaults");
-  }
-}
-router3.get("/admin/usd-rates", requireUser, requireAdmin, async (_req, res) => {
-  const saved = await fetchUsdRatesFromSettings();
-  const rates = saved ?? getUsdRates();
-  if (saved) setUsdRatesOverride(saved);
-  res.set("Cache-Control", "no-store");
-  res.json({ rates, defaults: USD_TO_LOCAL_RATES });
-});
-router3.put("/admin/usd-rates", requireUser, requireAdmin, async (req, res) => {
-  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
-    return res.status(503).json({ error: "Configuration serveur manquante" });
-  }
-  const body = req.body?.rates;
-  if (!body || typeof body.default !== "object" || typeof body.peakerr !== "object") {
-    return res.status(400).json({ error: "Format invalide: { rates: { default: {...}, peakerr: {...} } }" });
-  }
-  const allEntries = [...Object.values(body.default), ...Object.values(body.peakerr)];
-  if (!allEntries.every((v) => typeof v === "number" && isFinite(v) && v > 0)) {
-    return res.status(400).json({ error: "Tous les taux doivent \xEAtre des nombres positifs" });
-  }
-  const r = await fetch(
-    `${SUPABASE_URL8}/rest/v1/settings?on_conflict=key`,
-    {
-      method: "POST",
-      headers: { ...serviceRoleHeaders3(), "Prefer": "resolution=merge-duplicates,return=representation" },
-      body: JSON.stringify({ key: USD_RATES_SETTINGS_KEY, value: JSON.stringify(body) })
-    }
-  );
-  if (!r.ok) {
-    const text = await r.text();
-    logger.error({ status: r.status, body: text.slice(0, 300) }, "admin/usd-rates upsert failed");
-    return res.status(502).json({ error: "Impossible de sauvegarder les taux" });
-  }
-  setUsdRatesOverride(body);
-  logger.info({ rates: body }, "admin: USD\u2192local rates updated");
-  res.json({ ok: true, rates: body });
-});
-router3.delete("/admin/usd-rates", requireUser, requireAdmin, async (_req, res) => {
-  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
-    return res.status(503).json({ error: "Configuration serveur manquante" });
-  }
-  const r = await fetch(
-    `${SUPABASE_URL8}/rest/v1/settings?key=eq.${encodeURIComponent(USD_RATES_SETTINGS_KEY)}`,
-    { method: "DELETE", headers: serviceRoleHeaders3() }
-  );
-  if (!r.ok) return res.status(502).json({ error: "R\xE9initialisation impossible" });
-  const { clearUsdRatesOverride: clearUsdRatesOverride2 } = await Promise.resolve().then(() => (init_smm_pricing(), smm_pricing_exports));
-  clearUsdRatesOverride2();
-  logger.info("admin: USD\u2192local rates reset to defaults");
-  res.json({ ok: true });
-});
-router3.get("/admin/operator-logos", requireUser, requireAdmin, async (_req, res) => {
-  try {
-    const [logos, countries] = await Promise.all([
-      fetchOperatorLogos(),
-      listAllowedCountries().catch(() => [])
-    ]);
-    const seen = /* @__PURE__ */ new Map();
-    for (const c of countries) {
-      for (const op of c.operators) {
-        const existing = seen.get(op.code);
-        if (existing) {
-          existing.countries.push(c.name);
-        } else {
-          seen.set(op.code, { code: op.code, name: op.name, countries: [c.name] });
-        }
-      }
-    }
-    const operators = Array.from(seen.values()).map((op) => ({
-      ...op,
-      logo_url: logos[op.code] ?? null
-    }));
-    res.set("Cache-Control", "no-store");
-    res.json({ operators });
-  } catch (err) {
-    logger.error({ err }, "admin/operator-logos GET failed");
-    res.status(500).json({ error: "Impossible de charger les logos" });
-  }
-});
-router3.put("/admin/operator-logos/:code", requireUser, requireAdmin, async (req, res) => {
-  const code = String(req.params["code"] ?? "").trim();
-  const logoUrl = String(req.body?.logo_url ?? "").trim();
-  if (!code) return res.status(400).json({ error: "Code op\xE9rateur requis" });
-  if (!logoUrl) return res.status(400).json({ error: "URL du logo requise" });
-  if (!/^https?:\/\/.{5,}/.test(logoUrl)) {
-    return res.status(400).json({ error: "URL invalide \u2014 doit commencer par http:// ou https://" });
-  }
-  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
-    return res.status(503).json({ error: "Configuration serveur manquante" });
-  }
-  try {
-    await upsertOperatorLogo(code, logoUrl);
-    logger.info({ code, logoUrl }, "admin: operator logo updated");
-    res.json({ ok: true, code, logo_url: logoUrl });
-  } catch (err) {
-    logger.error({ err }, "admin/operator-logos PUT failed");
-    res.status(500).json({ error: err?.message || "Impossible de sauvegarder le logo" });
-  }
-});
-router3.delete("/admin/operator-logos/:code", requireUser, requireAdmin, async (req, res) => {
-  const code = String(req.params["code"] ?? "").trim();
-  if (!code) return res.status(400).json({ error: "Code op\xE9rateur requis" });
-  if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
-    return res.status(503).json({ error: "Configuration serveur manquante" });
-  }
-  try {
-    await deleteOperatorLogo(code);
-    logger.info({ code }, "admin: operator logo deleted");
-    res.json({ ok: true, code });
-  } catch (err) {
-    logger.error({ err }, "admin/operator-logos DELETE failed");
-    res.status(500).json({ error: err?.message || "Impossible de supprimer le logo" });
-  }
-});
-router3.post(
-  "/admin/operator-logos/:code/upload",
-  requireUser,
-  requireAdmin,
-  logoUpload.single("logo"),
-  async (req, res) => {
-    const code = String(req.params["code"] ?? "").trim();
-    if (!code) return res.status(400).json({ error: "Code op\xE9rateur requis" });
-    if (!req.file) return res.status(400).json({ error: "Fichier image requis" });
-    if (!SUPABASE_URL8 || !SUPABASE_SERVICE_ROLE_KEY7) {
-      return res.status(503).json({ error: "Configuration serveur manquante" });
-    }
-    try {
-      const publicUrl = await uploadOperatorLogoFile(
-        code,
-        req.file.buffer,
-        req.file.mimetype
-      );
-      logger.info({ code, size: req.file.size }, "admin: operator logo uploaded");
-      res.json({ ok: true, code, logo_url: publicUrl });
-    } catch (err) {
-      logger.error({ err }, "admin/operator-logos upload failed");
-      res.status(500).json({ error: err?.message || "Impossible d'uploader le logo" });
-    }
-  }
-);
-var admin_default = router3;
-
-// src/routes/support.ts
-var import_express4 = __toESM(require_express2(), 1);
-init_logger();
-
-// src/lib/support.ts
-init_logger();
-import { promises as fs3 } from "node:fs";
-import path3 from "node:path";
-import crypto2 from "node:crypto";
-var SupportError = class extends Error {
-  constructor(message, statusCode) {
-    super(message);
-    this.statusCode = statusCode;
-    this.name = "SupportError";
-  }
-};
-var DIR = path3.resolve(process.cwd(), "data", "support");
-var UPLOADS = path3.join(DIR, "uploads");
-var TTL_MS = 7 * 24 * 60 * 60 * 1e3;
-function userFile(userId) {
-  const safe = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-  return path3.join(DIR, `${safe}.jsonl`);
-}
-async function ensureDirs() {
-  await fs3.mkdir(UPLOADS, { recursive: true });
-}
-function isFresh(m) {
-  return Date.now() - new Date(m.ts).getTime() < TTL_MS;
-}
-async function readRaw(userId) {
-  try {
-    const txt = await fs3.readFile(userFile(userId), "utf8");
-    return txt.split("\n").filter((l) => l.trim()).map((l) => {
-      try {
-        return JSON.parse(l);
-      } catch {
-        return null;
-      }
-    }).filter((m) => m !== null);
-  } catch {
-    return [];
-  }
-}
-async function readThread(userId) {
-  const all = await readRaw(userId);
-  return all.filter(isFresh).sort((a, b) => a.ts.localeCompare(b.ts));
-}
-var MAX_THREAD_MESSAGES = 200;
-async function appendMessage(userId, msg) {
-  await ensureDirs();
-  const existing = await readRaw(userId);
-  const fresh = existing.filter(isFresh);
-  if (fresh.length >= MAX_THREAD_MESSAGES) {
-    throw new SupportError("Limite de messages atteinte pour ce fil de support (max 200)", 429);
-  }
-  const full = {
-    id: crypto2.randomUUID(),
-    ts: (/* @__PURE__ */ new Date()).toISOString(),
-    ...msg
-  };
-  await fs3.appendFile(userFile(userId), JSON.stringify(full) + "\n", "utf8");
-  return full;
-}
-var SEEN_FILE = path3.join(DIR, "_seen.json");
-async function readSeen() {
-  try {
-    const txt = await fs3.readFile(SEEN_FILE, "utf8");
-    return JSON.parse(txt);
-  } catch {
-    return {};
-  }
-}
-async function writeSeen(map) {
-  await ensureDirs();
-  await fs3.writeFile(SEEN_FILE, JSON.stringify(map), "utf8");
-}
-async function markSeen(userId, who) {
-  const map = await readSeen();
-  const cur = map[userId] || {};
-  if (who === "user") cur.user_seen = (/* @__PURE__ */ new Date()).toISOString();
-  else cur.admin_seen = (/* @__PURE__ */ new Date()).toISOString();
-  map[userId] = cur;
-  await writeSeen(map);
-}
-async function countUnreadForUser(userId) {
-  const map = await readSeen();
-  const seenTs = new Date(map[userId]?.user_seen || 0).getTime();
-  const msgs = await readThread(userId);
-  return msgs.filter((m) => m.sender === "admin" && new Date(m.ts).getTime() > seenTs).length;
-}
-async function listThreads() {
-  await ensureDirs();
-  let entries = [];
-  try {
-    entries = await fs3.readdir(DIR);
-  } catch {
-    return [];
-  }
-  const seenMap = await readSeen();
-  const out = [];
-  for (const f of entries) {
-    if (!f.endsWith(".jsonl")) continue;
-    const userId = f.replace(/\.jsonl$/, "");
-    const msgs = await readThread(userId);
-    if (msgs.length === 0) continue;
-    const last = msgs[msgs.length - 1];
-    const adminSeenTs = new Date(seenMap[userId]?.admin_seen || 0).getTime();
-    const unread = msgs.filter((m) => m.sender === "user" && new Date(m.ts).getTime() > adminSeenTs).length;
-    out.push({ user_id: userId, last_message: last, message_count: msgs.length, unread_for_admin: unread });
-  }
-  return out.sort((a, b) => b.last_message.ts.localeCompare(a.last_message.ts));
-}
-var ALLOWED_EXT = /* @__PURE__ */ new Set(["jpg", "jpeg", "png", "webp", "gif"]);
-var MAX_BYTES = 5 * 1024 * 1024;
-var MAX_IMAGES_PER_USER = 20;
-var MAX_GLOBAL_UPLOADS_BYTES = 500 * 1024 * 1024;
-var SUPABASE_URL9 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY8 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-var STORAGE_BUCKET2 = "support-uploads";
-function hasStorage() {
-  return !!(SUPABASE_URL9 && SUPABASE_SERVICE_ROLE_KEY8);
-}
-function storageHeaders() {
-  return {
-    apikey: SUPABASE_SERVICE_ROLE_KEY8,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY8}`
-  };
-}
-async function uploadToStorage(filename, buf, contentType) {
-  const url = `${SUPABASE_URL9}/storage/v1/object/${STORAGE_BUCKET2}/${encodeURIComponent(filename)}`;
-  const r = await fetch(url, {
-    method: "POST",
-    headers: { ...storageHeaders(), "Content-Type": contentType, "x-upsert": "false" },
-    body: new Uint8Array(buf)
-  });
-  if (!r.ok) {
-    const detail = await r.text().catch(() => "");
-    logger.error({ status: r.status, detail }, "support: storage upload failed");
-    throw new SupportError("Impossible d'enregistrer l'image", 502);
-  }
-}
-async function downloadFromStorage(filename) {
-  if (!hasStorage()) return null;
-  const url = `${SUPABASE_URL9}/storage/v1/object/${STORAGE_BUCKET2}/${encodeURIComponent(filename)}`;
-  const r = await fetch(url, { headers: storageHeaders() });
-  if (!r.ok) return null;
-  const ct = r.headers.get("content-type") || "image/jpeg";
-  const ab = await r.arrayBuffer();
-  return { buffer: Buffer.from(ab), contentType: ct };
-}
-async function getStorageBucketSize() {
-  return 0;
-}
-async function countUserImages(userId) {
-  if (!hasStorage()) return 0;
-  const safe = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-  const url = `${SUPABASE_URL9}/storage/v1/object/list/${STORAGE_BUCKET2}`;
-  const r = await fetch(url, {
-    method: "POST",
-    headers: { ...storageHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify({ prefix: `${safe}-`, limit: MAX_IMAGES_PER_USER + 1, offset: 0 })
-  });
-  if (!r.ok) return 0;
-  const items = await r.json().catch(() => []);
-  return Array.isArray(items) ? items.length : 0;
-}
-async function saveImageDataUrl(userId, dataUrl) {
-  const m = /^data:image\/(jpeg|jpg|png|webp|gif);base64,(.+)$/i.exec(dataUrl);
-  if (!m) throw new Error("Format d'image invalide");
-  let ext = m[1].toLowerCase();
-  if (ext === "jpeg") ext = "jpg";
-  if (!ALLOWED_EXT.has(ext)) throw new Error("Type d'image non support\xE9");
-  const buf = Buffer.from(m[2], "base64");
-  if (buf.byteLength > MAX_BYTES) throw new SupportError("Image trop volumineuse (max 5 MB)", 413);
-  if (!hasStorage()) {
-    throw new SupportError(
-      "Stockage Supabase non configur\xE9 (SUPABASE_SERVICE_ROLE_KEY manquant)",
-      503
-    );
-  }
-  const userCount = await countUserImages(userId);
-  if (userCount >= MAX_IMAGES_PER_USER) {
-    throw new SupportError("Quota d'images atteint (max 20 images par utilisateur)", 429);
-  }
-  void getStorageBucketSize;
-  void MAX_GLOBAL_UPLOADS_BYTES;
-  const safe = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-  const filename = `${safe}-${Date.now()}-${crypto2.randomBytes(4).toString("hex")}.${ext}`;
-  const contentType = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : "image/jpeg";
-  await uploadToStorage(filename, buf, contentType);
-  return filename;
-}
-function uploadPath(filename) {
-  if (!/^[a-zA-Z0-9_\-.]+$/.test(filename)) return null;
-  return path3.join(UPLOADS, filename);
-}
-function isOwnedBy(filename, userId) {
-  const safe = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-  return filename.startsWith(`${safe}-`);
-}
-async function cleanupExpired() {
-  await ensureDirs();
-  let entries = [];
-  try {
-    entries = await fs3.readdir(DIR);
-  } catch {
-    return { messages_removed: 0, images_removed: 0 };
-  }
-  const referenced = /* @__PURE__ */ new Set();
-  let messagesRemoved = 0;
-  for (const f of entries) {
-    if (!f.endsWith(".jsonl")) continue;
-    const fp = path3.join(DIR, f);
-    let raw = [];
-    try {
-      const txt = await fs3.readFile(fp, "utf8");
-      raw = txt.split("\n").filter((l) => l.trim()).map((l) => {
-        try {
-          return JSON.parse(l);
-        } catch {
-          return null;
-        }
-      }).filter((m) => m);
-    } catch {
-      continue;
-    }
-    const fresh = raw.filter(isFresh);
-    messagesRemoved += raw.length - fresh.length;
-    if (fresh.length === 0) {
-      try {
-        await fs3.unlink(fp);
-      } catch {
-      }
-    } else if (fresh.length !== raw.length) {
-      const txt = fresh.map((m) => JSON.stringify(m)).join("\n") + "\n";
-      try {
-        await fs3.writeFile(fp, txt, "utf8");
-      } catch {
-      }
-    }
-    for (const m of fresh) if (m.image_filename) referenced.add(m.image_filename);
-  }
-  let imagesRemoved = 0;
-  let uploads = [];
-  try {
-    uploads = await fs3.readdir(UPLOADS);
-  } catch {
-    uploads = [];
-  }
-  for (const f of uploads) {
-    if (!referenced.has(f)) {
-      try {
-        await fs3.unlink(path3.join(UPLOADS, f));
-        imagesRemoved++;
-      } catch {
-      }
-    }
-  }
-  if (hasStorage()) {
-    try {
-      const listUrl = `${SUPABASE_URL9}/storage/v1/object/list/${STORAGE_BUCKET2}`;
-      const orphans = [];
-      let offset = 0;
-      const PAGE = 1e3;
-      const now = Date.now();
-      while (true) {
-        const r = await fetch(listUrl, {
-          method: "POST",
-          headers: { ...storageHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ prefix: "", limit: PAGE, offset })
-        });
-        if (!r.ok) break;
-        const items = await r.json().catch(() => []);
-        if (!Array.isArray(items) || items.length === 0) break;
-        for (const it of items) {
-          if (!it.name) continue;
-          if (referenced.has(it.name)) continue;
-          const createdAt = it.created_at ? new Date(it.created_at).getTime() : now;
-          if (now - createdAt > TTL_MS) orphans.push(it.name);
-        }
-        if (items.length < PAGE) break;
-        offset += PAGE;
-      }
-      for (let i = 0; i < orphans.length; i += 100) {
-        const batch = orphans.slice(i, i + 100);
-        const delUrl = `${SUPABASE_URL9}/storage/v1/object/${STORAGE_BUCKET2}`;
-        const dr = await fetch(delUrl, {
-          method: "DELETE",
-          headers: { ...storageHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ prefixes: batch })
-        });
-        if (dr.ok) imagesRemoved += batch.length;
-      }
-      if (orphans.length > 0) {
-        logger.info({ deleted: orphans.length }, "support cleanup: storage orphans removed");
-      }
-    } catch (err) {
-      logger.warn({ err }, "support cleanup: storage purge failed");
-    }
-  }
-  return { messages_removed: messagesRemoved, images_removed: imagesRemoved };
-}
-var cleanupTimer = null;
-function startSupportCleanup() {
-  if (cleanupTimer) return;
-  cleanupExpired().then((r) => logger.info({ ...r }, "support cleanup")).catch(() => {
-  });
-  cleanupTimer = setInterval(() => {
-    cleanupExpired().then((r) => {
-      if (r.messages_removed || r.images_removed) logger.info({ ...r }, "support cleanup");
-    }).catch(() => {
-    });
-  }, 60 * 60 * 1e3);
-  cleanupTimer.unref?.();
-}
-
-// src/routes/support.ts
-import { promises as fs4 } from "node:fs";
-import path4 from "node:path";
-var router4 = (0, import_express4.Router)();
-var RATE_LIMIT_WINDOW_MS = 60 * 60 * 1e3;
-var RATE_LIMIT_MAX = 30;
-var rateLimitMap = /* @__PURE__ */ new Map();
-function checkRateLimit(userId) {
-  const now = Date.now();
-  const entry = rateLimitMap.get(userId);
-  if (!entry || now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
-    rateLimitMap.set(userId, { count: 1, windowStart: now });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count += 1;
-  return true;
-}
-router4.get("/support/messages", requireUser, async (req, res) => {
-  try {
-    const msgs = await readThread(req.userId);
-    res.json({ messages: msgs, ttl_days: 7 });
-  } catch (err) {
-    logger.error({ err }, "support read error");
-    res.status(500).json({ error: err.message });
-  }
-});
-router4.get("/support/unread", requireUser, async (req, res) => {
-  try {
-    const count = await countUnreadForUser(req.userId);
-    res.json({ count });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-router4.post("/support/mark-read", requireUser, async (req, res) => {
-  try {
-    await markSeen(req.userId, "user");
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-router4.post("/support/messages", requireUser, async (req, res) => {
-  try {
-    if (!checkRateLimit(req.userId)) {
-      return res.status(429).json({ error: "Trop de messages. R\xE9essayez dans une heure." });
-    }
-    const text = String(req.body?.text || "").slice(0, 4e3).trim();
-    const imageDataUrl = req.body?.image;
-    if (!text && !imageDataUrl) {
-      return res.status(400).json({ error: "Message vide" });
-    }
-    let image_filename;
-    if (imageDataUrl) {
-      image_filename = await saveImageDataUrl(req.userId, imageDataUrl);
-    }
-    const msg = await appendMessage(req.userId, {
-      sender: "user",
-      sender_user_id: req.userId,
-      text,
-      ...image_filename ? { image_filename } : {}
-    });
-    res.json({ message: msg });
-  } catch (err) {
-    logger.error({ err }, "support send error");
-    const status = err instanceof SupportError ? err.statusCode : 500;
-    res.status(status).json({ error: err.message });
-  }
-});
-router4.get("/support/uploads/:filename", requireUser, async (req, res) => {
-  const fname = req.params["filename"];
-  const fp = uploadPath(fname);
-  if (!fp) return res.status(400).end();
-  if (!isOwnedBy(fname, req.userId)) {
-    try {
-      const SUPABASE_URL20 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-      const SUPABASE_ANON_KEY6 = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
-      if (!SUPABASE_URL20 || !SUPABASE_ANON_KEY6) {
-        throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY environment variables must be set");
-      }
-      const r = await fetch(`${SUPABASE_URL20}/rest/v1/rpc/has_role`, {
-        method: "POST",
-        headers: {
-          apikey: SUPABASE_ANON_KEY6,
-          Authorization: `Bearer ${req.userToken}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ _user_id: req.userId, _role: "admin" })
-      });
-      const ok = r.ok && await r.json() === true;
-      if (!ok) return res.status(403).end();
-    } catch {
-      return res.status(403).end();
-    }
-  }
-  try {
-    const obj = await downloadFromStorage(fname);
-    if (obj) {
-      res.setHeader("Content-Type", obj.contentType);
-      res.setHeader("Cache-Control", "private, max-age=604800");
-      return res.end(obj.buffer);
-    }
-  } catch (err) {
-    logger.warn({ err, fname }, "support: storage download failed, trying local fallback");
-  }
-  try {
-    await fs4.access(fp);
-    const ext = path4.extname(fp).slice(1).toLowerCase();
-    const ct = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : "image/jpeg";
-    res.setHeader("Content-Type", ct);
-    res.setHeader("Cache-Control", "private, max-age=3600");
-    res.sendFile(fp);
-  } catch {
-    res.status(404).end();
-  }
-});
-router4.get("/admin/support/threads", requireUser, requireAdmin, async (_req, res) => {
-  try {
-    res.json({ threads: await listThreads() });
-  } catch (err) {
-    logger.error({ err }, "support threads error");
-    res.status(500).json({ error: err.message });
-  }
-});
-router4.post("/admin/support/mark-read", requireUser, requireAdmin, async (req, res) => {
-  try {
-    const userId = String(req.body?.user_id || "");
-    if (!userId) return res.status(400).json({ error: "user_id requis" });
-    await markSeen(userId, "admin");
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-router4.get("/admin/support/messages", requireUser, requireAdmin, async (req, res) => {
-  try {
-    const userId = String(req.query["user_id"] || "");
-    if (!userId) return res.status(400).json({ error: "user_id requis" });
-    const msgs = await readThread(userId);
-    res.json({ messages: msgs, ttl_days: 7 });
-  } catch (err) {
-    logger.error({ err }, "support admin read error");
-    res.status(500).json({ error: err.message });
-  }
-});
-router4.post("/admin/support/reply", requireUser, requireAdmin, async (req, res) => {
-  try {
-    const userId = String(req.body?.user_id || "");
-    const text = String(req.body?.text || "").slice(0, 4e3).trim();
-    const imageDataUrl = req.body?.image;
-    if (!userId) return res.status(400).json({ error: "user_id requis" });
-    if (!text && !imageDataUrl) return res.status(400).json({ error: "R\xE9ponse vide" });
-    let image_filename;
-    if (imageDataUrl) {
-      image_filename = await saveImageDataUrl(userId, imageDataUrl);
-    }
-    const msg = await appendMessage(userId, {
-      sender: "admin",
-      sender_user_id: req.userId,
-      text,
-      ...image_filename ? { image_filename } : {}
-    });
-    res.json({ message: msg });
-  } catch (err) {
-    logger.error({ err }, "support reply error");
-    const status = err instanceof SupportError ? err.statusCode : 500;
-    res.status(status).json({ error: err.message });
-  }
-});
-var support_default = router4;
-
 // src/routes/payments.ts
-var import_express5 = __toESM(require_express2(), 1);
-init_logger();
 var router5 = (0, import_express5.Router)();
-var SUPABASE_URL10 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY9 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-var SUPABASE_ANON_KEY5 = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
+var SERVICE_ROLE_KEY = process.env["API_SERVICE_ROLE_KEY"];
 var PUBLIC_URL = process.env["PUBLIC_API_URL"] || (process.env["REPLIT_DEV_DOMAIN"] ? `https://${process.env["REPLIT_DEV_DOMAIN"]}` : "");
 if (!isAfribapayConfigured()) {
   logger.warn(
     "AfribaPay is not configured: set AFRIBAPAY_API_USER, AFRIBAPAY_API_KEY and AFRIBAPAY_MERCHANT_KEY as server secrets. Deposit endpoints will return HTTP 503 until set."
   );
 }
-if (!hasServiceRoleKey()) {
-  logger.warn(
-    "SUPABASE_SERVICE_ROLE_KEY not set \u2014 automatic deposit crediting via webhook will not work. Admins can still manually credit deposits from the admin panel using their own session."
-  );
-}
-function serverHeaders() {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY9 || SUPABASE_ANON_KEY5;
-  return {
-    apikey: key2,
-    Authorization: `Bearer ${key2}`,
-    "Content-Type": "application/json"
-  };
-}
 async function insertPayment(args) {
-  const r = await fetch(`${SUPABASE_URL10}/rest/v1/payments`, {
-    method: "POST",
-    headers: {
-      ...serverHeaders(),
-      Authorization: `Bearer ${args.userToken}`,
-      Prefer: "return=representation"
-    },
-    body: JSON.stringify({
-      user_id: args.userId,
-      amount: args.amount,
-      method: "afribapay",
-      status: "pending",
-      order_id: args.orderId,
-      country: args.country,
-      operator: args.operator,
-      phone_number: args.phoneNumber,
-      currency: args.currency
-    })
-  });
-  if (!r.ok) {
-    const body = await r.text();
-    throw new Error(`Failed to create payment: HTTP ${r.status} ${body}`);
-  }
-  const rows = await r.json();
-  if (!rows[0]?.id) throw new Error("Failed to create payment: empty response");
-  return rows[0].id;
+  return createPayment(args);
 }
-async function patchPayment(paymentId, patch, userToken) {
-  const headers = userToken ? { ...serverHeaders(), Authorization: `Bearer ${userToken}` } : serverHeaders();
-  await fetch(`${SUPABASE_URL10}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
-    method: "PATCH",
-    headers,
-    body: JSON.stringify(patch)
-  });
+async function patchPayment(paymentId, patch) {
+  if (typeof patch.transaction_id === "string") await updatePaymentTransaction(paymentId, patch.transaction_id);
+  if (patch.status === "failed" || patch.status === "rejected" || patch.status === "pending") await markPaymentStatus(paymentId, patch.status);
 }
-async function findPaymentByOrderId(orderId) {
-  const r = await fetch(
-    `${SUPABASE_URL10}/rest/v1/payments?order_id=eq.${encodeURIComponent(orderId)}&select=id,status,user_id,transaction_id&limit=1`,
-    { headers: serverHeaders() }
-  );
-  if (!r.ok) return null;
-  const rows = await r.json();
-  return rows[0] || null;
-}
+var findPaymentByOrderId = fetchPaymentByOrderId;
 function generateOrderId(userId) {
   const ts = Date.now().toString(36);
   const rnd = Math.random().toString(36).slice(2, 8);
@@ -57811,8 +57342,8 @@ function extractAfribapayMessage(payload) {
   const p = payload;
   const inner = p["error"] ?? p["data"] ?? p;
   if (inner && typeof inner === "object") {
-    const msg = inner["message"];
-    if (typeof msg === "string" && msg) return msg;
+    const msg2 = inner["message"];
+    if (typeof msg2 === "string" && msg2) return msg2;
   }
   return void 0;
 }
@@ -57842,7 +57373,7 @@ router5.get("/payments/countries", async (req, res) => {
     const all = await listAllowedCountries(force);
     const safe = all.filter((c) => !isCountryExcluded(c.code));
     res.set("Cache-Control", "no-store");
-    res.json({ countries: safe });
+    return res.json({ countries: safe });
   } catch (err) {
     return handleAfribapayError(err, res);
   }
@@ -57859,7 +57390,7 @@ router5.post("/payments/otp", requireUser, async (req, res) => {
   }
   try {
     await requestOtp({ country, operator, phone_number: phone });
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (err) {
     return handleAfribapayError(err, res);
   }
@@ -57891,7 +57422,7 @@ router5.post("/payments/initiate", requireUser, async (req, res) => {
       error: "Service de paiement temporairement indisponible (URL de callback non configur\xE9e)."
     });
   }
-  let currency = "XOF";
+  let currency2 = "XOF";
   try {
     const list = await listAllowedCountries();
     const found = list.find((c) => c.code.toUpperCase() === country);
@@ -57902,7 +57433,7 @@ router5.post("/payments/initiate", requireUser, async (req, res) => {
     if (!op) {
       return res.status(400).json({ error: "Op\xE9rateur invalide pour ce pays" });
     }
-    currency = (op.currency || pickCurrencyForCountry(found)).toUpperCase();
+    currency2 = (op.currency || pickCurrencyForCountry(found)).toUpperCase();
     if (op.otp_required && !otpCode) {
       return res.status(400).json({ error: "Code OTP requis pour cet op\xE9rateur" });
     }
@@ -57919,12 +57450,13 @@ router5.post("/payments/initiate", requireUser, async (req, res) => {
       userId: req.userId,
       amount,
       // credit amount — what gets added to the user's balance
-      userToken: req.userToken,
       orderId,
       country,
       operator,
       phoneNumber: phone,
-      currency
+      currency: currency2,
+      feeAmount,
+      chargeAmount
     });
   } catch (err) {
     logger.error({ err }, "insertPayment failed");
@@ -57937,13 +57469,13 @@ router5.post("/payments/initiate", requireUser, async (req, res) => {
       phone_number: phone,
       amount: chargeAmount,
       // charge amount — what AfribaPay deducts
-      currency,
+      currency: currency2,
       order_id: orderId,
       notify_url: notifyUrl(),
       otp_code: otpCode
     });
     if (result.transaction_id) {
-      await patchPayment(paymentId, { transaction_id: result.transaction_id }, req.userToken);
+      await patchPayment(paymentId, { transaction_id: result.transaction_id });
     }
     return res.json({
       ok: true,
@@ -57960,7 +57492,7 @@ router5.post("/payments/initiate", requireUser, async (req, res) => {
       charge_amount: chargeAmount
     });
   } catch (err) {
-    await patchPayment(paymentId, { status: "failed" }, req.userToken).catch(() => void 0);
+    await patchPayment(paymentId, { status: "failed" }).catch(() => void 0);
     return handleAfribapayError(err, res);
   }
 });
@@ -58079,7 +57611,7 @@ router5.post("/payments/webhook", async (req, res) => {
 });
 function requireServiceRole(req, res, next) {
   const provided = req.headers["x-service-role-key"];
-  if (!SUPABASE_SERVICE_ROLE_KEY9 || provided !== SUPABASE_SERVICE_ROLE_KEY9) {
+  if (!SERVICE_ROLE_KEY || provided !== SERVICE_ROLE_KEY) {
     return res.status(403).json({ error: "Forbidden" });
   }
   return next();
@@ -58101,6 +57633,14 @@ router5.get("/payments/operator-logos", async (_req, res) => {
     return res.json({ logos: {} });
   }
 });
+router5.get("/payments/operator-logos/file/:filename", (req, res) => {
+  const filePath = operatorLogoPath(String(req.params["filename"] || ""));
+  if (!filePath) return res.status(404).end();
+  res.set("Cache-Control", "public, max-age=3600");
+  return res.sendFile(filePath, (err) => {
+    if (err && !res.headersSent) res.status(404).end();
+  });
+});
 var payments_default = router5;
 
 // src/routes/tickets.ts
@@ -58108,382 +57648,95 @@ var import_express6 = __toESM(require_express2(), 1);
 init_logger();
 
 // src/lib/tickets.ts
-init_logger();
-import { promises as fs5 } from "node:fs";
-import path5 from "node:path";
-import crypto3 from "node:crypto";
+import crypto9 from "node:crypto";
 var TicketError = class extends Error {
   constructor(message, statusCode) {
     super(message);
     this.statusCode = statusCode;
-    this.name = "TicketError";
   }
 };
-var SUPABASE_URL11 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY10 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-function supabaseEnabled2() {
-  return !!(SUPABASE_URL11 && SUPABASE_SERVICE_ROLE_KEY10);
-}
-function serviceRoleHeaders4() {
-  return {
-    apikey: SUPABASE_SERVICE_ROLE_KEY10,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY10}`,
-    "Content-Type": "application/json",
-    Prefer: "return=representation"
-  };
-}
-var MAX_MESSAGE_LEN = 2e3;
-var MAX_TICKETS_PER_USER = 100;
-function rowToTicket(row) {
-  return {
-    id: String(row["id"] || ""),
-    short_code: String(row["short_code"] || ""),
-    ts: String(row["ts"] || row["created_at"] || ""),
-    user_id: String(row["user_id"] || ""),
-    order_external_id: row["order_external_id"] != null ? String(row["order_external_id"]) : null,
-    order_local_id: row["order_local_id"] != null ? String(row["order_local_id"]) : null,
-    provider_id: row["provider_id"] != null ? Number(row["provider_id"]) : null,
-    service_name: row["service_name"] != null ? String(row["service_name"]) : null,
-    action_type: row["action_type"] || "other",
-    message: String(row["message"] || ""),
-    status: row["status"] || "open",
-    admin_response: row["admin_response"] != null ? String(row["admin_response"]) : void 0,
-    resolved_at: row["resolved_at"] != null ? String(row["resolved_at"]) : void 0,
-    resolved_by: row["resolved_by"] != null ? String(row["resolved_by"]) : void 0,
-    cancel_executed: Boolean(row["cancel_executed"]),
-    cancel_executed_at: row["cancel_executed_at"] != null ? String(row["cancel_executed_at"]) : void 0,
-    refunded: Boolean(row["refunded"]),
-    refunded_amount_fcfa: row["refunded_amount_fcfa"] != null ? Number(row["refunded_amount_fcfa"]) : void 0
-  };
-}
-async function supabaseInsertTicket(ticket) {
-  try {
-    const body = {
-      id: ticket.id,
-      short_code: ticket.short_code,
-      ts: ticket.ts,
-      user_id: ticket.user_id,
-      order_external_id: ticket.order_external_id,
-      order_local_id: ticket.order_local_id,
-      provider_id: ticket.provider_id,
-      service_name: ticket.service_name,
-      action_type: ticket.action_type,
-      message: ticket.message,
-      status: ticket.status
-    };
-    const r = await fetch(`${SUPABASE_URL11}/rest/v1/tickets`, {
-      method: "POST",
-      headers: serviceRoleHeaders4(),
-      body: JSON.stringify(body)
-    });
-    if (!r.ok) {
-      const txt = await r.text().catch(() => "");
-      logger.error({ status: r.status, body: txt.slice(0, 300) }, "tickets: supabase insert failed");
-      return null;
-    }
-    const rows = await r.json();
-    return rows[0] ? rowToTicket(rows[0]) : ticket;
-  } catch (err) {
-    logger.error({ err }, "tickets: supabase insert threw");
-    return null;
-  }
-}
-async function supabaseListAllTickets() {
-  const PAGE = 1e3;
-  const all = [];
-  try {
-    for (let offset = 0; ; offset += PAGE) {
-      const r = await fetch(
-        `${SUPABASE_URL11}/rest/v1/tickets?order=ts.desc&limit=${PAGE}&offset=${offset}`,
-        { headers: serviceRoleHeaders4() }
-      );
-      if (!r.ok) {
-        if (all.length) break;
-        return null;
-      }
-      const rows = await r.json();
-      all.push(...rows.map(rowToTicket));
-      if (rows.length < PAGE) break;
-    }
-    return all.sort((a, b) => {
-      const ao = a.status === "resolved" || a.status === "closed" ? 1 : 0;
-      const bo = b.status === "resolved" || b.status === "closed" ? 1 : 0;
-      if (ao !== bo) return ao - bo;
-      return b.ts.localeCompare(a.ts);
-    });
-  } catch (err) {
-    logger.error({ err }, "tickets: supabase listAll threw");
-    return null;
-  }
-}
-async function supabaseListUserTickets(userId) {
-  try {
-    const r = await fetch(
-      `${SUPABASE_URL11}/rest/v1/tickets?user_id=eq.${encodeURIComponent(userId)}&order=ts.desc&limit=100`,
-      { headers: serviceRoleHeaders4() }
-    );
-    if (!r.ok) return null;
-    const rows = await r.json();
-    return rows.map(rowToTicket);
-  } catch (err) {
-    logger.error({ err }, "tickets: supabase listUser threw");
-    return null;
-  }
-}
-async function supabaseGetTicket(ticketId) {
-  try {
-    const r = await fetch(
-      `${SUPABASE_URL11}/rest/v1/tickets?id=eq.${encodeURIComponent(ticketId)}&limit=1`,
-      { headers: serviceRoleHeaders4() }
-    );
-    if (!r.ok) return null;
-    const rows = await r.json();
-    if (!rows || rows.length === 0) return null;
-    const ticket = rowToTicket(rows[0]);
-    return { ticket, userId: ticket.user_id };
-  } catch (err) {
-    logger.error({ err }, "tickets: supabase getTicket threw");
-    return null;
-  }
-}
-async function supabaseUpdateTicket(ticketId, patch) {
-  try {
-    const body = { ...patch, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
-    const r = await fetch(
-      `${SUPABASE_URL11}/rest/v1/tickets?id=eq.${encodeURIComponent(ticketId)}`,
-      {
-        method: "PATCH",
-        headers: serviceRoleHeaders4(),
-        body: JSON.stringify(body)
-      }
-    );
-    if (!r.ok) {
-      const txt = await r.text().catch(() => "");
-      logger.error({ status: r.status, body: txt.slice(0, 300) }, "tickets: supabase patch failed");
-      return null;
-    }
-    const rows = await r.json();
-    return rows[0] ? rowToTicket(rows[0]) : null;
-  } catch (err) {
-    logger.error({ err }, "tickets: supabase patch threw");
-    return null;
-  }
-}
-async function supabaseCountOpen() {
-  try {
-    const r = await fetch(
-      `${SUPABASE_URL11}/rest/v1/tickets?status=in.("open","in_progress")&select=id`,
-      {
-        headers: {
-          ...serviceRoleHeaders4(),
-          Prefer: "count=exact",
-          "Range-Unit": "items",
-          Range: "0-0"
-        }
-      }
-    );
-    const raw = r.headers.get("content-range") || "";
-    const m = raw.match(/\/(\d+)$/);
-    if (m) return Number(m[1]);
-    const rows = await r.json().catch(() => []);
-    return rows.length;
-  } catch (err) {
-    logger.error({ err }, "tickets: supabase countOpen threw");
-    return null;
-  }
-}
-var DIR2 = path5.resolve(process.cwd(), "data", "tickets");
-function userFile2(userId) {
-  const safe = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-  return path5.join(DIR2, `${safe}.jsonl`);
-}
-async function ensureDirs2() {
-  await fs5.mkdir(DIR2, { recursive: true });
-}
-async function readUserTicketsLocal(userId) {
-  try {
-    const txt = await fs5.readFile(userFile2(userId), "utf8");
-    return txt.split("\n").filter((l) => l.trim()).map((l) => {
-      try {
-        return JSON.parse(l);
-      } catch {
-        return null;
-      }
-    }).filter((t) => t !== null);
-  } catch {
-    return [];
-  }
-}
-async function writeUserTicketsLocal(userId, tickets) {
-  await ensureDirs2();
-  const txt = tickets.length ? tickets.map((t) => JSON.stringify(t)).join("\n") + "\n" : "";
-  const dest = userFile2(userId);
-  const tmp = `${dest}.${process.pid}.${Date.now()}.tmp`;
-  await fs5.writeFile(tmp, txt, "utf8");
-  await fs5.rename(tmp, dest);
-}
-var userLocks = /* @__PURE__ */ new Map();
-async function withUserLock(userId, fn) {
-  const prev = userLocks.get(userId) ?? Promise.resolve();
-  const next = prev.then(fn, fn);
-  const settled = next.then(() => {
-  }, () => {
-  });
-  userLocks.set(userId, settled);
-  try {
-    return await next;
-  } finally {
-    if (userLocks.get(userId) === settled) userLocks.delete(userId);
-  }
-}
-function newShortCode() {
-  return "T-" + crypto3.randomBytes(3).toString("hex").toUpperCase();
-}
+var map = (r) => ({
+  id: String(r.id),
+  short_code: String(r.short_code),
+  user_id: String(r.user_id),
+  action_type: r.action_type,
+  message: String(r.message),
+  status: r.status,
+  ts: new Date(r.ts).toISOString(),
+  order_external_id: r.order_external_id ?? null,
+  order_local_id: r.order_local_id ?? null,
+  provider_id: r.provider_id ?? null,
+  service_name: r.service_name ?? null,
+  admin_response: r.admin_response ?? void 0,
+  resolved_at: r.resolved_at ? new Date(r.resolved_at).toISOString() : void 0,
+  resolved_by: r.resolved_by ?? void 0,
+  cancel_executed: Boolean(r.cancel_executed),
+  cancel_executed_at: r.cancel_executed_at ? new Date(r.cancel_executed_at).toISOString() : void 0,
+  refunded: Boolean(r.refunded),
+  refunded_amount_fcfa: r.refunded_amount_minor == null ? void 0 : Number(r.refunded_amount_minor) / 100
+});
+var SELECT = `SELECT id, short_code, ts, user_id, order_external_id, order_local_id, provider_id,
+ service_name, action_type, message, status, admin_response, resolved_at, resolved_by,
+ cancel_executed, cancel_executed_at, refunded, refunded_amount_minor FROM tickets`;
 async function createTicket(input) {
-  const message = String(input.message || "").slice(0, MAX_MESSAGE_LEN).trim();
+  const message = String(input.message || "").slice(0, 2e3).trim();
   if (!message) throw new TicketError("Message requis", 400);
-  if (!input.action_type) throw new TicketError("Type d'action requis", 400);
-  const ticket = {
-    id: crypto3.randomUUID(),
-    short_code: newShortCode(),
-    ts: (/* @__PURE__ */ new Date()).toISOString(),
-    user_id: input.user_id,
-    order_external_id: input.order_external_id ?? null,
-    order_local_id: input.order_local_id ?? null,
-    provider_id: input.provider_id ?? null,
-    service_name: input.service_name ?? null,
-    action_type: input.action_type,
-    message,
-    status: "open"
-  };
-  if (supabaseEnabled2()) {
-    const saved = await supabaseInsertTicket(ticket);
-    if (saved) return saved;
-    logger.warn({ ticketId: ticket.id }, "tickets: supabase insert failed, falling back to local file");
-  }
-  await ensureDirs2();
-  return withUserLock(input.user_id, async () => {
-    const existing = await readUserTicketsLocal(input.user_id);
-    if (existing.length >= MAX_TICKETS_PER_USER) {
-      throw new TicketError("Limite de tickets atteinte pour ce compte (max 100).", 429);
-    }
-    existing.push(ticket);
-    await writeUserTicketsLocal(input.user_id, existing);
-    return ticket;
-  });
+  if (!["cancel", "refund", "speed_up", "other"].includes(input.action_type)) throw new TicketError("Type d'action requis", 400);
+  const id = crypto9.randomUUID();
+  const short = `T-${crypto9.randomBytes(3).toString("hex").toUpperCase()}`;
+  await getMysqlPool().execute(
+    `INSERT INTO tickets (id, short_code, user_id, order_external_id, order_local_id, provider_id, service_name, action_type, message)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, short, input.user_id, input.order_external_id ?? null, input.order_local_id ?? null, input.provider_id ?? null, input.service_name ?? null, input.action_type, message]
+  );
+  const found = await getTicket(id);
+  if (!found) throw new TicketError("Ticket non disponible", 503);
+  return found.ticket;
 }
 async function listUserTickets(userId) {
-  if (supabaseEnabled2()) {
-    const rows = await supabaseListUserTickets(userId);
-    if (rows !== null) return rows;
-  }
-  const all = await readUserTicketsLocal(userId);
-  return all.sort((a, b) => b.ts.localeCompare(a.ts));
+  const [rows] = await getMysqlPool().execute(`${SELECT} WHERE user_id = ? ORDER BY ts DESC LIMIT 100`, [userId]);
+  return rows.map(map);
 }
 async function listAllTickets() {
-  if (supabaseEnabled2()) {
-    const rows = await supabaseListAllTickets();
-    if (rows !== null) return rows;
-  }
-  await ensureDirs2();
-  let entries = [];
-  try {
-    entries = await fs5.readdir(DIR2);
-  } catch {
-    return [];
-  }
-  const all = [];
-  for (const f of entries) {
-    if (!f.endsWith(".jsonl")) continue;
-    const userId = f.replace(/\.jsonl$/, "");
-    const list = await readUserTicketsLocal(userId);
-    all.push(...list);
-  }
-  return all.sort((a, b) => {
-    const ao = a.status === "resolved" || a.status === "closed" ? 1 : 0;
-    const bo = b.status === "resolved" || b.status === "closed" ? 1 : 0;
-    if (ao !== bo) return ao - bo;
-    return b.ts.localeCompare(a.ts);
-  });
+  const [rows] = await getMysqlPool().query(`${SELECT} ORDER BY (status IN ('resolved','closed')), ts DESC`);
+  return rows.map(map);
 }
-async function getTicket(ticketId) {
-  if (supabaseEnabled2()) {
-    const found = await supabaseGetTicket(ticketId);
-    if (found !== null) return found;
-  }
-  await ensureDirs2();
-  let entries = [];
-  try {
-    entries = await fs5.readdir(DIR2);
-  } catch {
-    return null;
-  }
-  for (const f of entries) {
-    if (!f.endsWith(".jsonl")) continue;
-    const userId = f.replace(/\.jsonl$/, "");
-    const list = await readUserTicketsLocal(userId);
-    const t = list.find((x) => x.id === ticketId);
-    if (t) return { ticket: t, userId };
-  }
-  return null;
+async function getTicket(id) {
+  const [rows] = await getMysqlPool().execute(`${SELECT} WHERE id = ? LIMIT 1`, [id]);
+  return rows[0] ? { ticket: map(rows[0]), userId: String(rows[0].user_id) } : null;
 }
-async function updateTicket(ticketId, patch) {
-  if (supabaseEnabled2()) {
-    const updated = await supabaseUpdateTicket(ticketId, patch);
-    if (updated !== null) return updated;
-    logger.warn({ ticketId }, "tickets: supabase patch failed, falling back to local file");
+async function updateTicket(id, patch) {
+  const allowed = { ...patch };
+  if (allowed.refunded_amount_fcfa !== void 0) {
+    allowed.refunded_amount_minor = Math.round(Number(allowed.refunded_amount_fcfa) * 100);
+    delete allowed.refunded_amount_fcfa;
   }
-  const found = await getTicket(ticketId);
-  if (!found) return null;
-  return withUserLock(found.userId, async () => {
-    const list = await readUserTicketsLocal(found.userId);
-    let updated = null;
-    const next = list.map((t) => {
-      if (t.id !== ticketId) return t;
-      updated = { ...t, ...patch };
-      return updated;
-    });
-    if (!updated) return null;
-    await writeUserTicketsLocal(found.userId, next);
-    return updated;
-  });
+  const keys = Object.keys(allowed);
+  if (!keys.length) return (await getTicket(id))?.ticket ?? null;
+  await getMysqlPool().execute(
+    `UPDATE tickets SET ${keys.map((k) => `${k} = ?`).join(", ")} WHERE id = ?`,
+    [...keys.map((k) => allowed[k]), id]
+  );
+  return (await getTicket(id))?.ticket ?? null;
 }
 async function countOpenTickets() {
-  if (supabaseEnabled2()) {
-    const n = await supabaseCountOpen();
-    if (n !== null) return n;
-  }
-  const all = await listAllTickets();
-  return all.filter((t) => t.status === "open" || t.status === "in_progress").length;
+  const [rows] = await getMysqlPool().query("SELECT COUNT(*) AS n FROM tickets WHERE status IN ('open', 'in_progress')");
+  return Number(rows[0]?.n || 0);
 }
 
 // src/lib/ticket-auto-closer.ts
 init_logger();
-var SUPABASE_URL12 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY11 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-var TERMINAL_ORDER_STATUSES = /* @__PURE__ */ new Set([
-  "completed",
-  "cancelled",
-  "partial",
-  "refunded"
-]);
+var TERMINAL_ORDER_STATUSES = /* @__PURE__ */ new Set(["completed", "cancelled", "partial", "refunded"]);
 
 // src/routes/tickets.ts
 var router6 = (0, import_express6.Router)();
-var SUPABASE_URL13 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY12 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 async function resolveOrderForUser(orderLocalId, userId) {
-  if (!SUPABASE_URL13 || !SUPABASE_SERVICE_ROLE_KEY12) return null;
-  const url = `${SUPABASE_URL13}/rest/v1/orders?id=eq.${encodeURIComponent(orderLocalId)}&user_id=eq.${encodeURIComponent(userId)}&select=id,user_id,external_order_id,provider,service_name&limit=1`;
-  const r = await fetch(url, {
-    headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY12,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY12}`
-    }
-  });
-  if (!r.ok) return null;
-  const rows = await r.json();
-  return rows && rows.length > 0 ? rows[0] || null : null;
+  const [rows] = await getMysqlPool().execute(
+    `SELECT id, user_id, COALESCE(external_order_id, provider_order_id) AS external_order_id,
+            provider, service_name, status FROM orders WHERE id = ? AND user_id = ? LIMIT 1`,
+    [orderLocalId, userId]
+  );
+  return rows[0] ? rows[0] : null;
 }
 var VALID_ACTIONS = /* @__PURE__ */ new Set([
   "cancel",
@@ -58548,7 +57801,7 @@ router6.post("/tickets", requireUser, async (req, res) => {
           status: "closed",
           admin_response: `Ticket ferm\xE9 automatiquement : la commande li\xE9e est ${label[order.status] ?? order.status}. Aucune intervention n'est n\xE9cessaire. Si vous avez d'autres questions, ouvrez un nouveau ticket.`,
           resolved_at: (/* @__PURE__ */ new Date()).toISOString(),
-          resolved_by: "system"
+          resolved_by: void 0
         });
         return res.json({ ticket: closed ?? t2 });
       }
@@ -58562,11 +57815,11 @@ router6.post("/tickets", requireUser, async (req, res) => {
       action_type,
       message
     });
-    res.json({ ticket: t });
+    return res.json({ ticket: t });
   } catch (err) {
     const status = err instanceof TicketError ? err.statusCode : 500;
     if (status === 500) logger.error({ err }, "ticket create error");
-    res.status(status).json({ error: err.message });
+    return res.status(status).json({ error: err.message });
   }
 });
 router6.get("/tickets/mine", requireUser, async (req, res) => {
@@ -58615,10 +57868,10 @@ router6.post(
         patch.status = "in_progress";
       }
       const updated = await updateTicket(id, patch);
-      res.json({ ticket: updated });
+      return res.json({ ticket: updated });
     } catch (err) {
       logger.error({ err }, "ticket respond error");
-      res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: err.message });
     }
   }
 );
@@ -58635,9 +57888,9 @@ router6.post(
         resolved_by: req.userId
       });
       if (!updated) return res.status(404).json({ error: "Ticket introuvable" });
-      res.json({ ticket: updated });
+      return res.json({ ticket: updated });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: err.message });
     }
   }
 );
@@ -58646,266 +57899,109 @@ var tickets_default = router6;
 // src/routes/profile.ts
 var import_express7 = __toESM(require_express2(), 1);
 init_logger();
-import crypto4 from "node:crypto";
+import crypto10 from "node:crypto";
+import { promises as fs4 } from "node:fs";
+import path4 from "node:path";
 var router7 = (0, import_express7.Router)();
-var SUPABASE_URL14 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY13 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-var BUCKET = "avatars";
-var MAX_BYTES2 = 2 * 1024 * 1024;
+var MAX_BYTES = 2 * 1024 * 1024;
 var ALLOWED = /* @__PURE__ */ new Set(["jpg", "jpeg", "png", "webp"]);
-function serviceHeaders() {
-  return {
-    apikey: SUPABASE_SERVICE_ROLE_KEY13,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY13}`
-  };
+var AVATAR_DIR = path4.resolve(process.cwd(), "data", "avatars");
+async function ensureProfile(userId) {
+  await getMysqlPool().execute(
+    `INSERT INTO profiles (user_id, email, username)
+     SELECT id, email, LEFT(SUBSTRING_INDEX(email, '@', 1), 64) FROM users WHERE id = ?
+     ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)`,
+    [userId]
+  );
 }
-function hasStorage2() {
-  return !!(SUPABASE_URL14 && SUPABASE_SERVICE_ROLE_KEY13);
-}
-async function fetchUserEmail(userToken) {
-  if (!userToken) return "";
+router7.get("/profile", requireUser, async (req, res) => {
   try {
-    const r = await fetch(`${SUPABASE_URL14}/auth/v1/user`, {
-      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY13, Authorization: `Bearer ${userToken}` }
-    });
-    if (r.ok) {
-      const u = await r.json();
-      return (u?.email || "").trim();
-    }
-  } catch {
-  }
-  return "";
-}
-async function profileExists(userId) {
-  try {
-    const r = await fetch(
-      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}&select=user_id&limit=1`,
-      { headers: serviceHeaders() }
+    const userId = String(req.userId);
+    await ensureProfile(userId);
+    const [rows] = await getMysqlPool().execute(
+      `SELECT user_id, email, username, country, currency, balance_minor,
+              affiliate_earnings_minor, avatar_url, referral_code
+       FROM profiles WHERE user_id = ? LIMIT 1`,
+      [userId]
     );
-    if (!r.ok) return false;
-    const rows = await r.json().catch(() => []);
-    return Array.isArray(rows) && rows.length > 0;
-  } catch {
-    return false;
-  }
-}
-async function ensureProfileRow(userId, userToken, country = "", currency = null) {
-  if (await profileExists(userId)) return true;
-  const email = await fetchUserEmail(userToken);
-  const base = (email.split("@")[0] || "user").slice(0, 40) || "user";
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const username = attempt === 0 ? base : `${base}${crypto4.randomInt(1e3, 9999)}`;
-    const body = { user_id: userId, username, email };
-    if (country) body.country = country;
-    if (currency) body.currency = currency;
-    const insRes = await fetch(`${SUPABASE_URL14}/rest/v1/profiles`, {
-      method: "POST",
-      headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=representation" },
-      body: JSON.stringify(body)
-    });
-    if (insRes.ok) return true;
-    if (await profileExists(userId)) return true;
-    const detail = await insRes.text().catch(() => "");
-    if (insRes.status === 409 || detail.includes("23505")) continue;
-    logger.error({ status: insRes.status, detail, userId }, "ensureProfileRow INSERT failed");
-    return false;
-  }
-  return profileExists(userId);
-}
-router7.post("/profile/avatar", requireUser, async (req, res) => {
-  if (!hasStorage2()) {
-    return res.status(503).json({ error: "Stockage non configur\xE9" });
-  }
-  const dataUrl = req.body?.image;
-  if (!dataUrl) return res.status(400).json({ error: "Image manquante" });
-  const m = /^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/i.exec(dataUrl);
-  if (!m) return res.status(400).json({ error: "Format d'image invalide" });
-  let ext = m[1].toLowerCase();
-  if (ext === "jpeg") ext = "jpg";
-  if (!ALLOWED.has(ext)) return res.status(400).json({ error: "Type non support\xE9" });
-  const buf = Buffer.from(m[2], "base64");
-  if (buf.byteLength > MAX_BYTES2) {
-    return res.status(413).json({ error: "Image trop volumineuse (max 2 MB)" });
-  }
-  const contentType = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
-  const userId = req.userId;
-  const safe = userId.replace(/[^a-zA-Z0-9]/g, "");
-  const filename = `${safe}-${crypto4.randomBytes(6).toString("hex")}.${ext}`;
-  try {
-    const oldRes = await fetch(
-      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}&select=avatar_url`,
-      { headers: { ...serviceHeaders(), Accept: "application/json" } }
-    );
-    if (oldRes.ok) {
-      const rows = await oldRes.json().catch(() => []);
-      const oldUrl = Array.isArray(rows) && rows[0]?.avatar_url ? rows[0].avatar_url : null;
-      if (oldUrl) {
-        const oldName = oldUrl.split(`/${BUCKET}/`)[1];
-        if (oldName) {
-          await fetch(`${SUPABASE_URL14}/storage/v1/object/${BUCKET}/${encodeURIComponent(oldName)}`, {
-            method: "DELETE",
-            headers: serviceHeaders()
-          }).catch(() => {
-          });
-        }
-      }
-    }
-    const uploadRes = await fetch(
-      `${SUPABASE_URL14}/storage/v1/object/${BUCKET}/${encodeURIComponent(filename)}`,
-      {
-        method: "POST",
-        headers: { ...serviceHeaders(), "Content-Type": contentType, "x-upsert": "false" },
-        body: new Uint8Array(buf)
-      }
-    );
-    if (!uploadRes.ok) {
-      const detail = await uploadRes.text().catch(() => "");
-      logger.error({ status: uploadRes.status, detail }, "avatar upload failed");
-      return res.status(502).json({ error: "\xC9chec de l'upload" });
-    }
-    const avatarUrl = `${SUPABASE_URL14}/storage/v1/object/public/${BUCKET}/${encodeURIComponent(filename)}`;
-    const patchRes = await fetch(
-      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}`,
-      {
-        method: "PATCH",
-        headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=minimal" },
-        body: JSON.stringify({ avatar_url: avatarUrl })
-      }
-    );
-    if (!patchRes.ok) {
-      logger.error({ status: patchRes.status }, "avatar profile patch failed");
-      return res.status(502).json({ error: "Impossible de mettre \xE0 jour le profil" });
-    }
-    res.json({ avatar_url: avatarUrl });
+    const p = rows[0];
+    if (!p) return res.status(404).json({ error: "Profil introuvable" });
+    return res.json({ ...p, balance: Number(p.balance_minor) / 100, affiliate_earnings: Number(p.affiliate_earnings_minor) / 100 });
   } catch (err) {
-    logger.error({ err }, "avatar upload error");
-    res.status(500).json({ error: err.message });
-  }
-});
-router7.delete("/profile/avatar", requireUser, async (req, res) => {
-  if (!hasStorage2()) return res.status(503).json({ error: "Stockage non configur\xE9" });
-  const userId = req.userId;
-  try {
-    const oldRes = await fetch(
-      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}&select=avatar_url`,
-      { headers: { ...serviceHeaders(), Accept: "application/json" } }
-    );
-    if (oldRes.ok) {
-      const rows = await oldRes.json().catch(() => []);
-      const oldUrl = Array.isArray(rows) && rows[0]?.avatar_url ? rows[0].avatar_url : null;
-      if (oldUrl) {
-        const oldName = oldUrl.split(`/${BUCKET}/`)[1];
-        if (oldName) {
-          await fetch(`${SUPABASE_URL14}/storage/v1/object/${BUCKET}/${encodeURIComponent(oldName)}`, {
-            method: "DELETE",
-            headers: serviceHeaders()
-          }).catch(() => {
-          });
-        }
-      }
-    }
-    await fetch(
-      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}`,
-      {
-        method: "PATCH",
-        headers: { ...serviceHeaders(), "Content-Type": "application/json", Prefer: "return=minimal" },
-        body: JSON.stringify({ avatar_url: null })
-      }
-    );
-    res.json({ ok: true });
-  } catch (err) {
-    logger.error({ err }, "avatar delete error");
-    res.status(500).json({ error: err.message });
-  }
-});
-router7.post("/profile/country", requireUser, async (req, res) => {
-  if (!SUPABASE_URL14 || !SUPABASE_SERVICE_ROLE_KEY13) {
-    return res.status(503).json({ error: "Service non configur\xE9" });
-  }
-  const country = String(req.body?.country || "").toUpperCase().trim();
-  if (!country || !/^[A-Z]{2}$/.test(country)) {
-    return res.status(400).json({ error: "Code pays invalide (ISO2 attendu)" });
-  }
-  const info = COUNTRY_CURRENCY[country];
-  if (!info) {
-    return res.status(400).json({ error: "Pays non support\xE9" });
-  }
-  const userId = req.userId;
-  try {
-    const patchRes = await fetch(
-      `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}`,
-      {
-        method: "PATCH",
-        headers: {
-          ...serviceHeaders(),
-          "Content-Type": "application/json",
-          Prefer: "return=representation"
-        },
-        body: JSON.stringify({ country, currency: info.currency })
-      }
-    );
-    if (!patchRes.ok) {
-      const detail = await patchRes.text().catch(() => "");
-      logger.error({ status: patchRes.status, detail }, "country update PATCH failed");
-      return res.status(502).json({ error: "Impossible de mettre \xE0 jour le pays" });
-    }
-    const rows = await patchRes.json().catch(() => []);
-    if (rows.length > 0) {
-      return res.json({ ok: true, country, currency: info.currency });
-    }
-    logger.warn({ userId }, "country PATCH updated 0 rows \u2014 profile not yet created, retrying");
-    let upserted = false;
-    for (let attempt = 0; attempt < 3 && !upserted; attempt++) {
-      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
-      const retryRes = await fetch(
-        `${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}`,
-        {
-          method: "PATCH",
-          headers: {
-            ...serviceHeaders(),
-            "Content-Type": "application/json",
-            Prefer: "return=representation"
-          },
-          body: JSON.stringify({ country, currency: info.currency })
-        }
-      );
-      if (!retryRes.ok) continue;
-      const retryRows = await retryRes.json().catch(() => []);
-      if (retryRows.length > 0) {
-        upserted = true;
-      }
-    }
-    if (!upserted) {
-      logger.warn({ userId }, "country: profile still missing \u2014 attempting INSERT fallback");
-      const ensured = await ensureProfileRow(userId, req.userToken, country, info.currency);
-      if (!ensured) {
-        return res.status(503).json({ error: "Profil non encore disponible, r\xE9essayez dans quelques secondes" });
-      }
-      await fetch(`${SUPABASE_URL14}/rest/v1/profiles?user_id=eq.${userId}`, {
-        method: "PATCH",
-        headers: { ...serviceHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ country, currency: info.currency })
-      }).catch(() => {
-      });
-      return res.json({ ok: true, country, currency: info.currency });
-    }
-    res.json({ ok: true, country, currency: info.currency });
-  } catch (err) {
-    logger.error({ err }, "country update error");
-    res.status(500).json({ error: err.message });
+    logger.error({ err }, "profile read error");
+    return res.status(503).json({ error: "Profil temporairement indisponible" });
   }
 });
 router7.post("/profile/ensure", requireUser, async (req, res) => {
-  if (!SUPABASE_URL14 || !SUPABASE_SERVICE_ROLE_KEY13) {
-    return res.status(503).json({ error: "Service non configur\xE9" });
-  }
   try {
-    const ok = await ensureProfileRow(req.userId, req.userToken);
-    if (!ok) return res.status(503).json({ error: "Profil non disponible" });
-    res.json({ ok: true });
+    await ensureProfile(String(req.userId));
+    return res.json({ ok: true });
   } catch (err) {
-    logger.error({ err }, "ensure profile error");
-    res.status(500).json({ error: err.message });
+    logger.error({ err }, "profile ensure error");
+    return res.status(503).json({ error: "Profil non disponible" });
+  }
+});
+router7.post("/profile/country", requireUser, async (req, res) => {
+  const country = String(req.body?.country || "").toUpperCase().trim();
+  if (!/^[A-Z]{2}$/.test(country)) return res.status(400).json({ error: "Code pays invalide (ISO2 attendu)" });
+  const info = COUNTRY_CURRENCY[country];
+  if (!info) return res.status(400).json({ error: "Pays non support\xE9" });
+  try {
+    const userId = String(req.userId);
+    await ensureProfile(userId);
+    await getMysqlPool().execute("UPDATE profiles SET country = ?, currency = ? WHERE user_id = ?", [country, info.currency, userId]);
+    return res.json({ ok: true, country, currency: info.currency });
+  } catch (err) {
+    logger.error({ err }, "country update error");
+    return res.status(503).json({ error: "Impossible de mettre \xE0 jour le pays" });
+  }
+});
+router7.post("/profile/avatar", requireUser, async (req, res) => {
+  const dataUrl = typeof req.body?.image === "string" ? req.body.image : "";
+  const match = /^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=\s]+)$/i.exec(dataUrl);
+  if (!match) return res.status(400).json({ error: "Format d'image invalide" });
+  let ext = match[1].toLowerCase();
+  if (ext === "jpeg") ext = "jpg";
+  if (!ALLOWED.has(ext)) return res.status(400).json({ error: "Type non support\xE9" });
+  const buffer = Buffer.from(match[2], "base64");
+  if (!buffer.length || buffer.byteLength > MAX_BYTES) return res.status(413).json({ error: "Image trop volumineuse (max 2 MB)" });
+  try {
+    await fs4.mkdir(AVATAR_DIR, { recursive: true });
+    const userId = String(req.userId);
+    const filename = `${userId}-${crypto10.randomBytes(8).toString("hex")}.${ext}`;
+    await fs4.writeFile(path4.join(AVATAR_DIR, filename), buffer, { flag: "wx" });
+    const avatarUrl = `/api/profile/avatar/${encodeURIComponent(filename)}`;
+    await ensureProfile(userId);
+    await getMysqlPool().execute("UPDATE profiles SET avatar_url = ? WHERE user_id = ?", [avatarUrl, userId]);
+    return res.json({ avatar_url: avatarUrl });
+  } catch (err) {
+    logger.error({ err }, "avatar upload error");
+    return res.status(500).json({ error: "\xC9chec de l'upload" });
+  }
+});
+router7.get("/profile/avatar/:filename", async (req, res) => {
+  const name = String(req.params.filename || "");
+  if (!/^[0-9a-f-]{36}-[0-9a-f]{16}\.(jpg|png|webp)$/i.test(name)) return res.status(404).end();
+  try {
+    const ext = path4.extname(name).slice(1);
+    res.type(ext === "jpg" ? "image/jpeg" : `image/${ext}`);
+    res.set("Cache-Control", "public, max-age=604800");
+    return res.sendFile(path4.join(AVATAR_DIR, name));
+  } catch {
+    return res.status(404).end();
+  }
+});
+router7.delete("/profile/avatar", requireUser, async (req, res) => {
+  try {
+    const userId = String(req.userId);
+    const [rows] = await getMysqlPool().execute("SELECT avatar_url FROM profiles WHERE user_id = ?", [userId]);
+    await getMysqlPool().execute("UPDATE profiles SET avatar_url = NULL WHERE user_id = ?", [userId]);
+    const filename = String(rows[0]?.avatar_url || "").split("/").pop() || "";
+    if (/^[0-9a-f-]{36}-[0-9a-f]{16}\.(jpg|png|webp)$/i.test(filename)) await fs4.unlink(path4.join(AVATAR_DIR, filename)).catch(() => void 0);
+    return res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err }, "avatar delete error");
+    return res.status(500).json({ error: "Impossible de supprimer la photo" });
   }
 });
 var profile_default = router7;
@@ -58913,17 +58009,8 @@ var profile_default = router7;
 // src/routes/referrals.ts
 var import_express8 = __toESM(require_express2(), 1);
 init_logger();
-var SUPABASE_URL15 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY14 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-function svcHeaders2() {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY14 || "";
-  return {
-    apikey: key2,
-    Authorization: `Bearer ${key2}`,
-    "Content-Type": "application/json"
-  };
-}
 var router8 = (0, import_express8.Router)();
+var asIso = (value) => new Date(String(value)).toISOString();
 router8.get("/referrals/config", async (_req, res) => {
   const cfg = await getReferralConfig();
   res.json({
@@ -58934,111 +58021,71 @@ router8.get("/referrals/config", async (_req, res) => {
 });
 router8.get("/referrals/check/:code", async (req, res) => {
   const code = normalizeCode(req.params["code"]);
-  if (!code) {
-    res.json({ valid: false });
-    return;
-  }
+  if (!code) return res.json({ valid: false });
   try {
-    const owner = await findCodeOwner(code);
-    res.json({ valid: owner !== null });
+    return res.json({ valid: await findCodeOwner(code) !== null });
   } catch (err) {
     logger.warn({ err }, "referrals/check failed");
-    res.status(503).json({ valid: false, error: "V\xE9rification indisponible" });
+    return res.status(503).json({ valid: false, error: "V\xE9rification indisponible" });
   }
 });
 router8.post("/referrals/visit", async (req, res) => {
   res.status(204).end();
   try {
     const code = normalizeCode(req.body?.["code"]);
-    if (!code || !SUPABASE_URL15 || !SUPABASE_SERVICE_ROLE_KEY14) return;
+    if (!code || !await findCodeOwner(code)) return;
     const rawKey = req.body?.["visitor_key"];
     const visitorKey = typeof rawKey === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(rawKey) ? rawKey : null;
-    const owner = await findCodeOwner(code);
-    if (!owner) return;
-    const r = await fetch(`${SUPABASE_URL15}/rest/v1/referral_visits`, {
-      method: "POST",
-      headers: svcHeaders2(),
-      body: JSON.stringify({ code, visitor_key: visitorKey })
-    });
-    if (!r.ok && r.status !== 409) {
-      const body = await r.text();
-      if (!body.includes("42P01") && !body.includes("23505")) {
-        logger.warn({ status: r.status, body: body.slice(0, 150) }, "referral visit insert failed");
-      }
-    }
+    await getMysqlPool().execute(
+      "INSERT IGNORE INTO referral_visits (code, visitor_key) VALUES (?, ?)",
+      [code, visitorKey]
+    );
   } catch (err) {
     logger.warn({ err }, "referral visit processing failed");
   }
 });
 router8.get("/referrals/me", requireUser, async (req, res) => {
-  if (!SUPABASE_URL15 || !SUPABASE_SERVICE_ROLE_KEY14) {
-    res.status(503).json({ error: "Service non configur\xE9" });
-    return;
-  }
   const userId = req.userId;
   try {
-    const pr = await fetch(
-      `${SUPABASE_URL15}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=referral_code,affiliate_earnings,country,currency`,
-      { headers: svcHeaders2() }
+    const [profiles] = await getMysqlPool().execute(
+      `SELECT referral_code, affiliate_earnings_minor, country, currency
+       FROM profiles WHERE user_id = ? LIMIT 1`,
+      [userId]
     );
-    if (!pr.ok) {
-      const body = await pr.text();
-      if (body.includes("42703")) {
-        res.status(503).json({ error: "Migration 020 requise (colonnes de parrainage absentes)" });
-        return;
-      }
-      logger.error({ status: pr.status, body: body.slice(0, 200) }, "referrals/me profile read failed");
-      res.status(502).json({ error: "Lecture du profil impossible" });
-      return;
-    }
-    const profiles = await pr.json();
-    if (!profiles[0]) {
-      res.status(404).json({ error: "Profil introuvable" });
-      return;
-    }
-    let code = profiles[0].referral_code;
+    const profile2 = profiles[0];
+    if (!profile2) return res.status(404).json({ error: "Profil introuvable" });
+    let code = profile2.referral_code ? String(profile2.referral_code) : null;
     if (!code) {
       code = await ensureReferralCode(userId);
-      if (!code) {
-        res.status(500).json({ error: "Impossible de g\xE9n\xE9rer votre code de parrainage" });
-        return;
-      }
+      if (!code) return res.status(500).json({ error: "Impossible de g\xE9n\xE9rer votre code de parrainage" });
     }
-    const [visitsRes, refsRes, cfg] = await Promise.all([
-      fetch(
-        `${SUPABASE_URL15}/rest/v1/referral_visits?code=eq.${encodeURIComponent(code)}&select=id&limit=1`,
-        { headers: { ...svcHeaders2(), Prefer: "count=exact", Range: "0-0", "Range-Unit": "items" } }
+    const [[visitRows], [refRows], cfg] = await Promise.all([
+      getMysqlPool().execute(
+        "SELECT COUNT(*) AS count FROM referral_visits WHERE code = ?",
+        [code]
       ),
-      fetch(
-        `${SUPABASE_URL15}/rest/v1/referrals?referrer_user_id=eq.${encodeURIComponent(userId)}&select=status,qualifying_amount_fcfa,referrer_bonus_fcfa`,
-        { headers: svcHeaders2() }
+      getMysqlPool().execute(
+        `SELECT status, qualifying_amount_minor, referrer_bonus_minor
+         FROM referrals WHERE referrer_user_id = ?`,
+        [userId]
       ),
       getReferralConfig()
     ]);
-    let visits = 0;
-    if (visitsRes.ok || visitsRes.status === 206) {
-      const cr = visitsRes.headers.get("content-range");
-      const m = cr ? /\/(\d+)$/.exec(cr) : null;
-      if (m) visits = parseInt(m[1], 10);
-    }
-    let signups = 0;
+    const visits = Number(visitRows[0]?.count || 0);
+    const signups = refRows.length;
     let paidCount = 0;
-    let qualifiedTotal = 0;
-    if (refsRes.ok) {
-      const rows = await refsRes.json();
-      signups = rows.length;
-      for (const row of rows) {
-        if (row.status === "paid") {
-          paidCount += 1;
-          qualifiedTotal += Number(row.qualifying_amount_fcfa || 0);
-        }
+    let qualifiedTotalMinor = 0;
+    for (const row of refRows) {
+      if (row.status === "paid") {
+        paidCount += 1;
+        qualifiedTotalMinor += Number(row.qualifying_amount_minor || 0);
       }
     }
     await ensureRatesLoaded();
-    const currencyCode = (profiles[0].currency || getCurrencyInfo(profiles[0].country).currency).toUpperCase();
+    const currencyCode = String(profile2.currency || getCurrencyInfo(profile2.country).currency).toUpperCase();
     const rate = getEffectiveRateByCurrency(currencyCode);
     const minDepositLocal = rate > 0 ? Math.ceil(cfg.minDepositFcfa / rate) : cfg.minDepositFcfa;
-    res.json({
+    return res.json({
       code,
       referrer_pct: cfg.referrerPct,
       referred_pct: cfg.referredPct,
@@ -59049,103 +58096,254 @@ router8.get("/referrals/me", requireUser, async (req, res) => {
         visits,
         signups,
         paid_referrals: paidCount,
-        first_deposits_total_fcfa: qualifiedTotal,
-        earned_fcfa: Number(profiles[0].affiliate_earnings || 0)
+        first_deposits_total_fcfa: qualifiedTotalMinor / 100,
+        earned_fcfa: Number(profile2.affiliate_earnings_minor || 0) / 100
       }
     });
   } catch (err) {
     logger.error({ err }, "referrals/me failed");
-    res.status(500).json({ error: "Erreur interne" });
+    return res.status(500).json({ error: "Erreur interne" });
   }
 });
 router8.get("/referrals/transactions", requireUser, async (req, res) => {
-  if (!SUPABASE_URL15 || !SUPABASE_SERVICE_ROLE_KEY14) {
-    res.json([]);
-    return;
-  }
   const userId = req.userId;
   try {
-    const enc = encodeURIComponent(userId);
-    const [asReferrerRes, asReferredRes] = await Promise.all([
-      fetch(
-        `${SUPABASE_URL15}/rest/v1/referrals?referrer_user_id=eq.${enc}&referrer_credited_at=not.is.null&select=id,referred_user_id,referrer_bonus_fcfa,referrer_credited_at&order=referrer_credited_at.desc&limit=200`,
-        { headers: svcHeaders2() }
+    const [[asReferrerRows], [asReferredRows]] = await Promise.all([
+      getMysqlPool().execute(
+        `SELECT r.id, r.referred_user_id, r.referrer_bonus_minor, r.referrer_credited_at,
+                p.username AS counterparty_name
+         FROM referrals r LEFT JOIN profiles p ON p.user_id = r.referred_user_id
+         WHERE r.referrer_user_id = ? AND r.referrer_credited_at IS NOT NULL
+         ORDER BY r.referrer_credited_at DESC LIMIT 200`,
+        [userId]
       ),
-      fetch(
-        `${SUPABASE_URL15}/rest/v1/referrals?referred_user_id=eq.${enc}&referred_credited_at=not.is.null&select=id,referrer_user_id,referred_bonus_fcfa,referred_credited_at&limit=5`,
-        { headers: svcHeaders2() }
+      getMysqlPool().execute(
+        `SELECT r.id, r.referrer_user_id, r.referred_bonus_minor, r.referred_credited_at,
+                p.username AS counterparty_name
+         FROM referrals r LEFT JOIN profiles p ON p.user_id = r.referrer_user_id
+         WHERE r.referred_user_id = ? AND r.referred_credited_at IS NOT NULL
+         ORDER BY r.referred_credited_at DESC LIMIT 5`,
+        [userId]
       )
     ]);
-    const asReferrer = asReferrerRes.ok ? await asReferrerRes.json() : [];
-    const asReferred = asReferredRes.ok ? await asReferredRes.json() : [];
-    const otherIds = Array.from(new Set([
-      ...asReferrer.map((r) => r.referred_user_id),
-      ...asReferred.map((r) => r.referrer_user_id)
-    ].filter(Boolean)));
-    const names = /* @__PURE__ */ new Map();
-    if (otherIds.length > 0) {
-      const pr2 = await fetch(
-        `${SUPABASE_URL15}/rest/v1/profiles?user_id=in.(${otherIds.join(",")})&select=user_id,username`,
-        { headers: svcHeaders2() }
-      );
-      if (pr2.ok) {
-        for (const p of await pr2.json()) {
-          if (p.username) names.set(p.user_id, p.username);
-        }
-      }
-    }
-    const short = (id) => id.replace(/-/g, "").slice(0, 8).toUpperCase();
     const out = [];
-    for (const r of asReferrer) {
-      const amount = Number(r.referrer_bonus_fcfa || 0);
-      if (amount <= 0 || !r.referrer_credited_at) continue;
-      const who = names.get(r.referred_user_id);
+    const short = (id) => id.replace(/-/g, "").slice(0, 8).toUpperCase();
+    for (const row of asReferrerRows) {
+      const amount = Number(row.referrer_bonus_minor || 0) / 100;
+      if (amount <= 0 || !row.referrer_credited_at) continue;
+      const who = row.counterparty_name ? String(row.counterparty_name) : "";
       out.push({
-        id: `${r.id}-referrer`,
+        id: `${row.id}-referrer`,
         kind: "commission",
         amount_fcfa: amount,
-        created_at: r.referrer_credited_at,
+        created_at: asIso(row.referrer_credited_at),
         detail: `Commission de parrainage${who ? ` \xB7 filleul ${who}` : ""}`,
-        reference: `PAR-${short(r.id)}`
+        reference: `PAR-${short(String(row.id))}`
       });
     }
-    for (const r of asReferred) {
-      const amount = Number(r.referred_bonus_fcfa || 0);
-      if (amount <= 0 || !r.referred_credited_at) continue;
-      const who = names.get(r.referrer_user_id);
+    for (const row of asReferredRows) {
+      const amount = Number(row.referred_bonus_minor || 0) / 100;
+      if (amount <= 0 || !row.referred_credited_at) continue;
+      const who = row.counterparty_name ? String(row.counterparty_name) : "";
       out.push({
-        id: `${r.id}-referred`,
+        id: `${row.id}-referred`,
         kind: "commission",
         amount_fcfa: amount,
-        created_at: r.referred_credited_at,
+        created_at: asIso(row.referred_credited_at),
         detail: `Bonus de bienvenue parrainage${who ? ` \xB7 via ${who}` : ""}`,
-        reference: `PAR-${short(r.id)}`
+        reference: `PAR-${short(String(row.id))}`
       });
     }
     out.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    res.json(out);
+    return res.json(out);
   } catch (err) {
     logger.warn({ err }, "referrals/transactions failed");
-    res.json([]);
+    return res.json([]);
   }
 });
 var referrals_default = router8;
 
-// src/routes/index.ts
+// src/routes/auth.ts
+var import_express9 = __toESM(require_express2(), 1);
+import crypto11 from "node:crypto";
 var router9 = (0, import_express9.Router)();
-router9.use(health_default);
-router9.use(smm_default);
-router9.use(admin_default);
-router9.use(support_default);
-router9.use(payments_default);
-router9.use(tickets_default);
-router9.use(profile_default);
-router9.use(referrals_default);
-var routes_default = router9;
+var COOKIE = "bb_session";
+var SESSION_DAYS = 30;
+var BCRYPT_COST = 12;
+var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+var authLimiter = rate_limit_default({
+  windowMs: 15 * 6e4,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Trop de tentatives. R\xE9essayez plus tard." }
+});
+function tokenHash(token) {
+  return crypto11.createHash("sha256").update(token).digest("hex");
+}
+function setSessionCookie(res, token) {
+  res.cookie(COOKIE, token, {
+    httpOnly: true,
+    secure: process.env["NODE_ENV"] === "production",
+    sameSite: "lax",
+    maxAge: SESSION_DAYS * 24 * 60 * 60 * 1e3,
+    path: "/"
+  });
+}
+async function createSessionToken(userId, req, executor = getMysqlPool()) {
+  const token = crypto11.randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1e3);
+  await executor.execute(
+    "INSERT INTO auth_sessions (id, user_id, token_hash, expires_at, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?)",
+    [crypto11.randomUUID(), userId, tokenHash(token), expiresAt, (req.ip || "").slice(0, 64), (req.get("user-agent") || "").slice(0, 512)]
+  );
+  return token;
+}
+function publicUser(row) {
+  return {
+    id: row["id"],
+    email: row["email"],
+    profile: {
+      user_id: row["id"],
+      email: row["email"],
+      username: row["username"],
+      country: row["country"],
+      currency: row["currency"],
+      balance: Number(row["balance_minor"] || 0) / 100,
+      affiliate_earnings: Number(row["affiliate_earnings_minor"] || 0) / 100,
+      avatar_url: row["avatar_url"],
+      referral_code: row["referral_code"]
+    },
+    isAdmin: Boolean(row["is_admin"])
+  };
+}
+router9.post("/auth/register", authLimiter, async (req, res) => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const password = typeof req.body?.password === "string" ? req.body.password : "";
+  const username = typeof req.body?.username === "string" ? req.body.username.trim() : "";
+  const country = typeof req.body?.country === "string" ? req.body.country.trim().toUpperCase() : "";
+  const referralCodeRaw = req.body?.referralCode ?? req.body?.referral_code;
+  const referralCode = referralCodeRaw == null || referralCodeRaw === "" ? null : normalizeCode(referralCodeRaw);
+  if (!emailPattern.test(email) || password.length < 8 || !username || username.length > 64 || country.length > 8 || referralCodeRaw != null && !referralCode) {
+    return res.status(400).json({ error: "Informations d'inscription invalides" });
+  }
+  const id = crypto11.randomUUID();
+  const pool2 = getMysqlPool();
+  let connection;
+  try {
+    connection = await pool2.getConnection();
+    const passwordHash = await bcryptjs_default.hash(password, BCRYPT_COST);
+    await connection.beginTransaction();
+    await connection.execute("INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)", [id, email, passwordHash]);
+    await connection.execute(
+      "INSERT INTO profiles (user_id, email, username, country) VALUES (?, ?, ?, ?)",
+      [id, email, username, country || null]
+    );
+    await connection.execute("INSERT INTO user_roles (user_id, role) VALUES (?, 'user')", [id]);
+    if (referralCode) {
+      const [owners] = await connection.execute(
+        "SELECT user_id FROM profiles WHERE referral_code=? FOR UPDATE",
+        [referralCode]
+      );
+      const referrerId = owners[0] ? String(owners[0].user_id) : "";
+      if (!referrerId || referrerId === id) {
+        await connection.rollback();
+        return res.status(400).json({ error: "Code de parrainage invalide" });
+      }
+      await connection.execute(
+        "INSERT INTO referrals (id,referrer_user_id,referred_user_id,code_used,status) VALUES (?,?,?,?, 'pending')",
+        [crypto11.randomUUID(), referrerId, id, referralCode]
+      );
+    }
+    const sessionToken = await createSessionToken(id, req, connection);
+    await connection.commit();
+    setSessionCookie(res, sessionToken);
+    return res.status(201).json({ user: publicUser({ id, email, username, country, balance_minor: 0, is_admin: false }) });
+  } catch (err) {
+    if (connection) await connection.rollback();
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ error: "Cette adresse email ou ce nom d'utilisateur est d\xE9j\xE0 utilis\xE9" });
+    }
+    req.log.error({ err }, "registration failed");
+    return res.status(503).json({ error: "Inscription temporairement indisponible" });
+  } finally {
+    connection?.release();
+  }
+});
+router9.post("/auth/login", authLimiter, async (req, res) => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const password = typeof req.body?.password === "string" ? req.body.password : "";
+  const invalid = () => res.status(401).json({ error: "Email ou mot de passe incorrect" });
+  if (!email || !password) return invalid();
+  try {
+    const [rows] = await getMysqlPool().execute(
+      `SELECT u.id, u.email, u.password_hash, p.username, p.country, p.currency, p.balance_minor,
+        p.affiliate_earnings_minor, p.avatar_url, p.referral_code,
+        EXISTS(SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role = 'admin') AS is_admin
+       FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.email = ? AND u.disabled_at IS NULL LIMIT 1`,
+      [email]
+    );
+    const user = rows[0];
+    if (!user || !await bcryptjs_default.compare(password, user.password_hash)) return invalid();
+    if (bcryptjs_default.getRounds(user.password_hash) < BCRYPT_COST) {
+      const replacement = await bcryptjs_default.hash(password, BCRYPT_COST);
+      await getMysqlPool().execute("UPDATE users SET password_hash = ? WHERE id = ?", [replacement, user.id]);
+    }
+    const sessionToken = await createSessionToken(user.id, req);
+    setSessionCookie(res, sessionToken);
+    return res.json({ user: publicUser(user) });
+  } catch (err) {
+    req.log.error({ err }, "login failed");
+    return res.status(503).json({ error: "Connexion temporairement indisponible" });
+  }
+});
+router9.post("/auth/logout", async (req, res) => {
+  const token = req.cookies?.[COOKIE];
+  if (typeof token === "string") {
+    try {
+      await getMysqlPool().execute("UPDATE auth_sessions SET revoked_at = NOW() WHERE token_hash = ?", [tokenHash(token)]);
+    } catch (err) {
+      req.log.error({ err }, "logout revocation failed");
+    }
+  }
+  res.clearCookie(COOKIE, { httpOnly: true, secure: process.env["NODE_ENV"] === "production", sameSite: "lax", path: "/" });
+  res.status(204).end();
+});
+router9.get("/auth/me", requireUser, async (req, res) => {
+  if (!req.userId) return res.status(401).json({ error: "Authentification requise" });
+  try {
+    const [rows] = await getMysqlPool().execute(
+      `SELECT u.id, u.email, p.username, p.country, p.currency, p.balance_minor,
+        p.affiliate_earnings_minor, p.avatar_url, p.referral_code,
+        EXISTS(SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role = 'admin') AS is_admin
+       FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.id = ? LIMIT 1`,
+      [req.userId]
+    );
+    if (!rows[0]) return res.status(401).json({ error: "Session invalide" });
+    return res.json({ user: publicUser(rows[0]) });
+  } catch (err) {
+    req.log.error({ err }, "me lookup failed");
+    return res.status(503).json({ error: "Service d'authentification indisponible" });
+  }
+});
+var auth_default = router9;
+
+// src/routes/index.ts
+var router10 = (0, import_express10.Router)();
+router10.use(health_default);
+router10.use(auth_default);
+router10.use(smm_default);
+router10.use(admin_default);
+router10.use(support_default);
+router10.use(payments_default);
+router10.use(tickets_default);
+router10.use(profile_default);
+router10.use(referrals_default);
+var routes_default = router10;
 
 // src/app.ts
 init_logger();
-var app = (0, import_express10.default)();
+var app = (0, import_express11.default)();
 app.set("trust proxy", ["loopback", "linklocal", "uniquelocal"]);
 app.use(
   (0, import_pino_http.default)({
@@ -59167,7 +58365,7 @@ app.use(
   })
 );
 app.use((0, import_compression.default)());
-app.use((0, import_cors.default)());
+app.use((0, import_cors.default)({ origin: true, credentials: true }));
 var apiLimiter = rate_limit_default({
   windowMs: 60 * 1e3,
   max: 600,
@@ -59186,24 +58384,25 @@ function captureRawBody(req, _res, buf) {
     req.rawBody = buf.toString("utf8");
   }
 }
-app.use(import_express10.default.json({ limit: "8mb", verify: captureRawBody }));
-app.use(import_express10.default.urlencoded({ extended: true, limit: "8mb" }));
+app.use(import_express11.default.json({ limit: "8mb", verify: captureRawBody }));
+app.use(import_express11.default.urlencoded({ extended: true, limit: "8mb" }));
+app.use((0, import_cookie_parser.default)());
 app.use("/api", apiLimiter, routes_default);
 if (process.env["NODE_ENV"] === "production") {
-  const scriptDir = path6.dirname(fileURLToPath(import.meta.url));
+  const scriptDir = path5.dirname(fileURLToPath(import.meta.url));
   const candidates = [
     process.env["FRONTEND_DIST"],
-    path6.resolve(scriptDir, "./public"),
-    path6.resolve(scriptDir, "../frontend"),
-    path6.resolve(scriptDir, "../../frontend")
+    path5.resolve(scriptDir, "./public"),
+    path5.resolve(scriptDir, "../frontend"),
+    path5.resolve(scriptDir, "../../frontend")
   ].filter((p) => Boolean(p));
   const frontendDist = candidates.find(
-    (dir) => fs6.existsSync(path6.join(dir, "index.html"))
+    (dir) => fs5.existsSync(path5.join(dir, "index.html"))
   );
   if (frontendDist) {
     logger.info({ frontendDist }, "serving frontend static files");
     app.use(
-      import_express10.default.static(frontendDist, {
+      import_express11.default.static(frontendDist, {
         index: false,
         maxAge: "1y",
         setHeaders: (res, filePath) => {
@@ -59214,7 +58413,7 @@ if (process.env["NODE_ENV"] === "production") {
       })
     );
     app.get(/^\/(?!api(\/|$)).*/, (_req, res, next) => {
-      const indexFile = path6.join(frontendDist, "index.html");
+      const indexFile = path5.join(frontendDist, "index.html");
       res.sendFile(indexFile, (err) => {
         if (err) next(err);
       });
@@ -59233,39 +58432,11 @@ init_logger();
 
 // src/lib/settings-cleanup.ts
 init_logger();
-var SUPABASE_URL16 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY15 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-var SENSITIVE_SETTING_KEYS = [
-  "soleaspay_api_key",
-  "soleaspay_merchant_id",
-  "soleaspay_callback_url"
-];
+var SENSITIVE_SETTING_KEYS = ["soleaspay_api_key", "soleaspay_merchant_id", "soleaspay_callback_url"];
 async function purgeSensitiveSettingRows() {
-  if (!SUPABASE_URL16 || !SUPABASE_SERVICE_ROLE_KEY15) {
-    logger.warn(
-      "SUPABASE_SERVICE_ROLE_KEY not set \u2014 cannot purge sensitive setting rows. Apply the SQL migration in migrations/001_settings_rls.sql manually."
-    );
-    return;
-  }
   try {
-    const keysFilter = SENSITIVE_SETTING_KEYS.map((k) => `key.eq.${k}`).join(",");
-    const r = await fetch(
-      `${SUPABASE_URL16}/rest/v1/settings?or=(${encodeURIComponent(keysFilter)})`,
-      {
-        method: "DELETE",
-        headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY15,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY15}`,
-          Prefer: "return=minimal"
-        }
-      }
-    );
-    if (r.ok) {
-      logger.info({ keys: SENSITIVE_SETTING_KEYS }, "sensitive settings rows purged");
-    } else {
-      const body = await r.text();
-      logger.error({ status: r.status, body }, "failed to purge sensitive settings rows");
-    }
+    await getMysqlPool().query("DELETE FROM settings WHERE `key` IN (?)", [SENSITIVE_SETTING_KEYS]);
+    logger.info({ keys: SENSITIVE_SETTING_KEYS }, "sensitive settings rows purged");
   } catch (err) {
     logger.error({ err }, "error during sensitive settings row purge");
   }
@@ -59273,157 +58444,74 @@ async function purgeSensitiveSettingRows() {
 
 // src/lib/order-status-poller.ts
 init_logger();
-var SUPABASE_URL17 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY16 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-var SMM_API_KEY = process.env["SMM_PANEL_API_KEY"];
-var SMM_API_URL = process.env["SMM_PANEL_API_URL"];
 var POLL_INTERVAL_MS = 6e4;
 var WINDOW_DAYS = 30;
 var BATCH_LIMIT = 100;
 var PROVIDER_STATUS_BATCH = 100;
 var SYNC_CONCURRENCY = 4;
-var FINAL_STATUSES = [
-  "completed",
-  "canceled",
-  "cancelled",
-  "refunded",
-  "failed"
-];
+var FINAL_STATUSES = ["completed", "canceled", "cancelled", "refunded", "failed"];
 var timer = null;
 var bootTimer = null;
 var started = false;
 var tickInFlight = false;
+var chunk = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
 async function fetchPendingOrders() {
-  const since = new Date(Date.now() - WINDOW_DAYS * 864e5).toISOString();
-  const notIn = `(${FINAL_STATUSES.map((s) => `"${s}"`).join(",")})`;
-  const url = `${SUPABASE_URL17}/rest/v1/orders?select=id,external_order_id,status,user_id,provider&external_order_id=not.is.null&status=not.in.${encodeURIComponent(notIn)}&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${BATCH_LIMIT}`;
-  const r = await fetch(url, {
-    headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY16,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY16}`
-    }
-  });
-  if (!r.ok) {
-    const body = await r.text().catch(() => "");
-    logger.warn({ status: r.status, body: body.slice(0, 200) }, "order-poller: fetch failed");
-    return [];
-  }
-  return await r.json();
+  const marks = FINAL_STATUSES.map(() => "?").join(",");
+  const [rows] = await getMysqlPool().execute(
+    `SELECT id, COALESCE(provider_order_id, external_order_id) external_order_id, status, user_id, provider
+       FROM orders WHERE COALESCE(provider_order_id, external_order_id) IS NOT NULL
+       AND status NOT IN (${marks}) AND created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL ? DAY)
+       ORDER BY created_at DESC LIMIT ?`,
+    [...FINAL_STATUSES, WINDOW_DAYS, BATCH_LIMIT]
+  );
+  return rows;
 }
-function chunk(arr, size) {
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}
-async function batchProviderStatuses(providerId, externalIds) {
+async function batchStatuses(pid, ids) {
   const out = /* @__PURE__ */ new Map();
-  if (externalIds.length === 0) return out;
-  for (const ids of chunk(externalIds, PROVIDER_STATUS_BATCH)) {
-    let resp;
-    try {
-      resp = await callProvider(providerId, "status", { orders: ids.join(",") });
-    } catch (err) {
-      logger.warn({ err, providerId, count: ids.length }, "order-poller: batch status call failed");
-      continue;
-    }
-    if (Array.isArray(resp)) {
-      for (const row of resp) {
-        const id = row?.order != null ? String(row.order) : null;
-        if (!id || row?.error) continue;
-        const s = row.status;
-        if (typeof s === "string" && s.length > 0) out.set(id, s);
-      }
-    } else if (resp && typeof resp === "object") {
-      for (const [id, body] of Object.entries(resp)) {
-        if (!body || body.error) continue;
-        const s = body.status;
-        if (typeof s === "string" && s.length > 0) out.set(String(id), s);
+  for (const part of chunk(ids, PROVIDER_STATUS_BATCH)) try {
+    const response = await callProvider(pid, "status", { orders: part.join(",") });
+    if (Array.isArray(response)) {
+      for (const row of response) if (row?.order != null && !row.error && typeof row.status === "string") out.set(String(row.order), row.status);
+      else if (response && typeof response === "object") {
+        for (const [id, row2] of Object.entries(response)) if (row2 && !row2.error && typeof row2.status === "string") out.set(id, row2.status);
       }
     }
+  } catch (err) {
+    logger.warn({ err, pid }, "order-poller: batch status failed");
   }
   return out;
 }
 async function tickOnce(syncFn) {
   const orders = await fetchPendingOrders();
-  if (orders.length === 0) {
-    logger.debug("order-poller: no non-final orders to sync");
-    return;
+  if (!orders.length) return;
+  const groups = /* @__PURE__ */ new Map();
+  for (const order of orders) {
+    const pid = [1, 3, 4, 5].includes(Number(order.provider)) ? order.provider : 1;
+    groups.set(pid, [...groups.get(pid) ?? [], order]);
   }
-  const byProvider = /* @__PURE__ */ new Map();
-  for (const o of orders) {
-    const pid = o.provider === 3 || o.provider === 4 || o.provider === 5 ? o.provider : 1;
-    const list = byProvider.get(pid) ?? [];
-    list.push(o);
-    byProvider.set(pid, list);
-  }
-  const toSync = [];
-  let skippedUnchanged = 0;
-  for (const [pid, list] of byProvider.entries()) {
-    const ids = list.map((o) => o.external_order_id);
-    const statuses = await batchProviderStatuses(pid, ids);
-    for (const o of list) {
-      const raw = statuses.get(o.external_order_id);
-      if (!raw) {
-        toSync.push({ order: o, providerId: pid });
-        continue;
-      }
-      const mapped = mapProviderStatus(raw);
-      if (mapped !== o.status || FINAL_REFUND_STATUSES.has(mapped)) {
-        toSync.push({ order: o, providerId: pid });
-      } else {
-        skippedUnchanged++;
-      }
+  const todo = [];
+  for (const [pid, list] of groups) {
+    const statuses = await batchStatuses(pid, list.map((o) => o.external_order_id));
+    for (const order of list) {
+      const raw = statuses.get(order.external_order_id);
+      if (!raw || mapProviderStatus(raw) !== order.status || FINAL_REFUND_STATUSES.has(mapProviderStatus(raw))) todo.push({ order, pid });
     }
   }
-  let updated = 0;
-  let refunded = 0;
-  let errored = 0;
-  for (const slice of chunk(toSync, SYNC_CONCURRENCY)) {
-    await Promise.all(slice.map(async ({ order, providerId }) => {
-      try {
-        const res = await syncFn(order.external_order_id, providerId);
-        if (!res.ok) {
-          errored++;
-          return;
-        }
-        if (res.status && res.status !== order.status) updated++;
-        if (res.refunded) refunded++;
-      } catch (err) {
-        errored++;
-        logger.debug({ err, externalId: order.external_order_id }, "order-poller: sync threw");
-      }
-    }));
-  }
-  logger.info(
-    {
-      checked: orders.length,
-      providers_polled: byProvider.size,
-      synced: toSync.length,
-      skipped_unchanged: skippedUnchanged,
-      updated,
-      refunded,
-      errored
-    },
-    "order-poller: tick done"
-  );
+  for (const part of chunk(todo, SYNC_CONCURRENCY)) await Promise.all(part.map(async ({ order, pid }) => {
+    try {
+      await syncFn(order.external_order_id, pid);
+    } catch (err) {
+      logger.debug({ err, order: order.id }, "order-poller: sync threw");
+    }
+  }));
+  logger.info({ checked: orders.length, synced: todo.length }, "order-poller: tick done");
 }
 function startOrderStatusPoller(syncFn) {
   if (started) return;
-  if (!SUPABASE_URL17 || !SUPABASE_SERVICE_ROLE_KEY16) {
-    logger.warn("order-poller: SUPABASE_URL/SERVICE_ROLE_KEY missing \u2014 poller disabled");
-    return;
-  }
-  if (!SMM_API_KEY || !SMM_API_URL) {
-    logger.warn("order-poller: SMM_PANEL_API_KEY/URL missing \u2014 poller disabled");
-    return;
-  }
   void ALL_PROVIDER_IDS;
   started = true;
-  const safeTick = async () => {
-    if (tickInFlight) {
-      logger.debug("order-poller: previous tick still running \u2014 skipping");
-      return;
-    }
+  const safe = async () => {
+    if (tickInFlight) return;
     tickInFlight = true;
     try {
       await tickOnce(syncFn);
@@ -59435,104 +58523,36 @@ function startOrderStatusPoller(syncFn) {
   };
   bootTimer = setTimeout(() => {
     bootTimer = null;
-    void safeTick();
-    timer = setInterval(() => {
-      void safeTick();
-    }, POLL_INTERVAL_MS);
+    void safe();
+    timer = setInterval(() => void safe(), POLL_INTERVAL_MS);
   }, 5e3);
-  logger.info({ interval_ms: POLL_INTERVAL_MS, window_days: WINDOW_DAYS }, "order-poller: started");
 }
 
 // src/lib/missed-refund-scanner.ts
 init_logger();
-var SUPABASE_URL18 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SUPABASE_SERVICE_ROLE_KEY17 = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SCAN_INTERVAL_MS = 5 * 6e4;
 var WINDOW_DAYS2 = 90;
 var PAGE_SIZE = 200;
 var timer2 = null;
 var scanInFlight = false;
 var started2 = false;
-function serviceRoleHeaders5() {
-  const key2 = SUPABASE_SERVICE_ROLE_KEY17;
-  return {
-    apikey: key2,
-    Authorization: `Bearer ${key2}`,
-    "Content-Type": "application/json"
-  };
-}
-async function fetchUnrefundedOrders() {
-  if (!SUPABASE_URL18 || !SUPABASE_SERVICE_ROLE_KEY17) return [];
-  const since = new Date(Date.now() - WINDOW_DAYS2 * 864e5).toISOString();
-  const finalNegative = encodeURIComponent('("canceled","cancelled","failed","refunded")');
-  const url = `${SUPABASE_URL18}/rest/v1/orders?select=id,user_id,price,status,external_order_id&status=in.${finalNegative}&refunded_at=is.null&price=gt.0&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=${PAGE_SIZE}`;
-  try {
-    const r = await fetch(url, { headers: serviceRoleHeaders5() });
-    if (!r.ok) {
-      const body = await r.text().catch(() => "");
-      logger.warn({ status: r.status, body: body.slice(0, 200) }, "missed-refund-scanner: fetch failed");
-      return [];
-    }
-    return await r.json();
-  } catch (err) {
-    logger.warn({ err }, "missed-refund-scanner: fetch threw");
-    return [];
-  }
-}
-async function applyRefund(order) {
-  const amount = Math.round(Number(order.price));
-  if (amount <= 0) return false;
-  try {
-    const rpcRes = await fetch(`${SUPABASE_URL18}/rest/v1/rpc/smm_refund_order`, {
-      method: "POST",
-      headers: serviceRoleHeaders5(),
-      body: JSON.stringify({ p_order_id: order.id, p_amount: amount })
-    });
-    if (!rpcRes.ok) {
-      const txt = await rpcRes.text().catch(() => "");
-      logger.error(
-        { status: rpcRes.status, body: txt.slice(0, 300), orderId: order.id, userId: order.user_id, amount },
-        "missed-refund-scanner: RPC failed"
-      );
-      return false;
-    }
-    const rows = await rpcRes.json().catch(() => null);
-    const row = rows && rows[0];
-    if (row?.refunded) {
-      logger.info(
-        { orderId: order.id, userId: order.user_id, amount, newBalance: row.new_balance, status: order.status },
-        "missed-refund-scanner: retroactive refund credited"
-      );
-      return true;
-    }
-    return false;
-  } catch (err) {
-    logger.warn({ err, orderId: order.id }, "missed-refund-scanner: RPC threw");
-    return false;
-  }
-}
 async function scanOnce() {
-  const orders = await fetchUnrefundedOrders();
-  if (orders.length === 0) return;
-  logger.info({ count: orders.length }, "missed-refund-scanner: found orders to refund");
-  let refunded = 0;
-  let failed = 0;
-  for (const order of orders) {
-    const ok = await applyRefund(order);
-    if (ok) refunded++;
-    else failed++;
-  }
-  logger.info(
-    { total: orders.length, refunded, failed },
-    "missed-refund-scanner: scan complete"
+  const [orders] = await getMysqlPool().execute(
+    `SELECT id FROM orders WHERE status IN ('canceled','cancelled','failed','refunded')
+       AND refunded_at IS NULL AND charge_minor > 0
+       AND created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL ? DAY)
+     ORDER BY created_at DESC LIMIT ?`,
+    [WINDOW_DAYS2, PAGE_SIZE]
   );
+  let refunded = 0;
+  for (const order of orders) {
+    const result = await refundOrderAtomic(String(order.id));
+    if (result.refunded) refunded++;
+  }
+  if (orders.length) logger.info({ total: orders.length, refunded }, "missed-refund-scanner: scan complete");
 }
 function startMissedRefundScanner() {
   if (started2) return;
-  if (!SUPABASE_URL18 || !SUPABASE_SERVICE_ROLE_KEY17) {
-    logger.warn("missed-refund-scanner: Supabase secrets missing \u2014 scanner disabled");
-    return;
-  }
   started2 = true;
   const safeScan = async () => {
     if (scanInFlight) return;
@@ -59556,8 +58576,6 @@ function startMissedRefundScanner() {
 
 // src/lib/pending-payment-scanner.ts
 init_logger();
-var SUPABASE_URL19 = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-var SERVICE_ROLE_KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 var SCAN_INTERVAL_MS2 = 3 * 6e4;
 var MIN_AGE_MS = 2 * 6e4;
 var AUTO_FAIL_MS = 35 * 6e4;
@@ -59566,18 +58584,21 @@ var PAGE_SIZE2 = 50;
 var timer3 = null;
 var inFlight = false;
 var started3 = false;
-function svcHeaders3() {
-  const key2 = SERVICE_ROLE_KEY;
-  return { apikey: key2, Authorization: `Bearer ${key2}`, "Content-Type": "application/json" };
-}
 async function fetchPendingPayments() {
-  if (!SUPABASE_URL19 || !SERVICE_ROLE_KEY) return [];
-  const cutoff = new Date(Date.now() - MIN_AGE_MS).toISOString();
-  const url = `${SUPABASE_URL19}/rest/v1/payments?select=id,user_id,order_id,created_at,amount&status=eq.pending&credited_at=is.null&order_id=not.is.null&created_at=lt.${encodeURIComponent(cutoff)}&order=created_at.asc&limit=${PAGE_SIZE2}`;
   try {
-    const r = await fetch(url, { headers: svcHeaders3() });
-    if (!r.ok) return [];
-    return await r.json();
+    const [rows] = await getMysqlPool().execute(
+      `SELECT id,user_id,order_id,created_at,amount_minor FROM payments
+       WHERE status='pending' AND credited_at IS NULL AND order_id IS NOT NULL
+       AND created_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE) ORDER BY created_at ASC LIMIT ?`,
+      [PAGE_SIZE2]
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      user_id: String(r.user_id),
+      order_id: String(r.order_id),
+      created_at: new Date(r.created_at).toISOString(),
+      amount: Number(r.amount_minor) / 100
+    }));
   } catch {
     return [];
   }
@@ -59643,10 +58664,6 @@ async function scanOnce2() {
 }
 function startPendingPaymentScanner() {
   if (started3) return;
-  if (!SUPABASE_URL19 || !SERVICE_ROLE_KEY) {
-    logger.warn("pending-payment-scanner: Supabase secrets missing \u2014 scanner disabled");
-    return;
-  }
   started3 = true;
   const safeScan = async () => {
     if (inFlight) return;
@@ -60007,6 +59024,14 @@ object-assign/index.js:
   (c) Sindre Sorhus
   @license MIT
   *)
+
+cookie-parser/index.js:
+  (*!
+   * cookie-parser
+   * Copyright(c) 2014 TJ Holowaychuk
+   * Copyright(c) 2015 Douglas Christopher Wilson
+   * MIT Licensed
+   *)
 
 safe-buffer/index.js:
   (*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> *)
