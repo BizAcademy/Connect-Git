@@ -19,14 +19,14 @@ content_type = "application/octet-stream"
 id = "2tID3xNaLhecKCE-6mAMd"
 uri = "file://migrations/mysql/002_order_client_request_id.sql"
 type = "unspecified"
-title = "Migration MySQL 002 — idempotence commandes"
-description = "Ajoute l’identifiant client qui empêche les doubles commandes."
+title = "Télécharger le SQL 002 — idempotence des commandes"
+description = "Deuxième fichier à importer dans phpMyAdmin après la réussite du SQL 001."
 logical_id = "47bad63f-cb9d-4c4a-b70f-fe44a3328578"
 content_hash = "sha256:be9cb96441d10b57f6e7f8a4b6fe7a0a25f36eead664f6c6320091c9e84acd91"
 size = 254
 mtime_ms = 1788695879432
-storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:1a67866f-edc3-4d00-ba60-42cc792c384a/47bad63f-cb9d-4c4a-b70f-fe44a3328578/fb487578-262a-4a9c-9e40-d1f0b5b37618"
-storage_version_token = "1788696574244266"
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:1a67866f-edc3-4d00-ba60-42cc792c384a/47bad63f-cb9d-4c4a-b70f-fe44a3328578/86e5dafb-27e4-42c1-885b-83232f1667c1"
+storage_version_token = "1788699719363161"
 content_type = "application/octet-stream"
 
 [[outputs]]
