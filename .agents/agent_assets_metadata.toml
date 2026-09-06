@@ -5,14 +5,14 @@ generated = []
 id = "fiij5gaZhUgnEcCEsCeod"
 uri = "file://migrations/mysql/001_bizpanel_auth_phase1.sql"
 type = "unspecified"
-title = "Migration MySQL 001 — schéma complet"
-description = "Schéma BizPanel complet à exécuter en premier dans phpMyAdmin."
+title = "Télécharger le SQL 001 — schéma BizPanel complet"
+description = "Premier fichier à importer dans phpMyAdmin pour créer toutes les tables MySQL/MariaDB de BizPanel."
 logical_id = "fbf02767-df4b-48d6-b6bb-2993a182b825"
 content_hash = "sha256:de46fb6104332b6316f60c7b990b25ebbe2ecfa45cecb94740d7b0d8f5cac697"
 size = 14096
 mtime_ms = 1788695807912
-storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:1a67866f-edc3-4d00-ba60-42cc792c384a/fbf02767-df4b-48d6-b6bb-2993a182b825/d1727a37-a6c1-4c62-b0f3-0e2355f212d8"
-storage_version_token = "1788696573723853"
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:1a67866f-edc3-4d00-ba60-42cc792c384a/fbf02767-df4b-48d6-b6bb-2993a182b825/f218a55e-affe-4ec1-877b-180ce43c3fc5"
+storage_version_token = "1788699390377025"
 content_type = "application/octet-stream"
 
 [[outputs]]
