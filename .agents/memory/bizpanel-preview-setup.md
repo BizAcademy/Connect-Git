@@ -1,18 +1,28 @@
 ---
 name: BizPanel preview setup
-description: What it takes to run the BizPanel (BUZZ BOOSTER) preview in a fresh Replit workspace synced from GitHub.
+description: Environment-specific database and build requirements for running BizPanel in Replit and Plesk.
 ---
 
-# Running BizPanel preview in a fresh workspace
+# Running BizPanel across Replit and Plesk
 
 The real project lives in GitHub (`BizAcademy/Connect-Git`), not in the Replit template. A fresh workspace must be synced from the repo, then the `bizpanel` artifact adopted so the platform creates its workflow.
 
-## Frontend (artifacts/bizpanel)
-- Needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (from the user's Supabase project). Without them the app throws `supabaseUrl is required` at load. Set as Replit secrets; Vite exposes `VITE_*` from env.
+## MariaDB locality
 
-## Backend (artifacts/api-server)
-- The dev script is `pnpm run build && pnpm run start` — it rebuilds `dist/` on start.
-- **The repo commits a `dist/` bundle that can be stale.** If routes that exist in source (e.g. `/api/smm/services`) return 404, the running bundle is old — just restart the `artifacts/api-server: API Server` workflow to force a rebuild.
-- Full data functionality needs server-only credentials the user keeps in their Plesk deploy: SMM provider keys (`SMM_PANEL_*_API_KEY`), AfribaPay (`AFRIBAPAY_API_USER/API_KEY/MERCHANT_KEY`), `SUPABASE_SERVICE_ROLE_KEY`. Without them endpoints return 500 (e.g. "Fournisseur SMM #1 non configuré") — this is config, not a bug.
+The Plesk database advertises `localhost:3306`; that address is correct only
+when the Node API runs on the same Plesk server. In Replit, `localhost` points
+back to the Replit container and produces `ECONNREFUSED`.
 
-**Why:** User only wanted to preview the app ("just open, don't modify"). The landing page renders with just the two VITE_ Supabase vars; deeper panel data requires the backend credentials.
+**Why:** The application was moved from Supabase runtime storage to the user's
+Plesk MariaDB. Preview and production now have different network paths to the
+same kind of database.
+
+**How to apply:** Use `localhost:3306` in Plesk production. For an interactive
+Replit preview, obtain a public MariaDB hostname/IP from Cybrance and allow
+remote connections. Never assume the website domain is also the database host.
+
+## Backend build
+
+The API development workflow builds before it starts. A committed `dist/`
+bundle can be stale, so restart `artifacts/api-server: API Server` after source
+or dependency changes.

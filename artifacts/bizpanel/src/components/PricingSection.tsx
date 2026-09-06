@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import type { CSSProperties } from "react";
 import { Check } from "lucide-react";
 
 const plans = [
@@ -70,7 +71,7 @@ const PricingSection = () => {
                   ? "shadow-xl md:scale-105 ring-2"
                   : "shadow-sm border border-border/40"
               }`}
-              style={plan.popular ? { ringColor: "hsl(25, 95%, 53%)" } : {}}
+              style={plan.popular ? { "--tw-ring-color": "hsl(25, 95%, 53%)" } as CSSProperties : {}}
             >
               {plan.popular && (
                 <div

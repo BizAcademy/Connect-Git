@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,7 @@ import { toast } from "@/lib/toast";
 import { InvoiceModal, type InvoiceData } from "@/components/dashboard/InvoiceModal";
 import { formatPaymentMethod } from "@/lib/paymentMethod";
 import { formatBalance, getCurrencyInfo } from "@/lib/currency";
-import { getAuthHeaders } from "@/lib/authFetch";
+import { authedFetch } from "@/lib/authFetch";
 
 type TxKind = "deposit" | "order" | "refund" | "commission";
 type TxRow = {
@@ -90,11 +89,10 @@ export default function Transactions() {
     if (!user) return;
     setLoading(true);
     try {
-      const hdrs = await getAuthHeaders();
       const [ordRes, payRes, comRes] = await Promise.all([
-        fetch("/api/smm/user-orders", { headers: hdrs }).then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
-        fetch("/api/smm/user-payments", { headers: hdrs }).then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
-        fetch("/api/referrals/transactions", { headers: hdrs }).then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
+        authedFetch("/api/smm/user-orders").then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
+        authedFetch("/api/smm/user-payments").then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
+        authedFetch("/api/referrals/transactions").then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
       ]);
       const initial: any[] = Array.isArray(ordRes) ? ordRes : [];
       setOrders(initial);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { authedFetch } from "@/lib/authFetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CreditCard } from "lucide-react";
@@ -26,13 +26,13 @@ export default function PaymentHistory() {
   const load = async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("payments")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-    setPayments(data || []);
-    setLoading(false);
+    try {
+      const response = await authedFetch("/api/smm/user-payments");
+      if (!response.ok) throw new Error("Impossible de charger les paiements");
+      setPayments(await response.json());
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, [user]);

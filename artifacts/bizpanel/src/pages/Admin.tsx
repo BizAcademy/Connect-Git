@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { getAuthHeaders, authedFetch } from "@/lib/authFetch";
 import { invalidateSiteContentCache } from "@/hooks/useSiteContent";
 import { toast } from "@/lib/toast";
@@ -219,15 +218,13 @@ const AdminSupport = () => {
     try {
       const t = await fetchAdminThreads();
       setThreads(t);
-      // Resolve usernames
-      const ids = t.map((x) => x.user_id);
-      if (ids.length) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("user_id, username, email")
-          .in("user_id", ids);
+      // Thread summaries deliberately contain no profile fields. Resolve the
+      // label from the authenticated admin users endpoint instead.
+      const usersResponse = await authedFetch("/api/admin/users?limit=2000");
+      if (usersResponse.ok) {
+        const json = await usersResponse.json() as { users?: any[] };
         const map: Record<string, { username?: string; email?: string }> = {};
-        (data || []).forEach((p: any) => { map[p.user_id] = { username: p.username, email: p.email }; });
+        for (const p of json.users || []) map[p.user_id] = { username: p.username, email: p.email };
         setUserMap(map);
       }
       // ⚠️ Forme fonctionnelle obligatoire : `loadThreads` est appelé via
@@ -463,9 +460,7 @@ type TxRow = {
   currency?: string | null;
 };
 
-// Minimal shape we read off `orders` rows in Realtime payloads. Supabase
-// types `payload.new` as `Record<string, unknown>`; this guard narrows it
-// without an `any` cast.
+// Minimal shape for order updates from API payloads.
 interface OrderRowRT {
   id: string;
   user_id?: string;
@@ -488,6 +483,7 @@ const orderStatusMap: Record<string, { label: string; color: string }> = {
   cancelled: { label: "Annulé", color: "bg-red-100 text-red-700" },
   rejected: { label: "Rejeté", color: "bg-red-100 text-red-700" },
   partial: { label: "Partiel", color: "bg-orange-100 text-orange-700" },
+  reconciliation_required: { label: "Réconciliation requise", color: "bg-amber-100 text-amber-800" },
 };
 const paymentStatusMap: Record<string, { label: string; color: string }> = {
   completed: { label: "Validé", color: "bg-green-100 text-green-700" },
@@ -577,44 +573,6 @@ const AdminTransactions = () => {
     load();
     const id = setInterval(() => load(true), 20000);
     return () => clearInterval(id);
-  }, []);
-
-  // Realtime: when the background poller updates an order row, patch the
-  // matching journal entry in place. We only patch existing rows here —
-  // brand-new orders are picked up on the next 20s `load()` (which also
-  // re-fetches deposits and refunds from the unified server endpoint).
-  useEffect(() => {
-    const channel = supabase
-      .channel("admin-transactions-orders")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders" },
-        (payload) => {
-          const next = asOrderRowRT(payload.new);
-          if (!next) return;
-          // The transactions journal namespaces row IDs by type to avoid
-          // collisions across deposits/orders/refunds (see admin route:
-          // `o-${order.id}`). Match against that prefixed form.
-          const rowId = `o-${next.id}`;
-          setRows((prev) => prev.map((r) => {
-            if (r.type !== "order" || r.id !== rowId) return r;
-            const ns = String(next.status || r.status);
-            const m = orderStatusMap[ns] || { label: ns, color: "bg-gray-100 text-gray-700" };
-            return {
-              ...r,
-              status: ns,
-              status_label: m.label,
-              status_color: m.color,
-              refunded_at: next.refunded_at || r.refunded_at,
-            };
-          }));
-          if (next.refunded_at) {
-            window.dispatchEvent(new CustomEvent("balance:refresh"));
-          }
-        },
-      )
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
   }, []);
 
   const now = new Date();
@@ -808,12 +766,13 @@ const AdminTransactions = () => {
                     r.type === "commission" ? "text-emerald-600" :
                     r.type === "adjustment" ? (r.amount < 0 ? "text-red-600" : "text-blue-600") : "text-green-600";
                   // Force refund is shown when an order is in a final unsuccessful
-                  // status, has not been refunded yet, and has an external id.
+                   // status, or has been retained in the reconciliation queue.
+                   // Queue rows intentionally have no external id but can still
+                   // be explicitly refunded by their local primary key.
                   const canForceRefund =
                     r.type === "order" &&
                     !r.refunded_at &&
-                    !!r.external_order_id &&
-                    ["canceled","cancelled","failed","refunded"].includes((r.status || "").toLowerCase());
+                     ["canceled","cancelled","failed","refunded","reconciliation_required"].includes((r.status || "").toLowerCase());
                   return (
                   <tr key={r.id} className="border-t hover:bg-muted/30">
                     <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
@@ -891,11 +850,12 @@ const AdminTransactions = () => {
                         {canForceRefund && (
                           <button
                             onClick={async () => {
-                              if (!r.external_order_id) return;
-                              if (!window.confirm(`Forcer le remboursement de ${fmtTxAmount(r.amount, r.type, r.country, r.currency)} pour la commande #${r.external_order_id} ?`)) return;
+                              const localOrderId = String(r.raw?.local_order_id || r.id.replace(/^o-/, ""));
+                              const reference = r.external_order_id || `locale ${localOrderId}`;
+                              if (!window.confirm(`Forcer le remboursement de ${fmtTxAmount(r.amount, r.type, r.country, r.currency)} pour la commande #${reference} ?`)) return;
                               setRefunding(r.id);
                               try {
-                                const res = await adminForceOrderRefund(String(r.id));
+                                const res = await adminForceOrderRefund(localOrderId);
                                 if (res.error) {
                                   toast.error(res.error);
                                 } else if (res.refunded) {
@@ -1087,33 +1047,8 @@ const AdminEarningsSection = () => {
     // Polling de secours toutes les 30 s (réduit depuis 2 min)
     const id = setInterval(() => load(true), 30_000);
 
-    // Temps réel : recharger immédiatement dès qu'une commande ou un gain change
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const triggerReload = () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      // Petit debounce pour fusionner les événements en rafale (ex. INSERT order
-      // suivi immédiatement d'un INSERT earnings) en un seul fetch silencieux.
-      debounceTimer = setTimeout(() => { void load(true); }, 600);
-    };
-
-    const channel = supabase
-      .channel("admin-earnings-realtime")
-      .on(
-        "postgres_changes" as any,
-        { event: "*", schema: "public", table: "earnings" },
-        triggerReload,
-      )
-      .on(
-        "postgres_changes" as any,
-        { event: "*", schema: "public", table: "orders" },
-        triggerReload,
-      )
-      .subscribe();
-
     return () => {
       clearInterval(id);
-      if (debounceTimer) clearTimeout(debounceTimer);
-      void supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     // Custom-range dates are applied explicitly via the "Appliquer" button,
@@ -1931,18 +1866,9 @@ const AdminUsers = () => {
   useEffect(() => { load(""); loadTotals(); }, []);
 
   useEffect(() => {
-    const channel = supabase
-      .channel("admin-balances")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "profiles" },
-        () => loadTotals(),
-      )
-      .subscribe();
     const interval = window.setInterval(loadTotals, 15_000);
     return () => {
       totalsMountedRef.current = false;
-      try { supabase.removeChannel(channel); } catch { /* ignore */ }
       window.clearInterval(interval);
     };
   }, []);
@@ -2380,36 +2306,18 @@ const AdminOrders = () => {
   const load = async () => {
     setLoading(true);
     try {
-      // Supabase/PostgREST caps a single response at its page size. Walk all
-      // ranges so older orders remain available to the admin search.
-      const pageSize = 1000;
-      const list: any[] = [];
-      for (let offset = 0; ; offset += pageSize) {
-        const { data, error } = await supabase
-          .from("orders")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .range(offset, offset + pageSize - 1);
-        if (error) throw error;
-        const page = data || [];
-        list.push(...page);
-        if (page.length < pageSize) break;
-      }
+      const journal = await adminApiFetch("/api/admin/transactions?limit=all&type=order");
+      const list: any[] = (journal.rows || []).map((row: any) => ({
+        ...row,
+        id: String(row.id).replace(/^o-/, ""),
+        price: row.amount,
+        external_order_id: row.reference,
+        service_name: row.detail,
+      }));
       setOrders(list);
 
-      const ids = Array.from(new Set(list.map((o: any) => o.user_id).filter(Boolean)));
       const map: Record<string, string> = {};
-      for (let i = 0; i < ids.length; i += 500) {
-        const chunk = ids.slice(i, i + 500);
-        const { data: profs, error } = await supabase
-          .from("profiles")
-          .select("user_id, username, email")
-          .in("user_id", chunk);
-        if (error) throw error;
-        for (const p of profs || []) {
-          map[p.user_id] = p.username || p.email || p.user_id.slice(0, 8);
-        }
-      }
+      for (const order of list) map[order.user_id] = order.user_label || order.user_email || String(order.user_id).slice(0, 8);
       setUsernames(map);
     } catch (err) {
       setOrders([]);
@@ -2422,31 +2330,9 @@ const AdminOrders = () => {
 
   useEffect(() => { load(); }, []);
 
-  // Realtime: reflect background poller updates instantly in the admin
-  // orders list (no filter — admin sees everyone's orders).
   useEffect(() => {
-    const channel = supabase
-      .channel("admin-orders-list")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders" },
-        (payload) => {
-          const next = asOrderRowRT(payload.new);
-          if (!next) return;
-          setOrders((prev) => prev.map((o) => (o.id === next.id ? { ...o, ...next } : o)));
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "orders" },
-        (payload) => {
-          const row = asOrderRowRT(payload.new);
-          if (!row) return;
-          setOrders((prev) => (prev.some((o) => o.id === row.id) ? prev : [{ ...row }, ...prev]));
-        },
-      )
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
+    const id = window.setInterval(() => { void load(); }, 20_000);
+    return () => window.clearInterval(id);
   }, []);
 
   const REFUND_STATUSES = new Set(["canceled", "cancelled", "failed", "refunded"]);
@@ -2454,8 +2340,12 @@ const AdminOrders = () => {
   const updateStatus = async (id: string, status: string) => {
     const shouldRefund = REFUND_STATUSES.has(status.toLowerCase());
 
-    await supabase.from("orders").update({ status }).eq("id", id);
-    setOrders(orders.map(o => o.id === id ? { ...o, status } : o));
+    // The server only exposes safe provider synchronization/refund actions;
+    // arbitrary status edits are not accepted by the cookie API.
+    if (!shouldRefund) {
+      toast.error("La modification manuelle de statut n'est pas disponible.");
+      return;
+    }
 
     if (shouldRefund) {
       try {
@@ -2619,9 +2509,17 @@ const AdminPayments = () => {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("payments").select("*, profiles(username, email)").order("created_at", { ascending: false }).limit(100);
-    setPayments(data || []);
-    setLoading(false);
+    try {
+      const data = await adminApiFetch("/api/admin/deposits?limit=100");
+      setPayments((data.deposits || []).map((payment: any) => ({
+        ...payment,
+        profiles: { username: payment.user_username, email: payment.user_email },
+      })));
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -3232,25 +3130,7 @@ const AdminContent = () => {
     }
     setUploading(item.id);
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${item.key}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("site-images")
-        .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("site-images").getPublicUrl(path);
-      const url = pub.publicUrl;
-      const { error: dbErr } = await supabase
-        .from("site_content")
-        .update({ value: url })
-        .eq("id", item.id);
-      if (dbErr) throw dbErr;
-      setContent((prev) => prev.map((c) => (c.id === item.id ? { ...c, value: url } : c)));
-      setUrlErrors((prev) => ({ ...prev, [item.id]: false }));
-      invalidateSiteContentCache();
-      setSaved(item.id);
-      setTimeout(() => setSaved(null), 2000);
-      toast.success(`✅ Image "${item.label}" mise à jour`);
+      throw new Error("L'import d'images n'est pas encore fourni par l'API MySQL. Utilisez une URL d'image.");
     } catch (e: any) {
       toast.error(e?.message || "Échec du téléversement");
     } finally {
@@ -3260,9 +3140,14 @@ const AdminContent = () => {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("site_content").select("*").order("section");
-    setContent(data || []);
-    setLoading(false);
+    try {
+      const data = await adminApiFetch("/api/admin/site-content");
+      setContent(data.content || []);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -3274,13 +3159,20 @@ const AdminContent = () => {
 
   const save = async (item: any) => {
     setSaving(item.id);
-    const { error } = await supabase.from("site_content").update({ value: item.value }).eq("id", item.id);
-    setSaving(null);
-    if (error) { toast.error(error.message); return; }
-    invalidateSiteContentCache();
-    setSaved(item.id);
-    setTimeout(() => setSaved(null), 2000);
-    toast.success(`✅ "${item.label}" mis à jour`);
+    try {
+      await adminApiFetch(`/api/admin/site-content/${encodeURIComponent(item.key)}`, {
+        method: "PUT",
+        body: JSON.stringify({ section: item.section, label: item.label, value: item.value, type: item.type }),
+      });
+      invalidateSiteContentCache();
+      setSaved(item.id);
+      setTimeout(() => setSaved(null), 2000);
+      toast.success(`✅ "${item.label}" mis à jour`);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSaving(null);
+    }
   };
 
   const grouped = content.reduce((acc: any, c) => {
@@ -3370,7 +3262,7 @@ const AdminContent = () => {
                             )}
                           </label>
                           <p className="text-[11px] text-muted-foreground mt-1">
-                            JPG / PNG / WebP — 5 Mo max. L'image est hébergée sur Supabase Storage.
+                            JPG / PNG / WebP — 5 Mo max. Utilisez une URL tant que l'API d'import n'est pas disponible.
                           </p>
                         </div>
 
@@ -3921,11 +3813,8 @@ const AdminOperatorLogos = () => {
     try {
       const formData = new FormData();
       formData.append("logo", file);
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-      const r = await fetch(`/api/admin/operator-logos/${encodeURIComponent(code)}/upload`, {
+      const r = await authedFetch(`/api/admin/operator-logos/${encodeURIComponent(code)}/upload`, {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
       const d = await r.json();
@@ -4170,11 +4059,8 @@ const AdminLandingLogos = () => {
     try {
       const fd = new FormData();
       fd.append("logo", f);
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-      const r = await fetch(`/api/admin/operator-logos/${encodeURIComponent(code)}/upload`, {
+      const r = await authedFetch(`/api/admin/operator-logos/${encodeURIComponent(code)}/upload`, {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: fd,
       });
       const d = await r.json();
@@ -4312,13 +4198,9 @@ const AdminSettings = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from("settings")
-      .select("key, value")
-      .then(({ data }) => {
-        setSettings(data || []);
-        setLoading(false);
-      });
+    // Generic settings (including secrets) intentionally have no browser API.
+    setSettings([]);
+    setLoading(false);
   }, []);
 
   const update = (key: string, value: string) => {
@@ -4327,11 +4209,8 @@ const AdminSettings = () => {
 
   const saveAll = async () => {
     setSaving(true);
-    for (const s of settings) {
-      await supabase.from("settings").update({ value: s.value }).eq("key", s.key);
-    }
     setSaving(false);
-    toast.success("Paramètres enregistrés");
+    toast.error("Ces paramètres ne peuvent pas être modifiés depuis le navigateur.");
   };
 
   const LABELS: Record<string, string> = {
@@ -4852,11 +4731,9 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
   const resolveUsernames = async (list: SupportTicket[]) => {
     const ids = Array.from(new Set(list.map((t) => t.user_id).filter(Boolean)));
     if (!ids.length) return;
-    const { data } = await supabase
-      .from("profiles")
-      .select("user_id, username, email")
-      .in("user_id", ids);
-    if (data) {
+    const response = await adminApiFetch("/api/admin/users?limit=2000");
+    const data = response.users?.filter((profile: any) => ids.includes(profile.user_id)) || [];
+    if (data.length) {
       const map: Record<string, string> = {};
       for (const p of data) {
         map[p.user_id] = p.username || p.email || p.user_id.slice(0, 8) + "…";
@@ -4889,21 +4766,12 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
     const map: Record<string, string> = {};
 
     try {
-      for (let i = 0; i < localIds.length; i += 500) {
-        const chunk = localIds.slice(i, i + 500);
-        const { data } = await supabase.from("orders").select("id, status").in("id", chunk);
-        for (const row of data || []) map[`local:${row.id}`] = row.status;
-      }
-      for (let i = 0; i < extIds.length; i += 500) {
-        const chunk = extIds.slice(i, i + 500);
-        const { data } = await supabase
-          .from("orders")
-          .select("external_order_id, status")
-          .in("external_order_id", chunk as any);
-        for (const row of data || []) {
-          const extId = (row as any).external_order_id as string | null;
-          if (extId) map[`ext:${extId}`] = (row as any).status as string;
-        }
+      const journal = await adminApiFetch("/api/admin/transactions?limit=all&type=order");
+      for (const row of journal.rows || []) {
+        const localId = String(row.id || "").replace(/^o-/, "");
+        if (localIds.includes(localId)) map[`local:${localId}`] = row.status;
+        const externalId = String(row.reference || "").replace(/^#/, "");
+        if (externalId && extIds.includes(externalId)) map[`ext:${externalId}`] = row.status;
       }
     } catch {
       /* non-fatal — worst case tickets remain visible */
@@ -4930,19 +4798,8 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
     refresh();
     const id = setInterval(refresh, 15000);
 
-    // Realtime: refresh list instantly when a ticket is inserted or updated
-    const channel = supabase
-      .channel("admin-tickets-list")
-      .on(
-        "postgres_changes" as any,
-        { event: "*", schema: "public", table: "tickets" },
-        () => { void refresh(); },
-      )
-      .subscribe();
-
     return () => {
       clearInterval(id);
-      void supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -5266,11 +5123,15 @@ export default function Admin() {
     if (loading) return;
     if (!user) { navigate("/auth"); return; }
 
-    supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
-      if (!data) { navigate("/dashboard"); toast.error("Accès refusé"); }
-      else setIsAdmin(true);
-      setChecking(false);
-    });
+    authedFetch("/api/auth/me")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Accès refusé");
+        const data = await response.json();
+        if (!data.user?.is_admin) throw new Error("Accès refusé");
+        setIsAdmin(true);
+      })
+      .catch(() => { navigate("/dashboard"); toast.error("Accès refusé"); })
+      .finally(() => setChecking(false));
   }, [user, loading]);
 
   // Poll total unread support messages for the tab badge
@@ -5301,27 +5162,9 @@ export default function Admin() {
     refresh();
     const id = setInterval(refresh, 15000);
 
-    // Supabase Realtime: instant badge update when a new ticket is inserted
-    const channel = supabase
-      .channel("admin-tickets-badge")
-      .on(
-        "postgres_changes" as any,
-        { event: "INSERT", schema: "public", table: "tickets" },
-        () => {
-          if (!cancelled) {
-            refresh();
-            toast.info("Nouveau ticket reçu — vérifiez l'onglet Tickets.", {
-              duration: 6000,
-            });
-          }
-        },
-      )
-      .subscribe();
-
     return () => {
       cancelled = true;
       clearInterval(id);
-      void supabase.removeChannel(channel);
     };
   }, [isAdmin]);
 

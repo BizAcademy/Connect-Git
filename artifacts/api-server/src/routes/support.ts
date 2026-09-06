@@ -12,7 +12,6 @@ import {
   isOwnedBy,
   markSeen,
   countUnreadForUser,
-  downloadFromStorage,
   SupportError,
 } from "../lib/support";
 import { promises as fs } from "node:fs";
@@ -92,27 +91,27 @@ router.post("/support/messages", requireUser, async (req: AuthedRequest, res) =>
       text,
       ...(image_filename ? { image_filename } : {}),
     });
-    res.json({ message: msg });
+    return res.json({ message: msg });
   } catch (err) {
     logger.error({ err }, "support send error");
     const status = err instanceof SupportError ? err.statusCode : 500;
-    res.status(status).json({ error: (err as Error).message });
+    return res.status(status).json({ error: (err as Error).message });
   }
 });
 
 // User or Admin: serve image (admin can fetch any; user only their own)
 router.get("/support/uploads/:filename", requireUser, async (req: AuthedRequest, res) => {
-  const fname = req.params["filename"]!;
+  const fname = String(req.params["filename"] || "");
   const fp = uploadPath(fname);
   if (!fp) return res.status(400).end();
 
   // If not owned by the user, check admin
-  if (!isOwnedBy(fname, req.userId!)) {
+  if (!(await isOwnedBy(fname, req.userId!))) {
     // Admin check inline (mirrors requireAdmin)
     try {
       const [roles] = await getMysqlPool().execute<(RowDataPacket & { role: string })[]>(
         "SELECT role FROM user_roles WHERE user_id = ? AND role = 'admin' LIMIT 1",
-        [req.userId],
+        [String(req.userId)],
       );
       if (!roles[0]) return res.status(403).end();
     } catch {
@@ -120,28 +119,16 @@ router.get("/support/uploads/:filename", requireUser, async (req: AuthedRequest,
     }
   }
 
-  // Primary source: Supabase Storage (persists across deploys)
-  try {
-    const obj = await downloadFromStorage(fname);
-    if (obj) {
-      res.setHeader("Content-Type", obj.contentType);
-      res.setHeader("Cache-Control", "private, max-age=604800"); // 7 jours
-      return res.end(obj.buffer);
-    }
-  } catch (err) {
-    logger.warn({ err, fname }, "support: storage download failed, trying local fallback");
-  }
-
-  // Fallback: legacy local-disk file (for images uploaded before migration 016)
+  // Files are application-managed and ownership is checked above.
   try {
     await fs.access(fp);
     const ext = path.extname(fp).slice(1).toLowerCase();
     const ct = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : "image/jpeg";
     res.setHeader("Content-Type", ct);
     res.setHeader("Cache-Control", "private, max-age=3600");
-    res.sendFile(fp);
+    return res.sendFile(fp);
   } catch {
-    res.status(404).end();
+    return res.status(404).end();
   }
 });
 
@@ -161,9 +148,9 @@ router.post("/admin/support/mark-read", requireUser, requireAdmin, async (req, r
     const userId = String(req.body?.user_id || "");
     if (!userId) return res.status(400).json({ error: "user_id requis" });
     await markSeen(userId, "admin");
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    return res.status(500).json({ error: (err as Error).message });
   }
 });
 
@@ -173,10 +160,10 @@ router.get("/admin/support/messages", requireUser, requireAdmin, async (req, res
     const userId = String(req.query["user_id"] || "");
     if (!userId) return res.status(400).json({ error: "user_id requis" });
     const msgs = await readThread(userId);
-    res.json({ messages: msgs, ttl_days: 7 });
+    return res.json({ messages: msgs, ttl_days: 7 });
   } catch (err) {
     logger.error({ err }, "support admin read error");
-    res.status(500).json({ error: (err as Error).message });
+    return res.status(500).json({ error: (err as Error).message });
   }
 });
 
@@ -199,11 +186,11 @@ router.post("/admin/support/reply", requireUser, requireAdmin, async (req: Authe
       text,
       ...(image_filename ? { image_filename } : {}),
     });
-    res.json({ message: msg });
+    return res.json({ message: msg });
   } catch (err) {
     logger.error({ err }, "support reply error");
     const status = err instanceof SupportError ? err.statusCode : 500;
-    res.status(status).json({ error: (err as Error).message });
+    return res.status(status).json({ error: (err as Error).message });
   }
 });
 

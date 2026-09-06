@@ -1,4 +1,6 @@
 import { logger } from "./logger";
+import type { RowDataPacket } from "mysql2/promise";
+import { getMysqlPool } from "./mysql";
 
 // Note: Provider ID 2 (GROWFOLLOWERS) was retired. IDs are kept non-contiguous
 // (1, 3, 4, 5) on purpose so existing rows in `orders.provider` and
@@ -84,7 +86,7 @@ export async function callProvider(
 }
 
 // ---------------------------------------------------------------------------
-// Display config (order, enabled, header text) — sourced from Supabase table
+// Display config (order, enabled, header text) — sourced from MySQL.
 // `smm_providers_config`. Cached for 30 s. Falls back to defaults when the
 // table is missing so the app keeps working before the SQL is applied.
 // ---------------------------------------------------------------------------
@@ -104,9 +106,6 @@ const DEFAULT_CONFIG: ProviderDisplay[] = [
   { provider_id: 5, display_order: 4, enabled: true, header_title: "ExoSupplier", header_text: "Fournisseur ExoSupplier — large catalogue de services SMM à tarifs compétitifs." },
 ];
 
-const SUPABASE_URL = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-const SUPABASE_SERVICE_ROLE_KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-
 let cfgCache: { ts: number; data: ProviderDisplay[] } | null = null;
 const CFG_TTL_MS = 30_000;
 
@@ -114,31 +113,14 @@ export function invalidateProviderConfigCache() {
   cfgCache = null;
 }
 
-function srHeaders(): Record<string, string> {
-  return {
-    apikey: SUPABASE_SERVICE_ROLE_KEY!,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-    "Content-Type": "application/json",
-  };
-}
-
 export async function loadProviderConfig(): Promise<ProviderDisplay[]> {
   if (cfgCache && Date.now() - cfgCache.ts < CFG_TTL_MS) return cfgCache.data;
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    cfgCache = { ts: Date.now(), data: DEFAULT_CONFIG };
-    return DEFAULT_CONFIG;
-  }
   try {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/smm_providers_config?select=*&order=display_order.asc`,
-      { headers: srHeaders() },
+    await getMysqlPool().query(
+      "INSERT IGNORE INTO smm_providers_config (provider_id,display_order,enabled,header_title,header_text) VALUES ?",
+      [DEFAULT_CONFIG.map(d => [d.provider_id, d.display_order, d.enabled, d.header_title, d.header_text])],
     );
-    if (!r.ok) {
-      logger.warn({ status: r.status }, "smm_providers_config read failed — using defaults");
-      cfgCache = { ts: Date.now(), data: DEFAULT_CONFIG };
-      return DEFAULT_CONFIG;
-    }
-    const rows = (await r.json()) as Array<Partial<ProviderDisplay>>;
+    const [rows] = await getMysqlPool().query<RowDataPacket[]>("SELECT provider_id,display_order,enabled,header_title,header_text FROM smm_providers_config ORDER BY display_order");
     if (!rows.length) {
       cfgCache = { ts: Date.now(), data: DEFAULT_CONFIG };
       return DEFAULT_CONFIG;
@@ -151,8 +133,8 @@ export async function loadProviderConfig(): Promise<ProviderDisplay[]> {
         const def = byId.get(id)!;
         byId.set(id, {
           provider_id: id,
-          display_order: typeof row.display_order === "number" ? row.display_order : def.display_order,
-          enabled: typeof row.enabled === "boolean" ? row.enabled : def.enabled,
+          display_order: Number.isFinite(Number(row.display_order)) ? Number(row.display_order) : def.display_order,
+          enabled: row.enabled === undefined || row.enabled === null ? def.enabled : Boolean(row.enabled),
           header_title: typeof row.header_title === "string" ? row.header_title : def.header_title,
           header_text: typeof row.header_text === "string" ? row.header_text : def.header_text,
         });
@@ -162,9 +144,8 @@ export async function loadProviderConfig(): Promise<ProviderDisplay[]> {
     cfgCache = { ts: Date.now(), data };
     return data;
   } catch (err) {
-    logger.warn({ err }, "smm_providers_config load threw — using defaults");
-    cfgCache = { ts: Date.now(), data: DEFAULT_CONFIG };
-    return DEFAULT_CONFIG;
+    logger.error({ err }, "smm_providers_config load failed");
+    throw err;
   }
 }
 
@@ -172,28 +153,17 @@ export async function updateProviderConfig(
   providerId: ProviderId,
   patch: Partial<Pick<ProviderDisplay, "display_order" | "enabled" | "header_title" | "header_text">>,
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return { ok: false, error: "Configuration serveur manquante (SUPABASE_SERVICE_ROLE_KEY)" };
+  const columns = Object.entries(patch).filter(([, v]) => v !== undefined);
+  if (!columns.length) return { ok: true };
+  try {
+    await getMysqlPool().execute(
+      `UPDATE smm_providers_config SET ${columns.map(([k]) => `${k}=?`).join(",")} WHERE provider_id=?`,
+      [...columns.map(([, v]) => v), providerId],
+    );
+    invalidateProviderConfigCache();
+    return { ok: true };
+  } catch (err) {
+    logger.error({ err, providerId }, "smm provider config update failed");
+    return { ok: false, error: "Mise à jour impossible" };
   }
-  const body: Record<string, unknown> = {};
-  if (typeof patch.display_order === "number") body["display_order"] = patch.display_order;
-  if (typeof patch.enabled === "boolean") body["enabled"] = patch.enabled;
-  if (typeof patch.header_title === "string") body["header_title"] = patch.header_title;
-  if (typeof patch.header_text === "string") body["header_text"] = patch.header_text;
-  if (Object.keys(body).length === 0) return { ok: true };
-
-  const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/smm_providers_config?provider_id=eq.${providerId}`,
-    {
-      method: "PATCH",
-      headers: { ...srHeaders(), Prefer: "return=minimal" },
-      body: JSON.stringify(body),
-    },
-  );
-  if (!r.ok) {
-    const txt = await r.text().catch(() => "");
-    return { ok: false, error: `${r.status}: ${txt.slice(0, 200)}` };
-  }
-  invalidateProviderConfigCache();
-  return { ok: true };
 }

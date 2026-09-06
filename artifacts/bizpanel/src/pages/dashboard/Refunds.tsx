@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RefreshCw, Search, RotateCcw, Wallet, FileText } from "lucide-react";
 import { syncOrdersStatusWithRefunds } from "@/lib/orderSync";
 import { formatBalance } from "@/lib/currency";
-import { getAuthHeaders } from "@/lib/authFetch";
+import { authedFetch } from "@/lib/authFetch";
 import { fetchSmmProviders } from "@/lib/smm";
 import { toast } from "@/lib/toast";
 import { InvoiceModal, type InvoiceData } from "@/components/dashboard/InvoiceModal";
@@ -61,8 +60,7 @@ export default function Refunds() {
     setLoading(true);
     try {
       // On ne récupère QUE les commandes ayant un remboursement effectif
-      const hdrs = await getAuthHeaders();
-      const r = await fetch("/api/smm/user-orders", { headers: hdrs });
+      const r = await authedFetch("/api/smm/user-orders");
       const allOrders: any[] = r.ok ? (await r.json() as any[]) : [];
       const initial = allOrders
         .filter((o: any) => o.refunded_at !== null && o.refunded_at !== undefined && Number(o.refunded_amount) > 0)
@@ -78,8 +76,7 @@ export default function Refunds() {
           `Nouveau remboursement : ${formatBalance(total, profile?.country)} recrédités sur votre solde.`,
         );
         // Recharger pour voir les nouveaux remboursements (via API pour bypasser RLS)
-        const hdrs2 = await getAuthHeaders();
-        const r2 = await fetch("/api/smm/user-orders", { headers: hdrs2 });
+        const r2 = await authedFetch("/api/smm/user-orders");
         const allRefreshed: any[] = r2.ok ? (await r2.json()) : [];
         setOrders(
           allRefreshed
@@ -97,18 +94,11 @@ export default function Refunds() {
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [user]);
 
-  // Realtime : mise à jour immédiate dès qu'un remboursement est appliqué
+  // Cookie API polling replaces the former realtime subscription.
   useEffect(() => {
     if (!user) return;
-    const channel = supabase
-      .channel(`refunds-user-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders", filter: `user_id=eq.${user.id}` },
-        () => { void load(); },
-      )
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
+    const id = window.setInterval(() => { void load(); }, 20_000);
+    return () => window.clearInterval(id);
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [user]);
 

@@ -12,12 +12,10 @@ import {
   type TicketActionType,
 } from "../lib/tickets";
 import { TERMINAL_ORDER_STATUSES } from "../lib/ticket-auto-closer";
+import { getMysqlPool } from "../lib/mysql";
+import type { RowDataPacket } from "mysql2/promise";
 
 const router: IRouter = Router();
-
-const SUPABASE_URL =
-  process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-const SUPABASE_SERVICE_ROLE_KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 
 interface CanonicalOrder {
   id: string;
@@ -25,6 +23,7 @@ interface CanonicalOrder {
   external_order_id: string | null;
   provider: number | null;
   service_name: string | null;
+  status: string;
 }
 
 // Server-side ownership check. Resolves the canonical order row for the given
@@ -36,21 +35,12 @@ async function resolveOrderForUser(
   orderLocalId: string,
   userId: string,
 ): Promise<CanonicalOrder | null> {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
-  const url =
-    `${SUPABASE_URL}/rest/v1/orders` +
-    `?id=eq.${encodeURIComponent(orderLocalId)}` +
-    `&user_id=eq.${encodeURIComponent(userId)}` +
-    `&select=id,user_id,external_order_id,provider,service_name&limit=1`;
-  const r = await fetch(url, {
-    headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-    },
-  });
-  if (!r.ok) return null;
-  const rows = (await r.json()) as CanonicalOrder[];
-  return rows && rows.length > 0 ? rows[0] || null : null;
+  const [rows] = await getMysqlPool().execute<RowDataPacket[]>(
+    `SELECT id, user_id, COALESCE(external_order_id, provider_order_id) AS external_order_id,
+            provider, service_name, status FROM orders WHERE id = ? AND user_id = ? LIMIT 1`,
+    [orderLocalId, userId],
+  );
+  return rows[0] ? rows[0] as CanonicalOrder : null;
 }
 
 const VALID_ACTIONS: ReadonlySet<TicketActionType> = new Set([
@@ -136,7 +126,7 @@ router.post("/tickets", requireUser, async (req: AuthedRequest, res) => {
             `Aucune intervention n'est nécessaire. ` +
             `Si vous avez d'autres questions, ouvrez un nouveau ticket.`,
           resolved_at: new Date().toISOString(),
-          resolved_by: "system",
+            resolved_by: undefined,
         });
         return res.json({ ticket: closed ?? t });
       }
@@ -151,11 +141,11 @@ router.post("/tickets", requireUser, async (req: AuthedRequest, res) => {
       action_type,
       message,
     });
-    res.json({ ticket: t });
+    return res.json({ ticket: t });
   } catch (err) {
     const status = err instanceof TicketError ? err.statusCode : 500;
     if (status === 500) logger.error({ err }, "ticket create error");
-    res.status(status).json({ error: (err as Error).message });
+    return res.status(status).json({ error: (err as Error).message });
   }
 });
 
@@ -209,10 +199,10 @@ router.post(
         patch.status = "in_progress";
       }
       const updated = await updateTicket(id, patch);
-      res.json({ ticket: updated });
+      return res.json({ ticket: updated });
     } catch (err) {
       logger.error({ err }, "ticket respond error");
-      res.status(500).json({ error: (err as Error).message });
+      return res.status(500).json({ error: (err as Error).message });
     }
   },
 );
@@ -230,9 +220,9 @@ router.post(
         resolved_by: req.userId,
       });
       if (!updated) return res.status(404).json({ error: "Ticket introuvable" });
-      res.json({ ticket: updated });
+      return res.json({ ticket: updated });
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      return res.status(500).json({ error: (err as Error).message });
     }
   },
 );

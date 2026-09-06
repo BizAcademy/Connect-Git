@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,24 +10,8 @@ import { fetchSmmOrderStatus } from "@/lib/smm";
 import { useToast } from "@/lib/toast";
 import { fetchMyTickets } from "@/lib/tickets";
 import { formatBalance } from "@/lib/currency";
-import { getAuthHeaders } from "@/lib/authFetch";
+import { authedFetch } from "@/lib/authFetch";
 
-// Minimal shape we read off `orders` rows from Realtime payloads. Supabase
-// types `payload.new` as `Record<string, unknown>`; this guard narrows it
-// without resorting to an `any` cast.
-interface OrderRowRT {
-  id: string;
-  user_id?: string;
-  status?: string;
-  refunded_at?: string | null;
-  external_order_id?: string | null;
-  [key: string]: unknown;
-}
-function asOrderRowRT(value: unknown): OrderRowRT | null {
-  if (!value || typeof value !== "object") return null;
-  const v = value as Record<string, unknown>;
-  return typeof v["id"] === "string" ? (v as OrderRowRT) : null;
-}
 
 type Period = "all" | "today" | "month" | "year";
 type StatusFilter =
@@ -191,8 +174,7 @@ export default function MyOrders() {
     if (!user) return;
     setLoading(true);
     try {
-      const headers = await getAuthHeaders();
-      const r = await fetch("/api/smm/user-orders", { headers });
+      const r = await authedFetch("/api/smm/user-orders");
       if (!r.ok) {
         console.error("[MyOrders] user-orders returned", r.status);
         setLoading(false);
@@ -282,12 +264,11 @@ export default function MyOrders() {
   useEffect(() => { load(); }, [user]);
 
   // Periodic silent refresh + visibility listener so newly placed orders
-  // always appear even if the Supabase Realtime INSERT event is missed.
+  // always appear even if a prior refresh was missed.
   useEffect(() => {
     if (!user) return;
     const silentLoad = async () => {
-      const hdrs = await getAuthHeaders();
-      const r = await fetch("/api/smm/user-orders", { headers: hdrs });
+      const r = await authedFetch("/api/smm/user-orders");
       if (r.ok) setOrders(await r.json() as any[]);
     };
     const onVisible = () => { if (document.visibilityState === "visible") void silentLoad(); };
@@ -339,8 +320,8 @@ export default function MyOrders() {
 
   // Re-sync périodique tant qu'il y a des commandes non finales.
   // - 45s suffisent : le serveur poller tourne en arrière-plan toutes les 60s
-  //   et Supabase Realtime pousse déjà les changements de statut quasi en
-  //   temps réel. Inutile de marteler le provider depuis chaque onglet ouvert.
+  //   et le rafraîchissement API détecte les changements de statut. Inutile
+  //   de marteler le provider depuis chaque onglet ouvert.
   // - Mutex `running` : empêche deux ticks de se chevaucher si le précédent
   //   prend plus de 45s (réseau lent), ce qui évitait de la jauge instable.
   useEffect(() => {
@@ -364,39 +345,6 @@ export default function MyOrders() {
     }, 45000);
     return () => clearInterval(id);
   }, [orders, user, loadDetails]);
-
-  // Realtime: when the server poller updates an `orders` row in Supabase,
-  // patch the local list immediately — no manual refresh, no waiting for
-  // the 20s polling interval to fire.
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel(`orders-user-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders", filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          const next = asOrderRowRT(payload.new);
-          if (!next) return;
-          setOrders((prev) => prev.map((o) => (o.id === next.id ? { ...o, ...next } : o)));
-          // If a refund just happened, refresh the wallet balance shown in the header.
-          if (next.refunded_at) {
-            window.dispatchEvent(new CustomEvent("balance:refresh"));
-          }
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "orders", filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          const row = asOrderRowRT(payload.new);
-          if (!row) return;
-          setOrders((prev) => (prev.some((o) => o.id === row.id) ? prev : [row, ...prev]));
-        },
-      )
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [user]);
 
   const filtered = useMemo(() => {
     const now = new Date();

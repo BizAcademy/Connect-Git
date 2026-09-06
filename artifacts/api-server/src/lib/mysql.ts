@@ -26,3 +26,10 @@ export function getMysqlPool(): Pool {
 export async function checkMysqlConnection(): Promise<void> {
   await getMysqlPool().query("SELECT 1");
 }
+
+export async function closeMysqlPool(): Promise<void> {
+  if (!pool) return;
+  const current = pool;
+  pool = undefined;
+  await current.end();
+}

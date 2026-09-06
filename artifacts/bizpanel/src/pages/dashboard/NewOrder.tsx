@@ -190,6 +190,7 @@ export default function NewOrder() {
   const [link, setLink] = useState("");
   const [quantity, setQuantity] = useState("");
   const [loading, setLoading] = useState(false);
+  const orderRequestId = useRef<string | null>(null);
 
   // Load provider header info (title + tagline) — also enforces that the
   // provider is currently enabled. If not, bounce back to the picker.
@@ -357,12 +358,14 @@ export default function NewOrder() {
 
     setLoading(true);
     try {
+      orderRequestId.current ??= crypto.randomUUID();
       // Place order — the server handles billing (balance check + debit) atomically
       const result = await placeSmmOrder({
         service: selectedService.service,
         link: link.trim(),
         quantity: qty,
         provider: providerId,
+        client_request_id: orderRequestId.current,
       });
 
       if (result.error || !result.order) {
@@ -399,6 +402,7 @@ export default function NewOrder() {
       setQuantity("");
       setSelectedService(null);
       setSearchParams({});
+      orderRequestId.current = null;
     } catch (e: any) {
       toast.error(e.message || "Erreur lors de la commande");
     } finally {

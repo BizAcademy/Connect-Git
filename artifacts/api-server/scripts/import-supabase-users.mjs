@@ -5,7 +5,7 @@ import crypto from "node:crypto";
 import mysql from "mysql2/promise";
 import bcrypt from "bcryptjs";
 
-const input = process.argv[2];
+const input = process.argv.slice(2).find((argument) => argument !== "--");
 if (!input) throw new Error("Usage: pnpm --filter @workspace/api-server import:supabase-users <export.json>");
 const required = ["MYSQL_HOST", "MYSQL_DATABASE", "MYSQL_USER", "MYSQL_PASSWORD"];
 if (required.some((key) => !process.env[key])) throw new Error("Required MYSQL_* configuration is missing");
@@ -22,7 +22,7 @@ try {
   for (const record of records) {
     const {
       id, email, encrypted_password: passwordHash, username, country, currency,
-      balance, affiliate_earnings, avatar_url, referral_code,
+      balance, affiliate_earnings, avatar_url, referral_code, roles,
     } = record;
     if (typeof id !== "string" || !crypto.randomUUID || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) throw new Error("Invalid user UUID in export");
     if (typeof email !== "string" || !mcf.test(passwordHash) || !(await bcrypt.getRounds(passwordHash))) throw new Error("Invalid email or bcrypt password format in export");
@@ -44,6 +44,20 @@ try {
         "INSERT IGNORE INTO user_roles (user_id, role) VALUES (?, 'user')",
         [id],
       );
+      // Roles are exported from public.user_roles (for example ["admin"]).
+      // Never infer an elevated role from client-controlled profile fields.
+      if (roles !== undefined && !Array.isArray(roles)) {
+        throw new Error("roles must be an array when present");
+      }
+      for (const role of roles || []) {
+        if (typeof role !== "string" || !/^[a-z_]{1,32}$/i.test(role)) {
+          throw new Error("Invalid role in export");
+        }
+        await connection.execute(
+          "INSERT IGNORE INTO user_roles (user_id, role) VALUES (?, ?)",
+          [id, role.toLowerCase()],
+        );
+      }
       await connection.commit();
     } catch (error) {
       await connection.rollback();

@@ -91,7 +91,7 @@ export interface SmmQuote {
 export interface SmmOrderResult {
   order?: number;
   provider?: number;
-  /** Local Supabase UUID of the inserted order row (set server-side). */
+  /** Local UUID of the inserted order row (set server-side). */
   local_order_id?: string | null;
   error?: string;
   provider_unavailable?: boolean;
@@ -239,9 +239,10 @@ export async function placeSmmOrder(input: {
   link: string;
   quantity: number | string;
   provider?: number;
+  client_request_id?: string;
 }): Promise<SmmOrderResult> {
   const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
-  const body = { ...input, provider: input.provider ?? 1 };
+  const body = { ...input, provider: input.provider ?? 1, client_request_id: input.client_request_id ?? crypto.randomUUID() };
   const res = await fetch(`${API_BASE}/order`, {
     method: "POST",
     headers,
@@ -315,7 +316,7 @@ export async function fetchAdminEarnings(query: AdminEarningsQuery = {}): Promis
   return res.json();
 }
 
-// Admin: backfill earnings ledger from existing Supabase orders
+// Admin: backfill earnings ledger from existing orders
 export interface BackfillResult {
   ok: boolean;
   total_orders_scanned: number;

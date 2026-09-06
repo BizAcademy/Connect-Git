@@ -20,6 +20,7 @@ async function buildAll() {
     entryPoints: [
       path.resolve(artifactDir, "src/index.ts"),
       path.resolve(artifactDir, "src/scripts/migrate-mysql.ts"),
+      path.resolve(artifactDir, "src/scripts/integration-money-earnings.ts"),
     ],
     outbase: path.resolve(artifactDir, "src"),
     platform: "node",

@@ -12,7 +12,6 @@ import {
 } from "@/lib/support";
 import { fetchMyTickets, markTicketRepliesSeen, type Ticket } from "@/lib/tickets";
 import { SupportImage } from "@/components/SupportImage";
-import { supabase } from "@/integrations/supabase/client";
 
 const formatTime = (iso: string) => {
   const d = new Date(iso);
@@ -146,18 +145,8 @@ function MyTickets() {
     refresh();
     const id = setInterval(() => refresh(true), 10000);
 
-    const channel = supabase
-      .channel("user-my-tickets")
-      .on(
-        "postgres_changes" as any,
-        { event: "*", schema: "public", table: "tickets" },
-        () => { void refresh(true); },
-      )
-      .subscribe();
-
     return () => {
       clearInterval(id);
-      void supabase.removeChannel(channel);
     };
   }, []);
 

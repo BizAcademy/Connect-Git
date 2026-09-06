@@ -4,8 +4,10 @@ import { requireUser, type AuthedRequest } from "../lib/auth";
 import {
   creditDeposit,
   markPaymentStatus,
-  hasServiceRoleKey,
   fetchPayment,
+  fetchPaymentByOrderId,
+  createPayment,
+  updatePaymentTransaction,
   BONUS_THRESHOLD_FCFA,
   BONUS_AMOUNT_FCFA,
   isEligibleForBonus,
@@ -25,13 +27,11 @@ import {
   resetTokenState,
   getTokenDiagnostics,
 } from "../lib/afribapay";
-import { fetchOperatorLogos } from "../lib/operator-logos";
+import { fetchOperatorLogos, operatorLogoPath } from "../lib/operator-logos";
 
 const router: IRouter = Router();
 
-const SUPABASE_URL = (process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"])!;
-const SUPABASE_SERVICE_ROLE_KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-const SUPABASE_ANON_KEY = (process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"])!;
+const SERVICE_ROLE_KEY = process.env["API_SERVICE_ROLE_KEY"];
 
 // Public base URL of the API server, used to compute the webhook callback URL
 // sent to AfribaPay (notify_url). Falls back to the Replit dev domain if set.
@@ -46,82 +46,29 @@ if (!isAfribapayConfigured()) {
     + "AFRIBAPAY_MERCHANT_KEY as server secrets. Deposit endpoints will return HTTP 503 until set.",
   );
 }
-if (!hasServiceRoleKey()) {
-  logger.warn(
-    "SUPABASE_SERVICE_ROLE_KEY not set — automatic deposit crediting via webhook will not work. "
-    + "Admins can still manually credit deposits from the admin panel using their own session.",
-  );
-}
-
-function serverHeaders() {
-  const key = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
-  return {
-    apikey: key,
-    Authorization: `Bearer ${key}`,
-    "Content-Type": "application/json",
-  };
-}
-
 interface InsertPaymentArgs {
   userId: string;
   amount: number;
-  userToken: string;
   orderId: string;
   country: string;
   operator: string;
   phoneNumber: string;
   currency: string;
+  /** Display-currency amounts; deposits.ts converts these to minor units. */
+  feeAmount: number;
+  chargeAmount: number;
 }
 
 async function insertPayment(args: InsertPaymentArgs): Promise<string> {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/payments`, {
-    method: "POST",
-    headers: {
-      ...serverHeaders(),
-      Authorization: `Bearer ${args.userToken}`,
-      Prefer: "return=representation",
-    },
-    body: JSON.stringify({
-      user_id: args.userId,
-      amount: args.amount,
-      method: "afribapay",
-      status: "pending",
-      order_id: args.orderId,
-      country: args.country,
-      operator: args.operator,
-      phone_number: args.phoneNumber,
-      currency: args.currency,
-    }),
-  });
-  if (!r.ok) {
-    const body = await r.text();
-    throw new Error(`Failed to create payment: HTTP ${r.status} ${body}`);
-  }
-  const rows = (await r.json()) as Array<{ id: string }>;
-  if (!rows[0]?.id) throw new Error("Failed to create payment: empty response");
-  return rows[0].id;
+  return createPayment(args);
 }
 
-async function patchPayment(paymentId: string, patch: Record<string, unknown>, userToken?: string) {
-  const headers = userToken
-    ? { ...serverHeaders(), Authorization: `Bearer ${userToken}` }
-    : serverHeaders();
-  await fetch(`${SUPABASE_URL}/rest/v1/payments?id=eq.${encodeURIComponent(paymentId)}`, {
-    method: "PATCH",
-    headers,
-    body: JSON.stringify(patch),
-  });
+async function patchPayment(paymentId: string, patch: Record<string, unknown>) {
+  if (typeof patch.transaction_id === "string") await updatePaymentTransaction(paymentId, patch.transaction_id);
+  if (patch.status === "failed" || patch.status === "rejected" || patch.status === "pending") await markPaymentStatus(paymentId, patch.status);
 }
 
-async function findPaymentByOrderId(orderId: string): Promise<{ id: string; status: string; user_id: string; transaction_id?: string | null } | null> {
-  const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/payments?order_id=eq.${encodeURIComponent(orderId)}&select=id,status,user_id,transaction_id&limit=1`,
-    { headers: serverHeaders() },
-  );
-  if (!r.ok) return null;
-  const rows = (await r.json()) as Array<{ id: string; status: string; user_id: string; transaction_id?: string | null }>;
-  return rows[0] || null;
-}
+const findPaymentByOrderId = fetchPaymentByOrderId;
 
 function generateOrderId(userId: string): string {
   const ts = Date.now().toString(36);
@@ -195,7 +142,7 @@ router.get("/payments/countries", async (req, res) => {
     const safe = all.filter((c) => !isCountryExcluded(c.code));
     // Avoid stale CDN/proxy caches for this dynamic resource.
     res.set("Cache-Control", "no-store");
-    res.json({ countries: safe });
+    return res.json({ countries: safe });
   } catch (err) {
     return handleAfribapayError(err, res);
   }
@@ -216,7 +163,7 @@ router.post("/payments/otp", requireUser, async (req: AuthedRequest, res) => {
   }
   try {
     await requestOtp({ country, operator, phone_number: phone });
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (err) {
     return handleAfribapayError(err, res);
   }
@@ -289,12 +236,13 @@ router.post("/payments/initiate", requireUser, async (req: AuthedRequest, res) =
     paymentId = await insertPayment({
       userId: req.userId!,
       amount,           // credit amount — what gets added to the user's balance
-      userToken: req.userToken!,
       orderId,
       country,
       operator,
       phoneNumber: phone,
       currency,
+      feeAmount,
+      chargeAmount,
     });
   } catch (err) {
     logger.error({ err }, "insertPayment failed");
@@ -313,7 +261,7 @@ router.post("/payments/initiate", requireUser, async (req: AuthedRequest, res) =
       otp_code: otpCode,
     });
     if (result.transaction_id) {
-      await patchPayment(paymentId, { transaction_id: result.transaction_id }, req.userToken!);
+      await patchPayment(paymentId, { transaction_id: result.transaction_id });
     }
     return res.json({
       ok: true,
@@ -331,7 +279,7 @@ router.post("/payments/initiate", requireUser, async (req: AuthedRequest, res) =
       charge_amount: chargeAmount,
     });
   } catch (err) {
-    await patchPayment(paymentId, { status: "failed" }, req.userToken!).catch(() => undefined);
+    await patchPayment(paymentId, { status: "failed" }).catch(() => undefined);
     return handleAfribapayError(err, res);
   }
 });
@@ -428,7 +376,7 @@ router.post("/payments/webhook", async (req: Request & { rawBody?: string }, res
   // Update transaction_id if newly known
   const txId = inner["transaction_id"] || inner["transactionId"];
   if (txId) {
-    await patchPayment(local.id, { transaction_id: String(txId) }).catch(() => undefined);
+      await patchPayment(local.id, { transaction_id: String(txId) }).catch(() => undefined);
   }
 
   try {
@@ -475,12 +423,12 @@ router.post("/payments/webhook", async (req: Request & { rawBody?: string }, res
 
 // ---------------------------------------------------------------------------
 // Admin: AfribaPay token diagnostics & reset
-// Protected by SUPABASE_SERVICE_ROLE_KEY header (server-to-server only).
+// Protected by API_SERVICE_ROLE_KEY header (server-to-server only).
 // ---------------------------------------------------------------------------
 
 function requireServiceRole(req: Request, res: any, next: any) {
   const provided = req.headers["x-service-role-key"];
-  if (!SUPABASE_SERVICE_ROLE_KEY || provided !== SUPABASE_SERVICE_ROLE_KEY) {
+  if (!SERVICE_ROLE_KEY || provided !== SERVICE_ROLE_KEY) {
     return res.status(403).json({ error: "Forbidden" });
   }
   return next();
@@ -511,6 +459,15 @@ router.get("/payments/operator-logos", async (_req, res) => {
     res.set("Cache-Control", "no-store");
     return res.json({ logos: {} });
   }
+});
+
+router.get("/payments/operator-logos/file/:filename", (req, res) => {
+  const filePath = operatorLogoPath(String(req.params["filename"] || ""));
+  if (!filePath) return res.status(404).end();
+  res.set("Cache-Control", "public, max-age=3600");
+  return res.sendFile(filePath, (err) => {
+    if (err && !res.headersSent) res.status(404).end();
+  });
 });
 
 export { BONUS_THRESHOLD_FCFA, BONUS_AMOUNT_FCFA, isEligibleForBonus };

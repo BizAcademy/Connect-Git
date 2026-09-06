@@ -3,23 +3,19 @@
  * under keys prefixed with `operator_logo_`.
  *
  * 30-second in-memory cache so admin changes are visible to users
- * within half a minute without hammering Supabase.
+ * within half a minute without repeatedly querying MySQL.
  */
+import crypto from "node:crypto";
+import path from "node:path";
+import { promises as fs } from "node:fs";
+import type { RowDataPacket } from "mysql2/promise";
 import { logger } from "./logger";
-
-const SUPABASE_URL = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-const SUPABASE_SERVICE_ROLE_KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+import { getMysqlPool } from "./mysql";
 
 const KEY_PREFIX = "operator_logo_";
 const CACHE_TTL_MS = 30_000;
-
-function serviceRoleHeaders(): Record<string, string> {
-  return {
-    apikey: SUPABASE_SERVICE_ROLE_KEY!,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-    "Content-Type": "application/json",
-  };
-}
+const LOGO_DIR = path.resolve(process.cwd(), "data", "operator-logos");
+const LOGO_URL_PREFIX = "/api/payments/operator-logos/file/";
 
 interface LogosCache {
   value: Record<string, string>;
@@ -34,14 +30,11 @@ export function bustOperatorLogosCache(): void {
 /** Returns a map of operatorCode → logo URL for all configured operators. */
 export async function fetchOperatorLogos(): Promise<Record<string, string>> {
   if (cache && cache.expiresAt > Date.now()) return cache.value;
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return {};
   try {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/settings?key=like.${encodeURIComponent(KEY_PREFIX + "*")}&select=key,value`,
-      { headers: serviceRoleHeaders() },
+    const [rows] = await getMysqlPool().execute<RowDataPacket[]>(
+      "SELECT `key`, `value` FROM settings WHERE `key` LIKE ?",
+      [`${KEY_PREFIX}%`],
     );
-    if (!r.ok) return {};
-    const rows = (await r.json()) as { key: string; value: string }[];
     const logos: Record<string, string> = {};
     for (const row of rows) {
       const code = row.key.slice(KEY_PREFIX.length);
@@ -55,59 +48,18 @@ export async function fetchOperatorLogos(): Promise<Record<string, string>> {
   }
 }
 
-/** Save (upsert) a logo URL for a given operator code.
- *
- *  PostgREST's resolution=merge-duplicates requires ?on_conflict=<col> but the
- *  `settings` table uses a plain unique index on `key`, which PostgREST cannot
- *  always use as an arbiter (42P10).  We therefore use the safe INSERT → PATCH
- *  pattern: insert first; on 409/23505 conflict, fall through to a targeted
- *  PATCH on the existing row.
- */
+/** Save a logo URL for a given operator code. */
 export async function upsertOperatorLogo(operatorCode: string, logoUrl: string): Promise<void> {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Supabase service role not configured");
-  }
   const key = KEY_PREFIX + operatorCode;
-
-  // 1. Try INSERT
-  const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/settings`, {
-    method: "POST",
-    headers: { ...serviceRoleHeaders(), Prefer: "return=minimal" },
-    body: JSON.stringify({ key, value: logoUrl }),
-  });
-
-  if (insertRes.ok || insertRes.status === 201) {
-    bustOperatorLogosCache();
-    return;
-  }
-
-  // 2. On duplicate-key conflict (409 / 23505), fall back to PATCH
-  if (insertRes.status === 409) {
-    const patchRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/settings?key=eq.${encodeURIComponent(key)}`,
-      {
-        method: "PATCH",
-        headers: { ...serviceRoleHeaders(), Prefer: "return=minimal" },
-        body: JSON.stringify({ value: logoUrl }),
-      },
-    );
-    if (!patchRes.ok) {
-      const body = await patchRes.text();
-      throw new Error(`Supabase logo update failed (${patchRes.status}): ${body.slice(0, 200)}`);
-    }
-    bustOperatorLogosCache();
-    return;
-  }
-
-  const body = await insertRes.text();
-  throw new Error(`Supabase logo insert failed (${insertRes.status}): ${body.slice(0, 200)}`);
+  await getMysqlPool().execute(
+    "INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)",
+    [key, logoUrl],
+  );
+  bustOperatorLogosCache();
 }
 
-const STORAGE_BUCKET = "operator-logos";
-
 /**
- * Upload an image buffer to Supabase Storage (public bucket) and store the
- * resulting public URL in the settings table.
+ * Upload an image buffer to local application storage and store its API URL.
  * Returns the public URL of the uploaded image.
  */
 export async function uploadOperatorLogoFile(
@@ -115,66 +67,41 @@ export async function uploadOperatorLogoFile(
   fileBuffer: Buffer,
   mimeType: string,
 ): Promise<string> {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Supabase service role not configured");
-  }
-  const storageHeaders = {
-    apikey: SUPABASE_SERVICE_ROLE_KEY!,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY!}`,
-  };
-
-  // Ensure the bucket exists (no-op if already created)
-  await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
-    method: "POST",
-    headers: { ...storageHeaders, "Content-Type": "application/json" },
-    body: JSON.stringify({ id: STORAGE_BUCKET, name: STORAGE_BUCKET, public: true }),
-  }).catch(() => {/* ignore — bucket likely exists */});
-
   const ext = mimeType.includes("svg")
     ? "svg"
     : mimeType.includes("png")
       ? "png"
       : "jpg";
-  const objectPath = `${operatorCode}.${ext}`;
-
-  const uploadRes = await fetch(
-    `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${objectPath}`,
-    {
-      method: "POST",
-      headers: {
-        ...storageHeaders,
-        "Content-Type": mimeType,
-        "x-upsert": "true",
-        "cache-control": "public, max-age=3600",
-      },
-      body: fileBuffer,
-    },
-  );
-  if (!uploadRes.ok) {
-    const body = await uploadRes.text();
-    throw new Error(`Storage upload failed (${uploadRes.status}): ${body.slice(0, 300)}`);
-  }
-
-  // Cache-bust with a timestamp so the browser picks up the new file immediately
-  const publicUrl =
-    `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${objectPath}?t=${Date.now()}`;
+  const safeCode = operatorCode.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+  if (!safeCode) throw new Error("Invalid operator code");
+  const filename = `${safeCode}-${crypto.randomBytes(8).toString("hex")}.${ext}`;
+  await fs.mkdir(LOGO_DIR, { recursive: true });
+  await fs.writeFile(path.join(LOGO_DIR, filename), fileBuffer, { flag: "wx" });
+  const publicUrl = `${LOGO_URL_PREFIX}${encodeURIComponent(filename)}?t=${Date.now()}`;
   await upsertOperatorLogo(operatorCode, publicUrl);
   return publicUrl;
 }
 
 /** Delete the custom logo for a given operator code (reverts to default). */
 export async function deleteOperatorLogo(operatorCode: string): Promise<void> {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Supabase service role not configured");
-  }
   const key = KEY_PREFIX + operatorCode;
-  const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/settings?key=eq.${encodeURIComponent(key)}`,
-    { method: "DELETE", headers: serviceRoleHeaders() },
+  const [rows] = await getMysqlPool().execute<RowDataPacket[]>(
+    "SELECT `value` FROM settings WHERE `key` = ?",
+    [key],
   );
-  if (!r.ok) {
-    const body = await r.text();
-    throw new Error(`Supabase delete failed (${r.status}): ${body.slice(0, 200)}`);
+  await getMysqlPool().execute("DELETE FROM settings WHERE `key` = ?", [key]);
+  const stored = String(rows[0]?.value || "");
+  if (stored.startsWith(LOGO_URL_PREFIX)) {
+    const filename = stored.slice(LOGO_URL_PREFIX.length).split("?")[0] || "";
+    if (/^[a-zA-Z0-9_-]{1,100}-[a-f0-9]{16}\.(svg|png|jpg)$/i.test(filename)) {
+      await fs.unlink(path.join(LOGO_DIR, filename)).catch(() => undefined);
+    }
   }
   bustOperatorLogosCache();
+}
+
+export function operatorLogoPath(filename: string): string | null {
+  return /^[a-zA-Z0-9_-]{1,100}-[a-f0-9]{16}\.(svg|png|jpg)$/i.test(filename)
+    ? path.join(LOGO_DIR, filename)
+    : null;
 }

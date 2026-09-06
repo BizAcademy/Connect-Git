@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 type ContentMap = Record<string, string>;
 
@@ -8,7 +7,10 @@ const listeners: Array<(map: ContentMap) => void> = [];
 
 async function loadContent(): Promise<ContentMap> {
   if (cache) return cache;
-  const { data } = await supabase.from("site_content").select("key, value");
+  const response = await fetch("/api/site-content");
+  if (!response.ok) throw new Error("Contenu indisponible");
+  const json = await response.json() as { content?: Array<{ key: string; value: string }> };
+  const data = json.content || [];
   const map: ContentMap = {};
   (data || []).forEach((row) => { map[row.key] = row.value; });
   cache = map;
@@ -22,7 +24,10 @@ export function useSiteContent() {
 
   useEffect(() => {
     if (cache) { setContent(cache); setLoading(false); return; }
-    loadContent().then((map) => { setContent(map); setLoading(false); });
+    loadContent()
+      .then((map) => setContent(map))
+      .catch((error) => console.error("[site-content] load failed", error))
+      .finally(() => setLoading(false));
   }, []);
 
   const get = (key: string, fallback = "") => content[key] ?? fallback;

@@ -1,6 +1,5 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import { logger } from "./logger";
+import type { RowDataPacket } from "mysql2/promise";
+import { getMysqlPool } from "./mysql";
 
 // Pricing overrides per provider:
 //   { "<smmServiceId>": { price_fcfa: number, hidden?: boolean } }
@@ -15,38 +14,27 @@ export interface PricingEntry {
 }
 export type PricingMap = Record<string, PricingEntry>;
 
-function fileFor(providerId: number): string {
-  return path.resolve(process.cwd(), "data", `smm-pricing-${providerId}.json`);
-}
-const LEGACY_FILE = path.resolve(process.cwd(), "data", "smm-pricing.json");
-
 const cache: Record<number, PricingMap | null> = {};
 
 export async function loadPricing(providerId: number = 1): Promise<PricingMap> {
   if (cache[providerId]) return cache[providerId]!;
-  const FILE = fileFor(providerId);
   try {
-    await fs.mkdir(path.dirname(FILE), { recursive: true });
-    let txt = await fs.readFile(FILE, "utf8").catch(() => "");
-    // One-time legacy migration: if provider 1's per-provider file is
-    // missing/empty, read the old smm-pricing.json so historical custom
-    // prices are not lost. The provider-1 file is then created on first save.
-    if (!txt && providerId === 1) {
-      txt = await fs.readFile(LEGACY_FILE, "utf8").catch(() => "");
-    }
-    cache[providerId] = txt ? (JSON.parse(txt) as PricingMap) : {};
+    const [rows] = await getMysqlPool().execute<RowDataPacket[]>(
+      "SELECT service_id,price_minor,hidden,featured,updated_at FROM smm_pricing WHERE provider=?", [providerId],
+    );
+    cache[providerId] = Object.fromEntries(rows.map(r => [String(r.service_id), {
+      price_fcfa: Number(r.price_minor), hidden: Boolean(r.hidden), featured: Boolean(r.featured),
+      updated_at: new Date(r.updated_at).toISOString(),
+    }]));
   } catch (err) {
-    logger.error({ err, providerId }, "failed to load smm pricing, starting empty");
     cache[providerId] = {};
+    throw err;
   }
   return cache[providerId]!;
 }
 
 export async function savePricing(map: PricingMap, providerId: number = 1): Promise<void> {
   cache[providerId] = map;
-  const FILE = fileFor(providerId);
-  await fs.mkdir(path.dirname(FILE), { recursive: true });
-  await fs.writeFile(FILE, JSON.stringify(map, null, 2), "utf8");
 }
 
 export async function setEntry(
@@ -54,20 +42,22 @@ export async function setEntry(
   entry: PricingEntry,
   providerId: number = 1,
 ): Promise<PricingMap> {
-  const map = await loadPricing(providerId);
-  map[String(serviceId)] = { ...entry, updated_at: new Date().toISOString() };
-  await savePricing(map, providerId);
-  return map;
+  await getMysqlPool().execute(
+    `INSERT INTO smm_pricing (provider,service_id,price_minor,hidden,featured) VALUES (?,?,?,?,?)
+     ON DUPLICATE KEY UPDATE price_minor=VALUES(price_minor),hidden=VALUES(hidden),featured=VALUES(featured)`,
+    [providerId, String(serviceId), Math.round(entry.price_fcfa), Boolean(entry.hidden), Boolean(entry.featured)],
+  );
+  cache[providerId] = null;
+  return loadPricing(providerId);
 }
 
 export async function deleteEntry(
   serviceId: number | string,
   providerId: number = 1,
 ): Promise<PricingMap> {
-  const map = await loadPricing(providerId);
-  delete map[String(serviceId)];
-  await savePricing(map, providerId);
-  return map;
+  await getMysqlPool().execute("DELETE FROM smm_pricing WHERE provider=? AND service_id=?", [providerId, String(serviceId)]);
+  cache[providerId] = null;
+  return loadPricing(providerId);
 }
 
 // ---------------------------------------------------------------------------

@@ -1,0 +1,44 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "fiij5gaZhUgnEcCEsCeod"
+uri = "file://migrations/mysql/001_bizpanel_auth_phase1.sql"
+type = "unspecified"
+title = "Migration MySQL 001 — schéma complet"
+description = "Schéma BizPanel complet à exécuter en premier dans phpMyAdmin."
+logical_id = "fbf02767-df4b-48d6-b6bb-2993a182b825"
+content_hash = "sha256:de46fb6104332b6316f60c7b990b25ebbe2ecfa45cecb94740d7b0d8f5cac697"
+size = 14096
+mtime_ms = 1788695807912
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:1a67866f-edc3-4d00-ba60-42cc792c384a/fbf02767-df4b-48d6-b6bb-2993a182b825/d1727a37-a6c1-4c62-b0f3-0e2355f212d8"
+storage_version_token = "1788696573723853"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "2tID3xNaLhecKCE-6mAMd"
+uri = "file://migrations/mysql/002_order_client_request_id.sql"
+type = "unspecified"
+title = "Migration MySQL 002 — idempotence commandes"
+description = "Ajoute l’identifiant client qui empêche les doubles commandes."
+logical_id = "47bad63f-cb9d-4c4a-b70f-fe44a3328578"
+content_hash = "sha256:be9cb96441d10b57f6e7f8a4b6fe7a0a25f36eead664f6c6320091c9e84acd91"
+size = 254
+mtime_ms = 1788695879432
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:1a67866f-edc3-4d00-ba60-42cc792c384a/47bad63f-cb9d-4c4a-b70f-fe44a3328578/fb487578-262a-4a9c-9e40-d1f0b5b37618"
+storage_version_token = "1788696574244266"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "fUUv-4vuofqdEmov1x6v-"
+uri = "file://migrations/mysql/003_earnings_idempotency.sql"
+type = "unspecified"
+title = "Migration MySQL 003 — idempotence gains"
+description = "Empêche le double comptage des gains lors des synchronisations fournisseur."
+logical_id = "e8bd5dca-7474-43b1-a04d-1fe1e6a4196d"
+content_hash = "sha256:3ac5fe6f402625cb9e4cf54b6e1c8a065dcd09875979756f09ba29e29d561654"
+size = 286
+mtime_ms = 1788696235616
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:1a67866f-edc3-4d00-ba60-42cc792c384a/e8bd5dca-7474-43b1-a04d-1fe1e6a4196d/55e1bb9e-2205-4d3f-aae5-fc708cf121b0"
+storage_version_token = "1788696574716104"
+content_type = "application/octet-stream"

@@ -14,9 +14,8 @@ import { logger } from "./logger";
 import { creditDeposit, markPaymentStatus, fetchPayment } from "./deposits";
 import { recoverStuckReferrals } from "./referrals";
 import { getStatus, isSuccessStatus, isFailureStatus, isAfribapayConfigured } from "./afribapay";
-
-const SUPABASE_URL        = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-const SERVICE_ROLE_KEY    = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+import { getMysqlPool } from "./mysql";
+import type { RowDataPacket } from "mysql2/promise";
 
 const SCAN_INTERVAL_MS    = 3 * 60_000;  // every 3 minutes
 const MIN_AGE_MS          = 2 * 60_000;  // skip payments younger than 2 min (still polling)
@@ -30,29 +29,17 @@ let timer: NodeJS.Timeout | null = null;
 let inFlight = false;
 let started  = false;
 
-function svcHeaders(): Record<string, string> {
-  const key = SERVICE_ROLE_KEY!;
-  return { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
-}
-
 interface PendingPayment { id: string; user_id: string; order_id: string; created_at: string; amount: number }
 
 async function fetchPendingPayments(): Promise<PendingPayment[]> {
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return [];
-  const cutoff = new Date(Date.now() - MIN_AGE_MS).toISOString();
-  // Only fetch AfribaPay payments: order_id IS NOT NULL (old SoleasPay rows have no order_id)
-  const url = `${SUPABASE_URL}/rest/v1/payments`
-    + `?select=id,user_id,order_id,created_at,amount`
-    + `&status=eq.pending`
-    + `&credited_at=is.null`
-    + `&order_id=not.is.null`
-    + `&created_at=lt.${encodeURIComponent(cutoff)}`
-    + `&order=created_at.asc`
-    + `&limit=${PAGE_SIZE}`;
   try {
-    const r = await fetch(url, { headers: svcHeaders() });
-    if (!r.ok) return [];
-    return (await r.json()) as PendingPayment[];
+    const [rows] = await getMysqlPool().execute<RowDataPacket[]>(
+      `SELECT id,user_id,order_id,created_at,amount_minor FROM payments
+       WHERE status='pending' AND credited_at IS NULL AND order_id IS NOT NULL
+       AND created_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE) ORDER BY created_at ASC LIMIT ?`, [PAGE_SIZE],
+    );
+    return rows.map(r => ({ id: String(r.id), user_id: String(r.user_id), order_id: String(r.order_id),
+      created_at: new Date(r.created_at).toISOString(), amount: Number(r.amount_minor) / 100 }));
   } catch { return []; }
 }
 
@@ -139,10 +126,6 @@ async function scanOnce(): Promise<void> {
 
 export function startPendingPaymentScanner(): void {
   if (started) return;
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    logger.warn("pending-payment-scanner: Supabase secrets missing — scanner disabled");
-    return;
-  }
   started = true;
 
   const safeScan = async () => {

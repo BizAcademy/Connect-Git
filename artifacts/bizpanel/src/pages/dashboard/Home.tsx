@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { authedFetch } from "@/lib/authFetch";
 import { formatBalance } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -43,13 +43,17 @@ export default function DashboardHome() {
     };
     const load = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("orders").select("*").eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      const orders = data || [];
-      compute(orders);
-      setLoading(false);
-      compute(await syncOrdersStatus(orders));
+      try {
+        const response = await authedFetch("/api/smm/user-orders");
+        if (!response.ok) throw new Error("Impossible de charger les commandes");
+        const orders = await response.json() as any[];
+        compute(orders);
+        compute(await syncOrdersStatus(orders));
+      } catch (error) {
+        console.error("[DashboardHome] orders load error", error);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
     const id = setInterval(load, 20000);

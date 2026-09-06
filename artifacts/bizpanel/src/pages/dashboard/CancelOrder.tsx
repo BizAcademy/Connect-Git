@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { authedFetch } from "@/lib/authFetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -43,7 +43,7 @@ export default function CancelOrder() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  // Routed by Supabase order primary key (local id), NOT external_order_id —
+  // Routed by the local order primary key, NOT external_order_id —
   // external IDs can collide across SMM providers, which would let an admin
   // act on the wrong order. The server also re-validates ownership.
   const { orderId } = useParams();
@@ -79,14 +79,11 @@ export default function CancelOrder() {
     let cancelled = false;
 
     const fetchOrder = async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("id", orderId)
-        .eq("user_id", user.id)
-        .limit(1);
+      const response = await authedFetch("/api/smm/user-orders");
+      if (!response.ok) throw new Error("Impossible de charger la commande");
+      const data = await response.json() as any[];
       if (cancelled) return;
-      const row = (data && data[0]) || null;
+      const row = data.find((candidate) => candidate.id === orderId) || null;
       setOrder(row);
       setOrderStatus(row?.status ?? null);
     };

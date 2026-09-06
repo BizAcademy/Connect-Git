@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { getMysqlPool } from "../lib/mysql";
 import { requireUser, type AuthedRequest } from "../lib/auth";
+import { normalizeCode } from "../lib/referrals";
 
 const router = Router();
 const COOKIE = "bb_session";
@@ -67,7 +68,9 @@ router.post("/auth/register", authLimiter, async (req: AuthedRequest, res) => {
   const password = typeof req.body?.password === "string" ? req.body.password : "";
   const username = typeof req.body?.username === "string" ? req.body.username.trim() : "";
   const country = typeof req.body?.country === "string" ? req.body.country.trim().toUpperCase() : "";
-  if (!emailPattern.test(email) || password.length < 8 || !username || username.length > 64 || country.length > 8) {
+  const referralCodeRaw = req.body?.referralCode ?? req.body?.referral_code;
+  const referralCode = referralCodeRaw == null || referralCodeRaw === "" ? null : normalizeCode(referralCodeRaw);
+  if (!emailPattern.test(email) || password.length < 8 || !username || username.length > 64 || country.length > 8 || (referralCodeRaw != null && !referralCode)) {
     return res.status(400).json({ error: "Informations d'inscription invalides" });
   }
   const id = crypto.randomUUID();
@@ -83,6 +86,20 @@ router.post("/auth/register", authLimiter, async (req: AuthedRequest, res) => {
       [id, email, username, country || null],
     );
     await connection.execute("INSERT INTO user_roles (user_id, role) VALUES (?, 'user')", [id]);
+    if (referralCode) {
+      const [owners] = await connection.execute<mysql.RowDataPacket[]>(
+        "SELECT user_id FROM profiles WHERE referral_code=? FOR UPDATE", [referralCode],
+      );
+      const referrerId = owners[0] ? String(owners[0].user_id) : "";
+      if (!referrerId || referrerId === id) {
+        await connection.rollback();
+        return res.status(400).json({ error: "Code de parrainage invalide" });
+      }
+      await connection.execute(
+        "INSERT INTO referrals (id,referrer_user_id,referred_user_id,code_used,status) VALUES (?,?,?,?, 'pending')",
+        [crypto.randomUUID(), referrerId, id, referralCode],
+      );
+    }
     const sessionToken = await createSessionToken(id, req, connection);
     await connection.commit();
     setSessionCookie(res, sessionToken);
