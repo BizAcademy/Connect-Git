@@ -7,10 +7,12 @@ import paymentsRouter from "./payments";
 import ticketsRouter from "./tickets";
 import profileRouter from "./profile";
 import referralsRouter from "./referrals";
+import authRouter from "./auth";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(authRouter);
 router.use(smmRouter);
 router.use(adminRouter);
 router.use(supportRouter);

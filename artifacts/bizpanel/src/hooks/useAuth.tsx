@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { User, Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 import { authedFetch } from "@/lib/authFetch";
 
+export interface AuthUser { id: string; email: string; }
+export interface AuthSession { user: AuthUser; }
+
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: AuthUser | null;
+  session: AuthSession | null;
   loading: boolean;
   profile: any | null;
   isAdmin: boolean;
@@ -29,42 +30,28 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const fetchProfile = async (userId: string, allowEnsure = true) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-
-    // Self-heal: if no profile row exists (signup trigger silently failed),
-    // ask the server to create one, then re-fetch once.
-    if (!data && allowEnsure) {
-      try {
-        const res = await authedFetch("/api/profile/ensure", { method: "POST" });
-        if (res.ok) {
-          await fetchProfile(userId, false);
-          return;
-        }
-      } catch { /* fall through with null profile */ }
+  const fetchProfile = async () => {
+    const res = await fetch("/api/auth/me", { credentials: "include" });
+    if (!res.ok) {
+      setUser(null); setSession(null); setProfile(null); setIsAdmin(false);
+      return;
     }
-
-    setProfile(data);
-    try {
-      const { data: roleData } = await supabase.rpc("has_role" as any, { _user_id: userId, _role: "admin" });
-      setIsAdmin(!!roleData);
-    } catch {
-      setIsAdmin(false);
-    }
+    const data = await res.json();
+    const currentUser = data.user as AuthUser & { profile: unknown; isAdmin: boolean };
+    setUser({ id: currentUser.id, email: currentUser.email });
+    setSession({ user: { id: currentUser.id, email: currentUser.email } });
+    setProfile(currentUser.profile);
+    setIsAdmin(currentUser.isAdmin);
   };
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+    if (user) await fetchProfile();
   };
 
   const patchProfile = (patch: Record<string, unknown>) => {
@@ -72,32 +59,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setTimeout(() => fetchProfile(session.user.id), 0);
-        } else {
-          setProfile(null);
-          setIsAdmin(false);
-        }
-        setLoading(false);
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    fetchProfile().finally(() => setLoading(false));
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    setUser(null);
+    setSession(null);
     setProfile(null);
     setIsAdmin(false);
   };

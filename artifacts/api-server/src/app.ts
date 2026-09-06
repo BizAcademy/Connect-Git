@@ -1,5 +1,6 @@
 import express, { type Express, type Request } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
@@ -45,7 +46,7 @@ app.use(
   }),
 );
 app.use(compression());
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 
 // Rate limiting — 600 requêtes/minute par IP sur toutes les routes /api.
 // 100/min était trop serré : le panneau admin interroge plusieurs endpoints
@@ -82,6 +83,7 @@ function captureRawBody(req: Request, _res: unknown, buf: Buffer) {
 // Allow up to 8 MB JSON payloads to accommodate base64-encoded support images (≤5 MB raw)
 app.use(express.json({ limit: "8mb", verify: captureRawBody }));
 app.use(express.urlencoded({ extended: true, limit: "8mb" }));
+app.use(cookieParser());
 
 app.use("/api", apiLimiter, router);
 

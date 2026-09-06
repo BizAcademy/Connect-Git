@@ -7,11 +7,14 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate:mysql": "pnpm run build && node ./dist/scripts/migrate-mysql.mjs",
+    "import:supabase-users": "node ./scripts/import-supabase-users.mjs"
   },
   "dependencies": {
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
+    "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
@@ -19,10 +22,12 @@
     "express": "^5",
     "express-rate-limit": "^8.5.2",
     "multer": "^2.1.1",
+    "mysql2": "^3.24.3",
     "pino": "^9",
     "pino-http": "^10"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/compression": "^1.8.1",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",

@@ -17,7 +17,11 @@ async function buildAll() {
   const buildTime = new Date().toISOString();
 
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    entryPoints: [
+      path.resolve(artifactDir, "src/index.ts"),
+      path.resolve(artifactDir, "src/scripts/migrate-mysql.ts"),
+    ],
+    outbase: path.resolve(artifactDir, "src"),
     platform: "node",
     bundle: true,
     format: "esm",

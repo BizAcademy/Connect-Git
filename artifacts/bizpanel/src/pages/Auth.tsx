@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/toast";
 import { Eye, EyeOff, User, Lock, Mail, CheckCircle2, Zap, Shield, Clock, Globe, ChevronDown, Gift } from "lucide-react";
 import logoImg from "@/assets/logo-buzzbooster.png";
@@ -14,7 +13,6 @@ import { prefetchImage } from "@/lib/imagePreload";
 prefetchImage(loginHeroImg);
 prefetchImage(signupHeroImg);
 import { SIGNUP_COUNTRIES } from "@/lib/currency";
-import { authedFetch } from "@/lib/authFetch";
 import { REF_CODE_RE, checkRefCode, getStoredRefCode, recordRefVisit, storeRefCode } from "@/lib/referral";
 
 const Auth = () => {
@@ -80,12 +78,15 @@ const Auth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
-    if (error) { setLoading(false); toast.error(error.message); return; }
-    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: data.user.id, _role: "admin" });
+    const response = await fetch("/api/auth/login", {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) { setLoading(false); toast.error(data.error || "Connexion impossible"); return; }
     setLoading(false);
     toast.success("Connexion réussie !");
-    navigate(isAdmin ? "/admin" : "/dashboard");
+    navigate(data.user?.isAdmin ? "/admin" : "/dashboard");
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -111,16 +112,12 @@ const Auth = () => {
         return;
       }
     }
-    const { data, error } = await supabase.auth.signUp({
-      email: signupEmail,
-      password: signupPassword,
-      // Pass country + referral code in metadata so the DB trigger can use them
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: { username, country: signupCountry, ...(refCode ? { referral_code: refCode } : {}) },
-      },
+    const response = await fetch("/api/auth/register", {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: signupEmail, password: signupPassword, username, country: signupCountry, referralCode: refCode || undefined }),
     });
-    if (error) { setLoading(false); toast.error(error.message); return; }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) { setLoading(false); toast.error(data.error || "Inscription impossible"); return; }
 
     // Always store country in localStorage as a guaranteed fallback.
     // This covers the email-confirmation flow where data.session is null
@@ -129,31 +126,6 @@ const Auth = () => {
     // profile still has no country set.
     localStorage.setItem("bb_pending_country", signupCountry);
 
-    // When session is available (email confirmation disabled), also save
-    // immediately via API — retry up to 3× to handle the brief lag
-    // between signUp and profile-row creation by the Supabase trigger.
-    const session = data.session;
-    if (session) {
-      let saved = false;
-      for (let attempt = 0; attempt < 3 && !saved; attempt++) {
-        if (attempt > 0) await new Promise((r) => setTimeout(r, 800));
-        try {
-          const res = await authedFetch("/api/profile/country", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ country: signupCountry }),
-          });
-          if (res.ok) {
-            saved = true;
-            // Do NOT remove bb_pending_country here — DashboardLayout will clear
-            // it only after confirming profile.country is set in the DB.
-            // Removing it here caused a race condition where profile.country was
-            // still null when DashboardLayout mounted, triggering the country modal.
-          }
-        } catch { /* retry */ }
-      }
-    }
-
     setLoading(false);
     toast.success("Compte créé ! Bienvenue sur BUZZ BOOSTER 🎉");
     navigate("/dashboard");
@@ -161,11 +133,7 @@ const Auth = () => {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, { redirectTo: `${window.location.origin}/reset-password` });
-    setLoading(false);
-    if (error) { toast.error(error.message); }
-    else { toast.success("Email de récupération envoyé !"); setShowForgot(false); }
+    toast.error("La récupération de mot de passe n'est pas encore disponible pendant la migration.");
   };
 
   // ─── FORGOT PASSWORD ────────────────────────────────────────────────────────

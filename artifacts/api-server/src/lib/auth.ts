@@ -1,60 +1,50 @@
 import type { Request, Response, NextFunction } from "express";
 import { logger } from "./logger";
-
-const SUPABASE_URL = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-const SUPABASE_ANON_KEY = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
-
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error("Missing required environment variables: SUPABASE_URL and SUPABASE_ANON_KEY must be set");
-}
+import crypto from "node:crypto";
+import type { RowDataPacket } from "mysql2/promise";
+import { getMysqlPool } from "./mysql";
 
 export interface AuthedRequest extends Request {
   userId?: string;
+  /** Legacy archive-route compatibility; custom sessions never set this. */
   userToken?: string;
   isAdmin?: boolean;
 }
 
 export async function requireUser(req: AuthedRequest, res: Response, next: NextFunction) {
-  const auth = req.headers.authorization || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  if (!token) return res.status(401).json({ error: "Authentification requise" });
+  const token = req.cookies?.["bb_session"];
+  if (!token) { res.status(401).json({ error: "Authentification requise" }); return; }
   try {
-    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
-    });
-    if (!r.ok) return res.status(401).json({ error: "Session invalide" });
-    const data = (await r.json()) as { id?: string };
-    if (!data?.id) return res.status(401).json({ error: "Utilisateur introuvable" });
-    req.userId = data.id;
-    req.userToken = token;
+    const hash = crypto.createHash("sha256").update(token).digest("hex");
+    const [rows] = await getMysqlPool().execute<(RowDataPacket & { user_id: string })[]>(
+      "SELECT user_id FROM auth_sessions WHERE token_hash = ? AND revoked_at IS NULL AND expires_at > NOW() LIMIT 1",
+      [hash],
+    );
+    if (!rows[0]?.user_id) { res.status(401).json({ error: "Session invalide" }); return; }
+    req.userId = rows[0].user_id;
     next();
   } catch (err) {
     logger.error({ err }, "auth verification failed");
     res.status(500).json({ error: "Auth verification failed" });
+    return;
   }
 }
 
 export async function requireAdmin(req: AuthedRequest, res: Response, next: NextFunction) {
-  if (!req.userId || !req.userToken) {
-    return res.status(401).json({ error: "Authentification requise" });
+  if (!req.userId) {
+    res.status(401).json({ error: "Authentification requise" });
+    return;
   }
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/has_role`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${req.userToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ _user_id: req.userId, _role: "admin" }),
-    });
-    if (!r.ok) return res.status(403).json({ error: "Accès refusé" });
-    const isAdmin = await r.json();
-    if (isAdmin !== true) return res.status(403).json({ error: "Accès admin requis" });
+    const [rows] = await getMysqlPool().execute<(RowDataPacket & { role: string })[]>(
+      "SELECT role FROM user_roles WHERE user_id = ? AND role = 'admin' LIMIT 1", [req.userId],
+    );
+    if (!rows[0]) { res.status(403).json({ error: "Accès admin requis" }); return; }
     req.isAdmin = true;
     next();
   } catch (err) {
     logger.error({ err }, "admin role verification failed");
     res.status(500).json({ error: "Role verification failed" });
+    return;
   }
 }

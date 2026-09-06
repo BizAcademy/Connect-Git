@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
 import { logger } from "../lib/logger";
 import { requireUser, requireAdmin, type AuthedRequest } from "../lib/auth";
+import { getMysqlPool } from "../lib/mysql";
+import type { RowDataPacket } from "mysql2/promise";
 import {
   readThread,
   appendMessage,
@@ -108,22 +110,11 @@ router.get("/support/uploads/:filename", requireUser, async (req: AuthedRequest,
   if (!isOwnedBy(fname, req.userId!)) {
     // Admin check inline (mirrors requireAdmin)
     try {
-      const SUPABASE_URL = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
-      const SUPABASE_ANON_KEY = process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
-      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-        throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY environment variables must be set");
-      }
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/has_role`, {
-        method: "POST",
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${req.userToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ _user_id: req.userId, _role: "admin" }),
-      });
-      const ok = r.ok && (await r.json()) === true;
-      if (!ok) return res.status(403).end();
+      const [roles] = await getMysqlPool().execute<(RowDataPacket & { role: string })[]>(
+        "SELECT role FROM user_roles WHERE user_id = ? AND role = 'admin' LIMIT 1",
+        [req.userId],
+      );
+      if (!roles[0]) return res.status(403).end();
     } catch {
       return res.status(403).end();
     }

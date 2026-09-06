@@ -47,3 +47,8 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Local-only Supabase exports used by the MySQL cutover importer
+supabase-export*.json
+supabase-export*.csv
+exports/
