@@ -67,7 +67,7 @@ try {
     } = record;
     if (typeof id !== "string" || !crypto.randomUUID || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) throw new Error("Invalid user UUID in export");
     if (typeof email !== "string" || !mcf.test(passwordHash) || !(await bcrypt.getRounds(passwordHash))) throw new Error("Invalid email or bcrypt password format in export");
-    const name = usernameFor({ id, email, username });
+    let name = usernameFor({ id, email, username });
     const balanceMinor = Math.round(Number(balance || 0) * 100);
     const affiliateEarningsMinor = Math.round(Number(affiliate_earnings || 0) * 100);
     if (!Number.isSafeInteger(balanceMinor) || !Number.isSafeInteger(affiliateEarningsMinor)) {
@@ -76,6 +76,14 @@ try {
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
+      const [usernameRows] = await connection.execute(
+        "SELECT user_id FROM profiles WHERE username = ? LIMIT 1",
+        [name],
+      );
+      if (usernameRows.length > 0 && usernameRows[0].user_id !== id) {
+        const suffix = `-${id.slice(0, 8)}`;
+        name = `${name.slice(0, 64 - suffix.length)}${suffix}`;
+      }
       await connection.execute("INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE email = VALUES(email)", [id, email.trim().toLowerCase(), passwordHash]);
       await connection.execute(
         "INSERT INTO profiles (user_id, email, username, country, currency, balance_minor, affiliate_earnings_minor, avatar_url, referral_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE email = VALUES(email), username = VALUES(username), country = COALESCE(VALUES(country), country), currency = COALESCE(VALUES(currency), currency), balance_minor = VALUES(balance_minor), affiliate_earnings_minor = VALUES(affiliate_earnings_minor), avatar_url = COALESCE(VALUES(avatar_url), avatar_url), referral_code = COALESCE(VALUES(referral_code), referral_code)",

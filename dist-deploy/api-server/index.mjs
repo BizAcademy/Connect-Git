@@ -53409,7 +53409,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-06T16:22:35.681Z";
+var BUILD_TIME = "2026-09-06T16:30:06.190Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
