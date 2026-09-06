@@ -2,13 +2,32 @@
 // Local, one-time importer. Input JSON is intentionally never committed.
 import fs from "node:fs/promises";
 import crypto from "node:crypto";
+import path from "node:path";
 import mysql from "mysql2/promise";
 import bcrypt from "bcryptjs";
 
 const input = process.argv.slice(2).find((argument) => argument !== "--");
 if (!input) throw new Error("Usage: pnpm --filter @workspace/api-server import:supabase-users <export.json>");
 const required = ["MYSQL_HOST", "MYSQL_DATABASE", "MYSQL_USER", "MYSQL_PASSWORD"];
-if (required.some((key) => !process.env[key])) throw new Error("Required MYSQL_* configuration is missing");
+if (required.some((key) => !process.env[key])) {
+  const configPath = path.join(path.dirname(path.resolve(input)), "mysql-import-config.json");
+  let config;
+  try {
+    config = JSON.parse(await fs.readFile(configPath, "utf8"));
+  } catch {
+    throw new Error(
+      `Required MYSQL_* configuration is missing. Add a private ${configPath} file beside the export.`,
+    );
+  }
+  for (const key of [...required, "MYSQL_PORT"]) {
+    if (!process.env[key] && config[key] !== undefined) {
+      process.env[key] = String(config[key]);
+    }
+  }
+}
+if (required.some((key) => !process.env[key])) {
+  throw new Error("Required MYSQL_* configuration is missing from mysql-import-config.json");
+}
 const raw = JSON.parse(await fs.readFile(input, "utf8"));
 const records = Array.isArray(raw)
   ? (raw.length === 1 && Array.isArray(raw[0]?.export_data) ? raw[0].export_data : raw)

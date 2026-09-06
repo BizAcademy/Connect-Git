@@ -15793,12 +15793,12 @@ var require_query2 = __commonJS({
         this._fields.push(this._currentFields);
         return this.readField;
       }
-      _streamLocalInfile(connection, path) {
+      _streamLocalInfile(connection, path2) {
         if (this._streamFactory) {
-          this._localStream = this._streamFactory(path);
+          this._localStream = this._streamFactory(path2);
         } else {
           this._localStreamError = new Error(
-            `As a result of LOCAL INFILE command server wants to read ${path} file, but as of v2.0 you must provide streamFactory option returning ReadStream.`
+            `As a result of LOCAL INFILE command server wants to read ${path2} file, but as of v2.0 you must provide streamFactory option returning ReadStream.`
           );
           connection.writePacket(EmptyPacket);
           return this.infileOk;
@@ -20280,6 +20280,7 @@ var require_promise = __commonJS({
 var import_promise = __toESM(require_promise(), 1);
 import fs from "node:fs/promises";
 import crypto2 from "node:crypto";
+import path from "node:path";
 
 // ../../node_modules/.pnpm/bcryptjs@3.0.3/node_modules/bcryptjs/index.js
 import nodeCrypto from "crypto";
@@ -22008,7 +22009,25 @@ var bcryptjs_default = {
 var input = process.argv.slice(2).find((argument) => argument !== "--");
 if (!input) throw new Error("Usage: pnpm --filter @workspace/api-server import:supabase-users <export.json>");
 var required = ["MYSQL_HOST", "MYSQL_DATABASE", "MYSQL_USER", "MYSQL_PASSWORD"];
-if (required.some((key) => !process.env[key])) throw new Error("Required MYSQL_* configuration is missing");
+if (required.some((key) => !process.env[key])) {
+  const configPath = path.join(path.dirname(path.resolve(input)), "mysql-import-config.json");
+  let config;
+  try {
+    config = JSON.parse(await fs.readFile(configPath, "utf8"));
+  } catch {
+    throw new Error(
+      `Required MYSQL_* configuration is missing. Add a private ${configPath} file beside the export.`
+    );
+  }
+  for (const key of [...required, "MYSQL_PORT"]) {
+    if (!process.env[key] && config[key] !== void 0) {
+      process.env[key] = String(config[key]);
+    }
+  }
+}
+if (required.some((key) => !process.env[key])) {
+  throw new Error("Required MYSQL_* configuration is missing from mysql-import-config.json");
+}
 var raw = JSON.parse(await fs.readFile(input, "utf8"));
 var records = Array.isArray(raw) ? raw.length === 1 && Array.isArray(raw[0]?.export_data) ? raw[0].export_data : raw : Array.isArray(raw?.export_data) ? raw.export_data : raw?.users;
 if (!Array.isArray(records)) {
