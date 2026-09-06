@@ -128,6 +128,22 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  // The Plesk deployment package is intentionally self-contained. Bundle the
+  // one-time Supabase importer separately so Plesk's "Run script" action can
+  // execute it with the Node application's MYSQL_* environment variables.
+  await esbuild({
+    entryPoints: [path.resolve(artifactDir, "scripts/import-supabase-users.mjs")],
+    platform: "node",
+    bundle: true,
+    format: "esm",
+    outfile: path.resolve(distDir, "scripts/import-supabase-users.mjs"),
+    logLevel: "info",
+    banner: {
+      js: `import { createRequire as __bannerCrReq } from 'node:module';
+globalThis.require = __bannerCrReq(import.meta.url);`,
+    },
+  });
 }
 
 buildAll().catch((err) => {

@@ -49,7 +49,8 @@ cat > dist-deploy/api-server/package.json << 'EOF'
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node --enable-source-maps index.mjs"
+    "start": "node --enable-source-maps index.mjs",
+    "import:supabase-users": "node scripts/import-supabase-users.mjs"
   },
   "engines": {
     "node": ">=20"

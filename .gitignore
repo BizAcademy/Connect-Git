@@ -52,3 +52,6 @@ Thumbs.db
 supabase-export*.json
 supabase-export*.csv
 exports/
+
+# User-provided screenshots are reference material, not deployable assets.
+attached_assets/image_*.png
