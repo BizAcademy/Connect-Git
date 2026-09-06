@@ -10,8 +10,12 @@ if (!input) throw new Error("Usage: pnpm --filter @workspace/api-server import:s
 const required = ["MYSQL_HOST", "MYSQL_DATABASE", "MYSQL_USER", "MYSQL_PASSWORD"];
 if (required.some((key) => !process.env[key])) throw new Error("Required MYSQL_* configuration is missing");
 const raw = JSON.parse(await fs.readFile(input, "utf8"));
-const records = Array.isArray(raw) ? raw : raw.users;
-if (!Array.isArray(records)) throw new Error("Export must be a JSON array or { users: [...] }");
+const records = Array.isArray(raw)
+  ? (raw.length === 1 && Array.isArray(raw[0]?.export_data) ? raw[0].export_data : raw)
+  : (Array.isArray(raw?.export_data) ? raw.export_data : raw?.users);
+if (!Array.isArray(records)) {
+  throw new Error("Export must be a JSON array, Supabase Copy as JSON result, or { users: [...] }");
+}
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST, port: Number(process.env.MYSQL_PORT || 3306),
   database: process.env.MYSQL_DATABASE, user: process.env.MYSQL_USER, password: process.env.MYSQL_PASSWORD,
