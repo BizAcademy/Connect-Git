@@ -20290,11 +20290,11 @@ import { fileURLToPath } from "node:url";
 var import_promise = __toESM(require_promise(), 1);
 var pool;
 function config() {
-  const host = process.env["MYSQL_HOST"];
-  const database = process.env["MYSQL_DATABASE"];
-  const user = process.env["MYSQL_USER"];
+  const host = process.env["MYSQL_HOST"]?.trim();
+  const database = process.env["MYSQL_DATABASE"]?.trim();
+  const user = process.env["MYSQL_USER"]?.trim();
   const password = process.env["MYSQL_PASSWORD"];
-  const rawPort = process.env["MYSQL_PORT"];
+  const rawPort = process.env["MYSQL_PORT"]?.trim();
   if (!host || !database || !user || password === void 0) {
     throw new Error("MYSQL_HOST, MYSQL_DATABASE, MYSQL_USER and MYSQL_PASSWORD are required");
   }
