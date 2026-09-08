@@ -138,6 +138,37 @@ router.post("/smm/order", requireUser, rateLimitOrders, async (req: AuthedReques
   } catch(err) { logger.error({err,userId:req.userId!,providerId},"SMM order error"); return res.status(500).json({error:"Erreur interne lors de la commande"}); }
 });
 router.get("/smm/user-orders",requireUser,async(req:AuthedRequest,res)=>{try{const [rows]=await getMysqlPool().execute<RowDataPacket[]>("SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC",[req.userId!]);res.json(rows.map(orderView));}catch(err){req.log.error({err},"user-orders failed");res.json([]);}});
+router.get("/smm/dashboard-summary",requireUser,async(req:AuthedRequest,res)=>{
+  try{
+    const [[statsRows],[recentRows]]=await Promise.all([
+      getMysqlPool().execute<RowDataPacket[]>(
+        `SELECT COUNT(*) AS total,
+          COALESCE(SUM(status IN ('pending','processing')),0) AS pending,
+          COALESCE(SUM(status='completed'),0) AS completed
+         FROM orders WHERE user_id=?`,
+        [req.userId!],
+      ),
+      getMysqlPool().execute<RowDataPacket[]>(
+        `SELECT id,provider,service_id,service_name,service_category,link,quantity,
+          charge_minor,currency,status,provider_order_id,external_order_id,created_at,updated_at
+         FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 6`,
+        [req.userId!],
+      ),
+    ]);
+    const stats=statsRows[0]??{};
+    return res.json({
+      stats:{
+        total:Number(stats.total??0),
+        pending:Number(stats.pending??0),
+        completed:Number(stats.completed??0),
+      },
+      recent_orders:recentRows.map(orderView),
+    });
+  }catch(err){
+    req.log.error({err},"dashboard-summary failed");
+    return res.status(500).json({error:"Impossible de charger le tableau de bord"});
+  }
+});
 router.get("/smm/user-payments",requireUser,async(req:AuthedRequest,res)=>{try{const [rows]=await getMysqlPool().execute<RowDataPacket[]>("SELECT *, amount_minor / 100 AS amount, fee_minor / 100 AS fee, bonus_amount_minor / 100 AS bonus_amount, charge_minor / 100 AS charge FROM payments WHERE user_id=? ORDER BY created_at DESC",[req.userId!]);res.json(rows);}catch(err){req.log.error({err},"user-payments failed");res.json([]);}});
 router.get("/smm/quote",requireUser,async(req:AuthedRequest,res)=>{const provider=parseProviderId(req.query["provider"]), service=Number(req.query["service"]), quantity=Number(req.query["quantity"]);if(!Number.isInteger(service)||service<=0)return res.status(400).json({error:"service invalide"});if(!Number.isInteger(quantity)||quantity<1)return res.status(400).json({error:"quantity invalide"});try{const svc=(await getRawServices(provider)).find((s:any)=>Number(s.service)===service);if(!svc)return res.status(404).json({error:"service introuvable"});const ov=(await loadPricing(provider))[String(service)];if(ov?.hidden)return res.status(403).json({error:"Service non disponible"});const p=await profile(req.userId!);const custom=typeof ov?.price_fcfa === "number";const per=custom?ov!.price_fcfa:defaultPriceFcfaForCurrency(svc.rate,provider,currency(p?.country??null,p?.currency??null));return res.json({service,provider,quantity,price_per_1000_fcfa:per,total_fcfa:Math.ceil(quantity/1000*per),price_is_custom:custom});}catch(err){return res.status(500).json({error:(err as Error).message});}});
 router.get("/smm/status",requireUser,async(req:AuthedRequest,res)=>{const external=String(req.query["order"]||""),provider=parseProviderId(req.query["provider"]);if(!external)return res.status(400).json({error:"order id required"});try{const [rows]=await getMysqlPool().execute<RowDataPacket[]>("SELECT user_id FROM orders WHERE provider=? AND (provider_order_id=? OR external_order_id=?) LIMIT 1",[provider,external,external]);if(!rows[0]||String(rows[0].user_id)!==req.userId)return res.status(403).json({error:"Commande introuvable ou accès refusé"});return res.json({...await callProvider(provider,"status",{order:external}),provider});}catch(err){return res.status(500).json({error:(err as Error).message});}});

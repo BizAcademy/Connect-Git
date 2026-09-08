@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-06T19:58:07.474Z";
+var BUILD_TIME = "2026-09-08T10:53:03.957Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -74189,6 +74189,37 @@ router2.get("/smm/user-orders", requireUser, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "user-orders failed");
     res.json([]);
+  }
+});
+router2.get("/smm/dashboard-summary", requireUser, async (req, res) => {
+  try {
+    const [[statsRows], [recentRows]] = await Promise.all([
+      getMysqlPool().execute(
+        `SELECT COUNT(*) AS total,
+          COALESCE(SUM(status IN ('pending','processing')),0) AS pending,
+          COALESCE(SUM(status='completed'),0) AS completed
+         FROM orders WHERE user_id=?`,
+        [req.userId]
+      ),
+      getMysqlPool().execute(
+        `SELECT id,provider,service_id,service_name,service_category,link,quantity,
+          charge_minor,currency,status,provider_order_id,external_order_id,created_at,updated_at
+         FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 6`,
+        [req.userId]
+      )
+    ]);
+    const stats = statsRows[0] ?? {};
+    return res.json({
+      stats: {
+        total: Number(stats.total ?? 0),
+        pending: Number(stats.pending ?? 0),
+        completed: Number(stats.completed ?? 0)
+      },
+      recent_orders: recentRows.map(orderView)
+    });
+  } catch (err) {
+    req.log.error({ err }, "dashboard-summary failed");
+    return res.status(500).json({ error: "Impossible de charger le tableau de bord" });
   }
 });
 router2.get("/smm/user-payments", requireUser, async (req, res) => {

@@ -1,0 +1,1 @@
+function a(r){if(!r)return"—";const e=String(r).toLowerCase().trim();return e==="afribapay"||e==="soleaspay"||e==="mobile_money"||e==="mobile-money"?"Mobile Money":e==="card"||e==="carte"?"Carte bancaire":e==="bank"||e==="virement"?"Virement bancaire":e.charAt(0).toUpperCase()+e.slice(1)}export{a as f};

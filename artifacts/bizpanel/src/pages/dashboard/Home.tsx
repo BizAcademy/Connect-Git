@@ -8,7 +8,6 @@ import {
   ShoppingCart, Wallet, TrendingUp, Clock, CheckCircle2,
   ArrowRight, PlusCircle, BarChart2, Package,
 } from "lucide-react";
-import { syncOrdersStatus } from "@/lib/orderSync";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 import { AdvertisementModal, type Advertisement } from "@/components/dashboard/AdvertisementModal";
 
@@ -45,24 +44,23 @@ export default function DashboardHome() {
 
   useEffect(() => {
     if (!user) return;
-    const compute = (orders: any[]) => {
-      setStats({
-        total: orders.length,
-        pending: orders.filter(o => o.status === "pending" || o.status === "processing").length,
-        completed: orders.filter(o => o.status === "completed").length,
-      });
-      setRecentOrders(orders.slice(0, 6));
-    };
     const load = async () => {
       setLoading(true);
       try {
-        const response = await authedFetch("/api/smm/user-orders");
-        if (!response.ok) throw new Error("Impossible de charger les commandes");
-        const orders = await response.json() as any[];
-        compute(orders);
-        compute(await syncOrdersStatus(orders));
+        const response = await authedFetch("/api/smm/dashboard-summary");
+        if (!response.ok) throw new Error("Impossible de charger le tableau de bord");
+        const data = await response.json() as {
+          stats?: { total?: number; pending?: number; completed?: number };
+          recent_orders?: any[];
+        };
+        setStats({
+          total: Number(data.stats?.total || 0),
+          pending: Number(data.stats?.pending || 0),
+          completed: Number(data.stats?.completed || 0),
+        });
+        setRecentOrders(data.recent_orders || []);
       } catch (error) {
-        console.error("[DashboardHome] orders load error", error);
+        console.error("[DashboardHome] summary load error", error);
       } finally {
         setLoading(false);
       }
