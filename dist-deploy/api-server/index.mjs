@@ -51969,6 +51969,157 @@ var init_logger = __esm({
   }
 });
 
+// src/lib/operator-health.ts
+var operator_health_exports = {};
+__export(operator_health_exports, {
+  COOLDOWN_MS: () => COOLDOWN_MS,
+  clearOperatorHealth: () => clearOperatorHealth,
+  isOperatorAvailabilityError: () => isOperatorAvailabilityError,
+  isOperatorUnavailable: () => isOperatorUnavailable,
+  isUserSideError: () => isUserSideError,
+  listUnavailableOperators: () => listUnavailableOperators,
+  markOperatorFailure: () => markOperatorFailure,
+  markOperatorOk: () => markOperatorOk
+});
+function key(country, operator) {
+  return `${String(country).toUpperCase()}:${String(operator).toLowerCase()}`;
+}
+function isOperatorAvailabilityError(args) {
+  const { httpStatus, message, payload } = args;
+  if (typeof httpStatus === "number" && httpStatus >= 500) return true;
+  const haystack = [
+    message ?? "",
+    typeof payload === "string" ? payload : "",
+    payload && typeof payload === "object" ? JSON.stringify(payload) : ""
+  ].join(" ").toLowerCase();
+  if (!haystack) return false;
+  const availabilityPatterns = [
+    /operator\s+(not|un)?available/i,
+    /operator\s+(is\s+)?down/i,
+    /operator\s+offline/i,
+    /service\s+(is\s+)?(unavailable|indisponible|down|offline)/i,
+    /service\s+momentan/i,
+    // "momentanément indisponible"
+    /provider\s+(unavailable|down|offline)/i,
+    /maintenance/i,
+    /temporair?ement\s+indisponible/i,
+    // "temporairement indisponible"
+    /momentan[eé]ment\s+indisponible/i,
+    /timeout/i,
+    /gateway\s+(timeout|error)/i,
+    /upstream/i,
+    /try\s+again\s+later/i,
+    /r[eé]essayez\s+plus\s+tard/i
+  ];
+  if (availabilityPatterns.some((re) => re.test(haystack))) return true;
+  return false;
+}
+function isUserSideError(args) {
+  const haystack = [
+    args.message ?? "",
+    typeof args.payload === "string" ? args.payload : "",
+    args.payload && typeof args.payload === "object" ? JSON.stringify(args.payload) : ""
+  ].join(" ").toLowerCase();
+  if (!haystack) return false;
+  const userPatterns = [
+    /invalid\s+(otp|code)/i,
+    /wrong\s+(otp|code|pin)/i,
+    /code\s+otp\s+(invalide|incorrect)/i,
+    /insufficient\s+(user\s+)?(funds|balance)/i,
+    /solde\s+insuffisant/i,
+    /invalid\s+phone/i,
+    /num[eé]ro\s+invalide/i,
+    /invalid\s+amount/i,
+    /montant\s+invalide/i,
+    /not\s+a\s+(subscriber|customer)/i,
+    /cancell?ed\s+by\s+(user|customer)/i,
+    /annul[eé]\s+par/i
+  ];
+  return userPatterns.some((re) => re.test(haystack));
+}
+function markOperatorFailure(country, operator, errorMsg) {
+  if (!country || !operator) return;
+  const k = key(country, operator);
+  const prev = state.get(k);
+  const entry = {
+    unavailableUntil: Date.now() + COOLDOWN_MS,
+    lastError: String(errorMsg).slice(0, 300),
+    lastFailureAt: Date.now(),
+    failureCount: (prev?.failureCount ?? 0) + 1
+  };
+  state.set(k, entry);
+  logger.warn(
+    { country, operator, until: new Date(entry.unavailableUntil).toISOString(), failureCount: entry.failureCount, err: entry.lastError },
+    "operator marked unavailable"
+  );
+}
+function markOperatorOk(country, operator) {
+  if (!country || !operator) return;
+  const k = key(country, operator);
+  if (state.delete(k)) {
+    logger.info({ country, operator }, "operator marked healthy (cleared cooldown)");
+  }
+}
+function isOperatorUnavailable(country, operator) {
+  const k = key(country, operator);
+  const e = state.get(k);
+  if (!e) return false;
+  if (e.unavailableUntil <= Date.now()) {
+    state.delete(k);
+    return false;
+  }
+  return true;
+}
+function listUnavailableOperators() {
+  const now = Date.now();
+  const out = [];
+  for (const [k, v] of state.entries()) {
+    if (v.unavailableUntil <= now) {
+      state.delete(k);
+      continue;
+    }
+    const [country, operator] = k.split(":");
+    out.push({
+      country,
+      operator,
+      unavailableUntil: new Date(v.unavailableUntil).toISOString(),
+      lastError: v.lastError,
+      lastFailureAt: new Date(v.lastFailureAt).toISOString(),
+      failureCount: v.failureCount
+    });
+  }
+  return out;
+}
+function clearOperatorHealth(country, operator) {
+  if (!country) {
+    const n2 = state.size;
+    state.clear();
+    logger.info({ cleared: n2 }, "operator health: cleared all");
+    return n2;
+  }
+  if (operator) {
+    return state.delete(key(country, operator)) ? 1 : 0;
+  }
+  let n = 0;
+  const prefix = `${country.toUpperCase()}:`;
+  for (const k of [...state.keys()]) {
+    if (k.startsWith(prefix)) {
+      state.delete(k);
+      n++;
+    }
+  }
+  return n;
+}
+var COOLDOWN_MS, state;
+var init_operator_health = __esm({
+  "src/lib/operator-health.ts"() {
+    "use strict";
+    init_logger();
+    COOLDOWN_MS = 10 * 60 * 1e3;
+    state = /* @__PURE__ */ new Map();
+  }
+});
+
 // ../../node_modules/.pnpm/media-typer@0.3.0/node_modules/media-typer/index.js
 var require_media_typer2 = __commonJS({
   "../../node_modules/.pnpm/media-typer@0.3.0/node_modules/media-typer/index.js"(exports) {
@@ -68556,157 +68707,6 @@ var require_multer = __commonJS({
   }
 });
 
-// src/lib/operator-health.ts
-var operator_health_exports = {};
-__export(operator_health_exports, {
-  COOLDOWN_MS: () => COOLDOWN_MS,
-  clearOperatorHealth: () => clearOperatorHealth,
-  isOperatorAvailabilityError: () => isOperatorAvailabilityError,
-  isOperatorUnavailable: () => isOperatorUnavailable,
-  isUserSideError: () => isUserSideError,
-  listUnavailableOperators: () => listUnavailableOperators,
-  markOperatorFailure: () => markOperatorFailure,
-  markOperatorOk: () => markOperatorOk
-});
-function key(country, operator) {
-  return `${String(country).toUpperCase()}:${String(operator).toLowerCase()}`;
-}
-function isOperatorAvailabilityError(args) {
-  const { httpStatus, message, payload } = args;
-  if (typeof httpStatus === "number" && httpStatus >= 500) return true;
-  const haystack = [
-    message ?? "",
-    typeof payload === "string" ? payload : "",
-    payload && typeof payload === "object" ? JSON.stringify(payload) : ""
-  ].join(" ").toLowerCase();
-  if (!haystack) return false;
-  const availabilityPatterns = [
-    /operator\s+(not|un)?available/i,
-    /operator\s+(is\s+)?down/i,
-    /operator\s+offline/i,
-    /service\s+(is\s+)?(unavailable|indisponible|down|offline)/i,
-    /service\s+momentan/i,
-    // "momentanément indisponible"
-    /provider\s+(unavailable|down|offline)/i,
-    /maintenance/i,
-    /temporair?ement\s+indisponible/i,
-    // "temporairement indisponible"
-    /momentan[eé]ment\s+indisponible/i,
-    /timeout/i,
-    /gateway\s+(timeout|error)/i,
-    /upstream/i,
-    /try\s+again\s+later/i,
-    /r[eé]essayez\s+plus\s+tard/i
-  ];
-  if (availabilityPatterns.some((re) => re.test(haystack))) return true;
-  return false;
-}
-function isUserSideError(args) {
-  const haystack = [
-    args.message ?? "",
-    typeof args.payload === "string" ? args.payload : "",
-    args.payload && typeof args.payload === "object" ? JSON.stringify(args.payload) : ""
-  ].join(" ").toLowerCase();
-  if (!haystack) return false;
-  const userPatterns = [
-    /invalid\s+(otp|code)/i,
-    /wrong\s+(otp|code|pin)/i,
-    /code\s+otp\s+(invalide|incorrect)/i,
-    /insufficient\s+(user\s+)?(funds|balance)/i,
-    /solde\s+insuffisant/i,
-    /invalid\s+phone/i,
-    /num[eé]ro\s+invalide/i,
-    /invalid\s+amount/i,
-    /montant\s+invalide/i,
-    /not\s+a\s+(subscriber|customer)/i,
-    /cancell?ed\s+by\s+(user|customer)/i,
-    /annul[eé]\s+par/i
-  ];
-  return userPatterns.some((re) => re.test(haystack));
-}
-function markOperatorFailure(country, operator, errorMsg) {
-  if (!country || !operator) return;
-  const k = key(country, operator);
-  const prev = state.get(k);
-  const entry = {
-    unavailableUntil: Date.now() + COOLDOWN_MS,
-    lastError: String(errorMsg).slice(0, 300),
-    lastFailureAt: Date.now(),
-    failureCount: (prev?.failureCount ?? 0) + 1
-  };
-  state.set(k, entry);
-  logger.warn(
-    { country, operator, until: new Date(entry.unavailableUntil).toISOString(), failureCount: entry.failureCount, err: entry.lastError },
-    "operator marked unavailable"
-  );
-}
-function markOperatorOk(country, operator) {
-  if (!country || !operator) return;
-  const k = key(country, operator);
-  if (state.delete(k)) {
-    logger.info({ country, operator }, "operator marked healthy (cleared cooldown)");
-  }
-}
-function isOperatorUnavailable(country, operator) {
-  const k = key(country, operator);
-  const e = state.get(k);
-  if (!e) return false;
-  if (e.unavailableUntil <= Date.now()) {
-    state.delete(k);
-    return false;
-  }
-  return true;
-}
-function listUnavailableOperators() {
-  const now = Date.now();
-  const out = [];
-  for (const [k, v] of state.entries()) {
-    if (v.unavailableUntil <= now) {
-      state.delete(k);
-      continue;
-    }
-    const [country, operator] = k.split(":");
-    out.push({
-      country,
-      operator,
-      unavailableUntil: new Date(v.unavailableUntil).toISOString(),
-      lastError: v.lastError,
-      lastFailureAt: new Date(v.lastFailureAt).toISOString(),
-      failureCount: v.failureCount
-    });
-  }
-  return out;
-}
-function clearOperatorHealth(country, operator) {
-  if (!country) {
-    const n2 = state.size;
-    state.clear();
-    logger.info({ cleared: n2 }, "operator health: cleared all");
-    return n2;
-  }
-  if (operator) {
-    return state.delete(key(country, operator)) ? 1 : 0;
-  }
-  let n = 0;
-  const prefix = `${country.toUpperCase()}:`;
-  for (const k of [...state.keys()]) {
-    if (k.startsWith(prefix)) {
-      state.delete(k);
-      n++;
-    }
-  }
-  return n;
-}
-var COOLDOWN_MS, state;
-var init_operator_health = __esm({
-  "src/lib/operator-health.ts"() {
-    "use strict";
-    init_logger();
-    COOLDOWN_MS = 10 * 60 * 1e3;
-    state = /* @__PURE__ */ new Map();
-  }
-});
-
 // src/app.ts
 var import_express11 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-08T10:53:03.957Z";
+var BUILD_TIME = "2026-09-08T10:56:22.337Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -76512,6 +76512,377 @@ function operatorLogoPath(filename) {
   return /^[a-zA-Z0-9_-]{1,100}-[a-f0-9]{16}\.(svg|png|jpg)$/i.test(filename) ? path.join(LOGO_DIR, filename) : null;
 }
 
+// src/lib/afribapay.ts
+init_logger();
+init_operator_health();
+import crypto7 from "node:crypto";
+var API_USER = process.env["AFRIBAPAY_API_USER"] ?? "";
+var API_KEY = process.env["AFRIBAPAY_API_KEY"] ?? "";
+var MERCHANT_KEY = process.env["AFRIBAPAY_MERCHANT_KEY"] ?? "";
+var API_BASE = (process.env["AFRIBAPAY_API_BASE"] || "https://api.afribapay.com").replace(/\/+$/, "");
+var EXCLUDED_COUNTRIES = /* @__PURE__ */ new Set([]);
+var AfribapayNotConfiguredError = class extends Error {
+  constructor() {
+    super("Service de paiement non configur\xE9");
+    this.name = "AfribapayNotConfiguredError";
+  }
+};
+var AfribapayApiError = class extends Error {
+  status;
+  payload;
+  constructor(status, payload, message) {
+    super(message || `Erreur de paiement HTTP ${status}`);
+    this.status = status;
+    this.payload = payload;
+  }
+};
+function isAfribapayConfigured() {
+  return Boolean(API_USER && API_KEY && MERCHANT_KEY);
+}
+function ensureConfigured() {
+  if (!isAfribapayConfigured()) throw new AfribapayNotConfiguredError();
+}
+function isCountryExcluded(code) {
+  if (!code) return false;
+  return EXCLUDED_COUNTRIES.has(String(code).toUpperCase());
+}
+var cachedToken = null;
+var tokenInflight = null;
+var tokenBackoffUntil = 0;
+var TOKEN_BACKOFF_MS = 2e4;
+async function fetchNewToken() {
+  ensureConfigured();
+  const basic = Buffer.from(`${API_USER}:${API_KEY}`).toString("base64");
+  const r = await fetch(`${API_BASE}/v1/token`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${basic}`,
+      "Content-Type": "application/json"
+    }
+  });
+  let body = null;
+  try {
+    body = await r.json();
+  } catch {
+  }
+  if (!r.ok) {
+    logger.error({ status: r.status, body }, "AfribaPay token fetch failed");
+    tokenBackoffUntil = Date.now() + TOKEN_BACKOFF_MS;
+    throw new AfribapayApiError(r.status, body, "\xC9chec r\xE9cup\xE9ration du jeton de paiement");
+  }
+  const token = body?.access_token || body?.token || body?.data?.access_token;
+  const expiresIn = Number(body?.expires_in || body?.data?.expires_in || 9e4);
+  if (!token) {
+    throw new AfribapayApiError(500, body, "Jeton de paiement introuvable dans la r\xE9ponse");
+  }
+  return { token, expiresAt: Date.now() + Math.max(30, expiresIn - 60) * 1e3 };
+}
+async function getToken() {
+  if (cachedToken && cachedToken.expiresAt > Date.now()) {
+    return cachedToken.token;
+  }
+  if (Date.now() < tokenBackoffUntil) {
+    const waitSec = Math.ceil((tokenBackoffUntil - Date.now()) / 1e3);
+    throw new AfribapayApiError(503, null, `Authentification de paiement en attente (${waitSec}s)`);
+  }
+  if (tokenInflight) return tokenInflight.then((e) => e.token);
+  tokenInflight = fetchNewToken().then((entry) => {
+    cachedToken = entry;
+    return entry;
+  }).finally(() => {
+    tokenInflight = null;
+  });
+  return tokenInflight.then((e) => e.token);
+}
+function resetTokenState() {
+  cachedToken = null;
+  tokenInflight = null;
+  tokenBackoffUntil = 0;
+  logger.info("AfribaPay token state reset \u2014 next request will fetch a fresh token");
+}
+function getTokenDiagnostics() {
+  return {
+    hasToken: cachedToken !== null && cachedToken.expiresAt > Date.now(),
+    tokenExpiresAt: cachedToken?.expiresAt ?? null,
+    backoffUntil: tokenBackoffUntil,
+    backoffActive: Date.now() < tokenBackoffUntil
+  };
+}
+async function authedFetch(path6, init = {}) {
+  ensureConfigured();
+  const token = await getToken();
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...init.headers || {}
+  };
+  const r = await fetch(`${API_BASE}${path6}`, { ...init, headers });
+  let body = null;
+  const text = await r.text();
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    body = text;
+  }
+  if (r.status === 401 && cachedToken) {
+    cachedToken = null;
+    const token2 = await getToken();
+    headers.Authorization = `Bearer ${token2}`;
+    const r2 = await fetch(`${API_BASE}${path6}`, { ...init, headers });
+    const text2 = await r2.text();
+    let body2 = null;
+    try {
+      body2 = text2 ? JSON.parse(text2) : null;
+    } catch {
+      body2 = text2;
+    }
+    if (!r2.ok) throw new AfribapayApiError(r2.status, body2);
+    return body2;
+  }
+  if (!r.ok) throw new AfribapayApiError(r.status, body);
+  return body;
+}
+var COUNTRIES_TTL_MS = 6e4;
+var countriesCache = null;
+var countriesInflight = null;
+function isOperatorAvailable(op) {
+  const truthy = (v) => v === true || v === 1 || v === "1" || v === "true";
+  const falsy = (v) => v === false || v === 0 || v === "0" || v === "false";
+  if (op == null) return false;
+  if (op.enabled !== void 0 && falsy(op.enabled)) return false;
+  if (op.active !== void 0 && falsy(op.active)) return false;
+  if (op.available !== void 0 && falsy(op.available)) return false;
+  if (op.is_active !== void 0 && falsy(op.is_active)) return false;
+  if (op.is_enabled !== void 0 && falsy(op.is_enabled)) return false;
+  if (truthy(op.enabled) || truthy(op.active) || truthy(op.available)) return true;
+  const status = String(op.status ?? op.state ?? "").toLowerCase().trim();
+  if (status) {
+    const okStates = /* @__PURE__ */ new Set(["active", "available", "online", "up", "enabled", "operational", "ok"]);
+    const koStates = /* @__PURE__ */ new Set([
+      "inactive",
+      "unavailable",
+      "offline",
+      "down",
+      "disabled",
+      "suspended",
+      "maintenance",
+      "closed",
+      "ko"
+    ]);
+    if (koStates.has(status)) return false;
+    if (okStates.has(status)) return true;
+  }
+  return true;
+}
+async function listCountries(forceRefresh = false) {
+  if (!forceRefresh && countriesCache && countriesCache.expiresAt > Date.now()) {
+    return countriesCache.value;
+  }
+  if (!forceRefresh && countriesInflight) return countriesInflight;
+  const run = (async () => {
+    const value = await fetchCountriesFresh();
+    countriesCache = { value, expiresAt: Date.now() + COUNTRIES_TTL_MS };
+    return value;
+  })();
+  countriesInflight = run;
+  run.finally(() => {
+    countriesInflight = null;
+  }).catch(() => {
+  });
+  return run;
+}
+async function fetchCountriesFresh() {
+  const data = await authedFetch("/v1/countries", { method: "GET" });
+  const inner = data?.data ?? data;
+  let rows;
+  if (Array.isArray(inner)) {
+    rows = inner;
+  } else if (inner && typeof inner === "object") {
+    rows = Object.values(inner);
+  } else {
+    rows = [];
+  }
+  const normalized = rows.map((row) => {
+    const code = String(row.code || row.country_code || row.iso2 || "").toUpperCase();
+    let ops = [];
+    if (Array.isArray(row.operators)) {
+      ops = row.operators;
+    } else if (row.currencies && typeof row.currencies === "object") {
+      const firstCur = Object.values(row.currencies)[0];
+      ops = Array.isArray(firstCur?.operators) ? firstCur.operators : [];
+    } else if (Array.isArray(row.providers)) {
+      ops = row.providers;
+    }
+    let currency2;
+    if (row.currency) {
+      currency2 = String(row.currency);
+    } else if (row.currencies && typeof row.currencies === "object") {
+      currency2 = Object.keys(row.currencies)[0];
+    }
+    return {
+      code,
+      name: String(row.name || row.country_name || code),
+      prefix: String(row.prefix || row.dial_code || row.phone_prefix || "").replace(/^0+/, "") || void 0,
+      currency: currency2,
+      operators: ops.filter((op) => isOperatorAvailable(op)).map((op) => ({
+        code: String(op.code || op.operator_code || op.id || op.name || ""),
+        name: String(op.name || op.operator_name || op.display_name || op.code || ""),
+        otp_required: Boolean(
+          op.otp_required === true || op.otp_required === 1 || op.otp_required === "1"
+        ),
+        currency: currency2
+      })).filter((op) => op.code)
+    };
+  }).filter((c) => c.code && c.operators.length > 0);
+  return normalized;
+}
+async function listAllowedCountries(forceRefresh = false) {
+  const all = await listCountries(forceRefresh);
+  return all.filter((c) => !isCountryExcluded(c.code)).map((c) => ({
+    ...c,
+    // Filtre dynamique : opérateurs marqués "en panne" via le circuit
+    // breaker (échecs récents de payin) sont masqués jusqu'à expiration
+    // du cooldown.
+    operators: c.operators.filter((op) => !isOperatorUnavailable(c.code, op.code))
+  })).filter((c) => c.operators.length > 0);
+}
+async function payin(params) {
+  ensureConfigured();
+  if (isCountryExcluded(params.country)) {
+    throw new AfribapayApiError(400, null, "Pays non support\xE9");
+  }
+  const body = {
+    operator: params.operator,
+    country: String(params.country).toUpperCase(),
+    phone_number: params.phone_number,
+    amount: params.amount,
+    currency: params.currency,
+    order_id: params.order_id,
+    merchant_key: MERCHANT_KEY,
+    notify_url: params.notify_url
+  };
+  if (params.otp_code) body["otp_code"] = params.otp_code;
+  let data;
+  try {
+    data = await authedFetch("/v1/pay/payin", {
+      method: "POST",
+      body: JSON.stringify(body)
+    });
+  } catch (err) {
+    if (err instanceof AfribapayApiError) {
+      const isUserErr = isUserSideError({ message: err.message, payload: err.payload });
+      if (!isUserErr && isOperatorAvailabilityError({ httpStatus: err.status, message: err.message, payload: err.payload })) {
+        markOperatorFailure(params.country, params.operator, err.message);
+      }
+    } else if (err instanceof Error) {
+      markOperatorFailure(params.country, params.operator, err.message);
+    }
+    throw err;
+  }
+  const inner = data?.data ?? data;
+  const status = inner?.status || data?.status || void 0;
+  const message = inner?.message || data?.message || void 0;
+  const statusUpper = String(status || "").toUpperCase();
+  if (statusUpper === "FAILED" || statusUpper === "ERROR") {
+    if (isOperatorAvailabilityError({ message, payload: data })) {
+      markOperatorFailure(params.country, params.operator, String(message || "operator failure"));
+    }
+  } else {
+    markOperatorOk(params.country, params.operator);
+  }
+  const redirectUrl = inner?.payment_url || inner?.checkout_url || inner?.redirect_url || inner?.wave_url || inner?.paymentUrl || inner?.checkoutUrl || data?.payment_url || data?.checkout_url || data?.redirect_url || void 0;
+  return {
+    transaction_id: inner?.transaction_id || inner?.transactionId || void 0,
+    order_id: inner?.order_id || params.order_id,
+    status,
+    message,
+    redirect_url: typeof redirectUrl === "string" && redirectUrl.startsWith("http") ? redirectUrl : void 0,
+    raw: data
+  };
+}
+async function requestOtp(params) {
+  ensureConfigured();
+  if (isCountryExcluded(params.country)) {
+    throw new AfribapayApiError(400, null, "Pays non support\xE9");
+  }
+  try {
+    const res = await authedFetch("/v1/pay/otp", {
+      method: "POST",
+      body: JSON.stringify({
+        operator: params.operator,
+        country: String(params.country).toUpperCase(),
+        phone_number: params.phone_number,
+        merchant_key: MERCHANT_KEY
+      })
+    });
+    markOperatorOk(params.country, params.operator);
+    return res;
+  } catch (err) {
+    if (err instanceof AfribapayApiError) {
+      const isUserErr = isUserSideError({ message: err.message, payload: err.payload });
+      if (!isUserErr && isOperatorAvailabilityError({ httpStatus: err.status, message: err.message, payload: err.payload })) {
+        markOperatorFailure(params.country, params.operator, err.message);
+      }
+    } else if (err instanceof Error) {
+      markOperatorFailure(params.country, params.operator, err.message);
+    }
+    throw err;
+  }
+}
+async function getStatus(orderId) {
+  let data;
+  try {
+    data = await authedFetch(`/v1/status?order_id=${encodeURIComponent(orderId)}`, { method: "GET" });
+  } catch (err) {
+    if (err instanceof AfribapayApiError && err.status === 429) {
+      const p = err.payload;
+      const inner2 = p?.data ?? p;
+      if (inner2 && typeof inner2 === "object") {
+        const s = String(inner2.status || "").toUpperCase();
+        if (s) {
+          return {
+            status: s,
+            transaction_id: inner2.transaction_id || inner2.transactionId || void 0,
+            order_id: inner2.order_id || orderId,
+            amount: inner2.amount != null ? Number(inner2.amount) : void 0,
+            raw: p
+          };
+        }
+      }
+    }
+    throw err;
+  }
+  const inner = data?.data ?? data;
+  return {
+    status: String(inner?.status || data?.status || "").toUpperCase(),
+    transaction_id: inner?.transaction_id || inner?.transactionId || void 0,
+    order_id: inner?.order_id || orderId,
+    amount: inner?.amount != null ? Number(inner.amount) : void 0,
+    raw: data
+  };
+}
+function verifyWebhookSignature(rawBody, headerSign) {
+  if (!API_KEY) return false;
+  if (!headerSign) return false;
+  const data = typeof rawBody === "string" ? rawBody : rawBody.toString("utf8");
+  const computed = crypto7.createHmac("sha256", API_KEY).update(data, "utf8").digest("hex");
+  const a = Buffer.from(computed, "utf8");
+  const b = Buffer.from(String(headerSign).trim().toLowerCase(), "utf8");
+  if (a.length !== b.length) return false;
+  return crypto7.timingSafeEqual(a, b);
+}
+function isSuccessStatus(s) {
+  if (!s) return false;
+  const x = String(s).toUpperCase();
+  return ["SUCCESS", "SUCCESSFUL", "COMPLETED", "PAID", "OK", "APPROVED"].includes(x);
+}
+function isFailureStatus(s) {
+  if (!s) return false;
+  const x = String(s).toUpperCase();
+  return ["FAILED", "REJECTED", "CANCELLED", "CANCELED", "ERROR", "EXPIRED", "DECLINED"].includes(x);
+}
+
 // src/routes/admin.ts
 var import_multer = __toESM(require_multer(), 1);
 var router3 = (0, import_express3.Router)();
@@ -76915,8 +77286,20 @@ router3.delete("/admin/usd-rates", requireUser, requireAdmin, async (_req, res) 
   clearUsdRatesOverride();
   res.json({ ok: true });
 });
+async function ensureSiteContentDefaults() {
+  await getMysqlPool().query(
+    `INSERT IGNORE INTO site_content (section,\`key\`,label,\`value\`,type) VALUES
+      ('hero','hero_community_image','Image communaut\xE9 (page d''accueil)','','image'),
+      ('services','services_title','Titre de la section Services','Services par plateforme','text'),
+      ('footer','footer_tagline','Texte de pr\xE9sentation du pied de page','La plateforme leader de croissance sur les r\xE9seaux sociaux en Afrique francophone.','text'),
+      ('footer','footer_logo_image','Logo du pied de page','','image'),
+      ('auth_login','auth_login_image','Image page de connexion','','image'),
+      ('auth_signup','auth_signup_image','Image page d''inscription','','image')`
+  );
+}
 router3.get("/site-content", async (_req, res) => {
   try {
+    await ensureSiteContentDefaults();
     const [rows] = await getMysqlPool().query("SELECT section,`key`,`value`,type,updated_at FROM site_content WHERE type IN ('text','image','url') ORDER BY section,`key`");
     return res.json({ content: rows });
   } catch (err) {
@@ -76925,6 +77308,7 @@ router3.get("/site-content", async (_req, res) => {
   }
 });
 router3.get("/admin/site-content", requireUser, requireAdmin, async (_req, res) => {
+  await ensureSiteContentDefaults();
   const [rows] = await getMysqlPool().query("SELECT id,section,`key`,label,`value`,type,updated_at FROM site_content ORDER BY section,`key`");
   res.json({ content: rows });
 });
@@ -76941,9 +77325,39 @@ router3.delete("/admin/site-content/:key", requireUser, requireAdmin, async (req
   await getMysqlPool().execute("DELETE FROM site_content WHERE `key`=?", [req.params.key]);
   res.json({ ok: true });
 });
-router3.get("/admin/operator-logos", requireUser, requireAdmin, async (_req, res) => {
-  const logos = await fetchOperatorLogos();
-  return res.json({ operators: Object.entries(logos).map(([code, logo_url]) => ({ code, logo_url })) });
+router3.get("/admin/operator-logos", requireUser, requireAdmin, async (req, res) => {
+  try {
+    const forceRefresh = String(req.query["refresh"] || "") === "1";
+    const [countries, logos] = await Promise.all([
+      listCountries(forceRefresh),
+      fetchOperatorLogos()
+    ]);
+    const byCode = /* @__PURE__ */ new Map();
+    for (const country of countries) {
+      for (const operator of country.operators) {
+        const code = String(operator.code).trim();
+        if (!code) continue;
+        const current = byCode.get(code);
+        if (current) {
+          if (!current.countries.includes(country.code)) current.countries.push(country.code);
+        } else {
+          byCode.set(code, {
+            code,
+            name: operator.name || code,
+            countries: [country.code],
+            logo_url: logos[code] || null
+          });
+        }
+      }
+    }
+    const operators = [...byCode.values()].sort(
+      (a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" })
+    );
+    return res.json({ operators });
+  } catch (err) {
+    logger.error({ err }, "admin operator logos");
+    return res.status(502).json({ error: "Impossible de r\xE9cup\xE9rer les moyens de paiement AfribaPay" });
+  }
 });
 router3.post("/admin/operator-logos/:code/upload", requireUser, requireAdmin, uploadLogo.single("logo"), async (req, res) => {
   const code = String(req.params.code || "");
@@ -76970,7 +77384,7 @@ init_logger();
 
 // src/lib/support.ts
 init_logger();
-import crypto7 from "node:crypto";
+import crypto8 from "node:crypto";
 import path2 from "node:path";
 import { promises as fs2 } from "node:fs";
 var SupportError = class extends Error {
@@ -76998,7 +77412,7 @@ async function appendMessage(userId, input) {
     [userId]
   );
   if (Number(counts[0]?.n || 0) >= 200) throw new SupportError("Limite de messages atteinte pour ce fil de support (max 200)", 429);
-  const id = crypto7.randomUUID();
+  const id = crypto8.randomUUID();
   await getMysqlPool().execute("INSERT INTO support_messages (id, user_id, sender, sender_user_id, text, image_filename) VALUES (?, ?, ?, ?, ?, ?)", [id, userId, input.sender, input.sender_user_id, text, input.image_filename ?? null]);
   return { id, ts: (/* @__PURE__ */ new Date()).toISOString(), sender: input.sender, sender_user_id: input.sender_user_id, text, image_filename: input.image_filename };
 }
@@ -77036,7 +77450,7 @@ async function saveImageDataUrl(userId, data) {
   const buffer = Buffer.from(m[2], "base64");
   if (!buffer.length || buffer.length > 5 * 1024 * 1024) throw new SupportError("Image trop volumineuse (max 5 MB)", 413);
   const ext = m[1].toLowerCase() === "jpeg" ? "jpg" : m[1].toLowerCase();
-  const name = `${userId.replace(/[^a-zA-Z0-9_-]/g, "")}-${crypto7.randomBytes(8).toString("hex")}.${ext}`;
+  const name = `${userId.replace(/[^a-zA-Z0-9_-]/g, "")}-${crypto8.randomBytes(8).toString("hex")}.${ext}`;
   await fs2.mkdir(UPLOADS, { recursive: true });
   await fs2.writeFile(path2.join(UPLOADS, name), buffer, { flag: "wx" });
   return name;
@@ -77226,379 +77640,6 @@ var support_default = router4;
 // src/routes/payments.ts
 var import_express5 = __toESM(require_express2(), 1);
 init_logger();
-
-// src/lib/afribapay.ts
-init_logger();
-init_operator_health();
-import crypto8 from "node:crypto";
-var API_USER = process.env["AFRIBAPAY_API_USER"] ?? "";
-var API_KEY = process.env["AFRIBAPAY_API_KEY"] ?? "";
-var MERCHANT_KEY = process.env["AFRIBAPAY_MERCHANT_KEY"] ?? "";
-var API_BASE = (process.env["AFRIBAPAY_API_BASE"] || "https://api.afribapay.com").replace(/\/+$/, "");
-var EXCLUDED_COUNTRIES = /* @__PURE__ */ new Set([]);
-var AfribapayNotConfiguredError = class extends Error {
-  constructor() {
-    super("Service de paiement non configur\xE9");
-    this.name = "AfribapayNotConfiguredError";
-  }
-};
-var AfribapayApiError = class extends Error {
-  status;
-  payload;
-  constructor(status, payload, message) {
-    super(message || `Erreur de paiement HTTP ${status}`);
-    this.status = status;
-    this.payload = payload;
-  }
-};
-function isAfribapayConfigured() {
-  return Boolean(API_USER && API_KEY && MERCHANT_KEY);
-}
-function ensureConfigured() {
-  if (!isAfribapayConfigured()) throw new AfribapayNotConfiguredError();
-}
-function isCountryExcluded(code) {
-  if (!code) return false;
-  return EXCLUDED_COUNTRIES.has(String(code).toUpperCase());
-}
-var cachedToken = null;
-var tokenInflight = null;
-var tokenBackoffUntil = 0;
-var TOKEN_BACKOFF_MS = 2e4;
-async function fetchNewToken() {
-  ensureConfigured();
-  const basic = Buffer.from(`${API_USER}:${API_KEY}`).toString("base64");
-  const r = await fetch(`${API_BASE}/v1/token`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${basic}`,
-      "Content-Type": "application/json"
-    }
-  });
-  let body = null;
-  try {
-    body = await r.json();
-  } catch {
-  }
-  if (!r.ok) {
-    logger.error({ status: r.status, body }, "AfribaPay token fetch failed");
-    tokenBackoffUntil = Date.now() + TOKEN_BACKOFF_MS;
-    throw new AfribapayApiError(r.status, body, "\xC9chec r\xE9cup\xE9ration du jeton de paiement");
-  }
-  const token = body?.access_token || body?.token || body?.data?.access_token;
-  const expiresIn = Number(body?.expires_in || body?.data?.expires_in || 9e4);
-  if (!token) {
-    throw new AfribapayApiError(500, body, "Jeton de paiement introuvable dans la r\xE9ponse");
-  }
-  return { token, expiresAt: Date.now() + Math.max(30, expiresIn - 60) * 1e3 };
-}
-async function getToken() {
-  if (cachedToken && cachedToken.expiresAt > Date.now()) {
-    return cachedToken.token;
-  }
-  if (Date.now() < tokenBackoffUntil) {
-    const waitSec = Math.ceil((tokenBackoffUntil - Date.now()) / 1e3);
-    throw new AfribapayApiError(503, null, `Authentification de paiement en attente (${waitSec}s)`);
-  }
-  if (tokenInflight) return tokenInflight.then((e) => e.token);
-  tokenInflight = fetchNewToken().then((entry) => {
-    cachedToken = entry;
-    return entry;
-  }).finally(() => {
-    tokenInflight = null;
-  });
-  return tokenInflight.then((e) => e.token);
-}
-function resetTokenState() {
-  cachedToken = null;
-  tokenInflight = null;
-  tokenBackoffUntil = 0;
-  logger.info("AfribaPay token state reset \u2014 next request will fetch a fresh token");
-}
-function getTokenDiagnostics() {
-  return {
-    hasToken: cachedToken !== null && cachedToken.expiresAt > Date.now(),
-    tokenExpiresAt: cachedToken?.expiresAt ?? null,
-    backoffUntil: tokenBackoffUntil,
-    backoffActive: Date.now() < tokenBackoffUntil
-  };
-}
-async function authedFetch(path6, init = {}) {
-  ensureConfigured();
-  const token = await getToken();
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-    Accept: "application/json",
-    ...init.headers || {}
-  };
-  const r = await fetch(`${API_BASE}${path6}`, { ...init, headers });
-  let body = null;
-  const text = await r.text();
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    body = text;
-  }
-  if (r.status === 401 && cachedToken) {
-    cachedToken = null;
-    const token2 = await getToken();
-    headers.Authorization = `Bearer ${token2}`;
-    const r2 = await fetch(`${API_BASE}${path6}`, { ...init, headers });
-    const text2 = await r2.text();
-    let body2 = null;
-    try {
-      body2 = text2 ? JSON.parse(text2) : null;
-    } catch {
-      body2 = text2;
-    }
-    if (!r2.ok) throw new AfribapayApiError(r2.status, body2);
-    return body2;
-  }
-  if (!r.ok) throw new AfribapayApiError(r.status, body);
-  return body;
-}
-var COUNTRIES_TTL_MS = 6e4;
-var countriesCache = null;
-var countriesInflight = null;
-function isOperatorAvailable(op) {
-  const truthy = (v) => v === true || v === 1 || v === "1" || v === "true";
-  const falsy = (v) => v === false || v === 0 || v === "0" || v === "false";
-  if (op == null) return false;
-  if (op.enabled !== void 0 && falsy(op.enabled)) return false;
-  if (op.active !== void 0 && falsy(op.active)) return false;
-  if (op.available !== void 0 && falsy(op.available)) return false;
-  if (op.is_active !== void 0 && falsy(op.is_active)) return false;
-  if (op.is_enabled !== void 0 && falsy(op.is_enabled)) return false;
-  if (truthy(op.enabled) || truthy(op.active) || truthy(op.available)) return true;
-  const status = String(op.status ?? op.state ?? "").toLowerCase().trim();
-  if (status) {
-    const okStates = /* @__PURE__ */ new Set(["active", "available", "online", "up", "enabled", "operational", "ok"]);
-    const koStates = /* @__PURE__ */ new Set([
-      "inactive",
-      "unavailable",
-      "offline",
-      "down",
-      "disabled",
-      "suspended",
-      "maintenance",
-      "closed",
-      "ko"
-    ]);
-    if (koStates.has(status)) return false;
-    if (okStates.has(status)) return true;
-  }
-  return true;
-}
-async function listCountries(forceRefresh = false) {
-  if (!forceRefresh && countriesCache && countriesCache.expiresAt > Date.now()) {
-    return countriesCache.value;
-  }
-  if (!forceRefresh && countriesInflight) return countriesInflight;
-  const run = (async () => {
-    const value = await fetchCountriesFresh();
-    countriesCache = { value, expiresAt: Date.now() + COUNTRIES_TTL_MS };
-    return value;
-  })();
-  countriesInflight = run;
-  run.finally(() => {
-    countriesInflight = null;
-  }).catch(() => {
-  });
-  return run;
-}
-async function fetchCountriesFresh() {
-  const data = await authedFetch("/v1/countries", { method: "GET" });
-  const inner = data?.data ?? data;
-  let rows;
-  if (Array.isArray(inner)) {
-    rows = inner;
-  } else if (inner && typeof inner === "object") {
-    rows = Object.values(inner);
-  } else {
-    rows = [];
-  }
-  const normalized = rows.map((row) => {
-    const code = String(row.code || row.country_code || row.iso2 || "").toUpperCase();
-    let ops = [];
-    if (Array.isArray(row.operators)) {
-      ops = row.operators;
-    } else if (row.currencies && typeof row.currencies === "object") {
-      const firstCur = Object.values(row.currencies)[0];
-      ops = Array.isArray(firstCur?.operators) ? firstCur.operators : [];
-    } else if (Array.isArray(row.providers)) {
-      ops = row.providers;
-    }
-    let currency2;
-    if (row.currency) {
-      currency2 = String(row.currency);
-    } else if (row.currencies && typeof row.currencies === "object") {
-      currency2 = Object.keys(row.currencies)[0];
-    }
-    return {
-      code,
-      name: String(row.name || row.country_name || code),
-      prefix: String(row.prefix || row.dial_code || row.phone_prefix || "").replace(/^0+/, "") || void 0,
-      currency: currency2,
-      operators: ops.filter((op) => isOperatorAvailable(op)).map((op) => ({
-        code: String(op.code || op.operator_code || op.id || op.name || ""),
-        name: String(op.name || op.operator_name || op.display_name || op.code || ""),
-        otp_required: Boolean(
-          op.otp_required === true || op.otp_required === 1 || op.otp_required === "1"
-        ),
-        currency: currency2
-      })).filter((op) => op.code)
-    };
-  }).filter((c) => c.code && c.operators.length > 0);
-  return normalized;
-}
-async function listAllowedCountries(forceRefresh = false) {
-  const all = await listCountries(forceRefresh);
-  return all.filter((c) => !isCountryExcluded(c.code)).map((c) => ({
-    ...c,
-    // Filtre dynamique : opérateurs marqués "en panne" via le circuit
-    // breaker (échecs récents de payin) sont masqués jusqu'à expiration
-    // du cooldown.
-    operators: c.operators.filter((op) => !isOperatorUnavailable(c.code, op.code))
-  })).filter((c) => c.operators.length > 0);
-}
-async function payin(params) {
-  ensureConfigured();
-  if (isCountryExcluded(params.country)) {
-    throw new AfribapayApiError(400, null, "Pays non support\xE9");
-  }
-  const body = {
-    operator: params.operator,
-    country: String(params.country).toUpperCase(),
-    phone_number: params.phone_number,
-    amount: params.amount,
-    currency: params.currency,
-    order_id: params.order_id,
-    merchant_key: MERCHANT_KEY,
-    notify_url: params.notify_url
-  };
-  if (params.otp_code) body["otp_code"] = params.otp_code;
-  let data;
-  try {
-    data = await authedFetch("/v1/pay/payin", {
-      method: "POST",
-      body: JSON.stringify(body)
-    });
-  } catch (err) {
-    if (err instanceof AfribapayApiError) {
-      const isUserErr = isUserSideError({ message: err.message, payload: err.payload });
-      if (!isUserErr && isOperatorAvailabilityError({ httpStatus: err.status, message: err.message, payload: err.payload })) {
-        markOperatorFailure(params.country, params.operator, err.message);
-      }
-    } else if (err instanceof Error) {
-      markOperatorFailure(params.country, params.operator, err.message);
-    }
-    throw err;
-  }
-  const inner = data?.data ?? data;
-  const status = inner?.status || data?.status || void 0;
-  const message = inner?.message || data?.message || void 0;
-  const statusUpper = String(status || "").toUpperCase();
-  if (statusUpper === "FAILED" || statusUpper === "ERROR") {
-    if (isOperatorAvailabilityError({ message, payload: data })) {
-      markOperatorFailure(params.country, params.operator, String(message || "operator failure"));
-    }
-  } else {
-    markOperatorOk(params.country, params.operator);
-  }
-  const redirectUrl = inner?.payment_url || inner?.checkout_url || inner?.redirect_url || inner?.wave_url || inner?.paymentUrl || inner?.checkoutUrl || data?.payment_url || data?.checkout_url || data?.redirect_url || void 0;
-  return {
-    transaction_id: inner?.transaction_id || inner?.transactionId || void 0,
-    order_id: inner?.order_id || params.order_id,
-    status,
-    message,
-    redirect_url: typeof redirectUrl === "string" && redirectUrl.startsWith("http") ? redirectUrl : void 0,
-    raw: data
-  };
-}
-async function requestOtp(params) {
-  ensureConfigured();
-  if (isCountryExcluded(params.country)) {
-    throw new AfribapayApiError(400, null, "Pays non support\xE9");
-  }
-  try {
-    const res = await authedFetch("/v1/pay/otp", {
-      method: "POST",
-      body: JSON.stringify({
-        operator: params.operator,
-        country: String(params.country).toUpperCase(),
-        phone_number: params.phone_number,
-        merchant_key: MERCHANT_KEY
-      })
-    });
-    markOperatorOk(params.country, params.operator);
-    return res;
-  } catch (err) {
-    if (err instanceof AfribapayApiError) {
-      const isUserErr = isUserSideError({ message: err.message, payload: err.payload });
-      if (!isUserErr && isOperatorAvailabilityError({ httpStatus: err.status, message: err.message, payload: err.payload })) {
-        markOperatorFailure(params.country, params.operator, err.message);
-      }
-    } else if (err instanceof Error) {
-      markOperatorFailure(params.country, params.operator, err.message);
-    }
-    throw err;
-  }
-}
-async function getStatus(orderId) {
-  let data;
-  try {
-    data = await authedFetch(`/v1/status?order_id=${encodeURIComponent(orderId)}`, { method: "GET" });
-  } catch (err) {
-    if (err instanceof AfribapayApiError && err.status === 429) {
-      const p = err.payload;
-      const inner2 = p?.data ?? p;
-      if (inner2 && typeof inner2 === "object") {
-        const s = String(inner2.status || "").toUpperCase();
-        if (s) {
-          return {
-            status: s,
-            transaction_id: inner2.transaction_id || inner2.transactionId || void 0,
-            order_id: inner2.order_id || orderId,
-            amount: inner2.amount != null ? Number(inner2.amount) : void 0,
-            raw: p
-          };
-        }
-      }
-    }
-    throw err;
-  }
-  const inner = data?.data ?? data;
-  return {
-    status: String(inner?.status || data?.status || "").toUpperCase(),
-    transaction_id: inner?.transaction_id || inner?.transactionId || void 0,
-    order_id: inner?.order_id || orderId,
-    amount: inner?.amount != null ? Number(inner.amount) : void 0,
-    raw: data
-  };
-}
-function verifyWebhookSignature(rawBody, headerSign) {
-  if (!API_KEY) return false;
-  if (!headerSign) return false;
-  const data = typeof rawBody === "string" ? rawBody : rawBody.toString("utf8");
-  const computed = crypto8.createHmac("sha256", API_KEY).update(data, "utf8").digest("hex");
-  const a = Buffer.from(computed, "utf8");
-  const b = Buffer.from(String(headerSign).trim().toLowerCase(), "utf8");
-  if (a.length !== b.length) return false;
-  return crypto8.timingSafeEqual(a, b);
-}
-function isSuccessStatus(s) {
-  if (!s) return false;
-  const x = String(s).toUpperCase();
-  return ["SUCCESS", "SUCCESSFUL", "COMPLETED", "PAID", "OK", "APPROVED"].includes(x);
-}
-function isFailureStatus(s) {
-  if (!s) return false;
-  const x = String(s).toUpperCase();
-  return ["FAILED", "REJECTED", "CANCELLED", "CANCELED", "ERROR", "EXPIRED", "DECLINED"].includes(x);
-}
-
-// src/routes/payments.ts
 var router5 = (0, import_express5.Router)();
 var SERVICE_ROLE_KEY = process.env["API_SERVICE_ROLE_KEY"];
 var PUBLIC_URL = process.env["PUBLIC_API_URL"] || (process.env["REPLIT_DEV_DOMAIN"] ? `https://${process.env["REPLIT_DEV_DOMAIN"]}` : "");

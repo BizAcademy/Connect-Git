@@ -3861,10 +3861,10 @@ const AdminOperatorLogos = () => {
   const [deleting, setDeleting] = useState<Record<string, boolean>>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const load = async () => {
+  const load = async (force = false) => {
     setLoading(true);
     try {
-      const r = await authedFetch("/api/admin/operator-logos");
+      const r = await authedFetch(`/api/admin/operator-logos${force ? "?refresh=1" : ""}`);
       const d = await r.json();
       if (r.ok && d.operators) {
         setOperators(d.operators as OperatorLogoItem[]);
@@ -3957,7 +3957,7 @@ const AdminOperatorLogos = () => {
             Les changements sont visibles par les utilisateurs dans moins de 30 secondes.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={() => void load(true)} disabled={loading}>
           <RefreshCw size={13} className={loading ? "animate-spin mr-1" : "mr-1"} />
           Rafraîchir
         </Button>

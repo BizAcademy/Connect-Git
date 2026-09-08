@@ -12,6 +12,7 @@ import { callProvider, parseProviderId, getProvider, loadProviderConfig, updateP
 import { NON_CFA_COUNTRIES_INFO, setRateOverrides } from "../lib/currency";
 import { BONUS_AMOUNT_FCFA, BONUS_THRESHOLD_FCFA, creditDeposit, markPaymentStatus } from "../lib/deposits";
 import { deleteOperatorLogo, fetchOperatorLogos, uploadOperatorLogoFile } from "../lib/operator-logos";
+import { listCountries } from "../lib/afribapay";
 import multer from "multer";
 
 const router: IRouter = Router();
@@ -211,13 +212,26 @@ router.delete("/admin/usd-rates", requireUser, requireAdmin, async (_req,res)=>{
 
 // Site-content stays operational data in MySQL; credentials are never accepted
 // through these endpoints.
+async function ensureSiteContentDefaults(): Promise<void> {
+  await getMysqlPool().query(
+    `INSERT IGNORE INTO site_content (section,\`key\`,label,\`value\`,type) VALUES
+      ('hero','hero_community_image','Image communauté (page d''accueil)','','image'),
+      ('services','services_title','Titre de la section Services','Services par plateforme','text'),
+      ('footer','footer_tagline','Texte de présentation du pied de page','La plateforme leader de croissance sur les réseaux sociaux en Afrique francophone.','text'),
+      ('footer','footer_logo_image','Logo du pied de page','','image'),
+      ('auth_login','auth_login_image','Image page de connexion','','image'),
+      ('auth_signup','auth_signup_image','Image page d''inscription','','image')`,
+  );
+}
 router.get("/site-content", async (_req,res) => {
   try {
+    await ensureSiteContentDefaults();
     const [rows] = await getMysqlPool().query<RowDataPacket[]>("SELECT section,`key`,`value`,type,updated_at FROM site_content WHERE type IN ('text','image','url') ORDER BY section,`key`");
     return res.json({ content: rows });
   } catch (err) { logger.error({ err }, "public site content"); return res.status(500).json({ error: "Contenu indisponible" }); }
 });
 router.get("/admin/site-content", requireUser, requireAdmin, async (_req,res) => {
+  await ensureSiteContentDefaults();
   const [rows] = await getMysqlPool().query<RowDataPacket[]>("SELECT id,section,`key`,label,`value`,type,updated_at FROM site_content ORDER BY section,`key`");
   res.json({ content: rows });
 });
@@ -234,9 +248,39 @@ router.delete("/admin/site-content/:key", requireUser, requireAdmin, async (req,
   await getMysqlPool().execute("DELETE FROM site_content WHERE `key`=?",[req.params.key]);
   res.json({ok:true});
 });
-router.get("/admin/operator-logos", requireUser, requireAdmin, async (_req, res) => {
-  const logos = await fetchOperatorLogos();
-  return res.json({ operators: Object.entries(logos).map(([code, logo_url]) => ({ code, logo_url })) });
+router.get("/admin/operator-logos", requireUser, requireAdmin, async (req, res) => {
+  try {
+    const forceRefresh = String(req.query["refresh"] || "") === "1";
+    const [countries, logos] = await Promise.all([
+      listCountries(forceRefresh),
+      fetchOperatorLogos(),
+    ]);
+    const byCode = new Map<string, { code: string; name: string; countries: string[]; logo_url: string | null }>();
+    for (const country of countries) {
+      for (const operator of country.operators) {
+        const code = String(operator.code).trim();
+        if (!code) continue;
+        const current = byCode.get(code);
+        if (current) {
+          if (!current.countries.includes(country.code)) current.countries.push(country.code);
+        } else {
+          byCode.set(code, {
+            code,
+            name: operator.name || code,
+            countries: [country.code],
+            logo_url: logos[code] || null,
+          });
+        }
+      }
+    }
+    const operators = [...byCode.values()].sort((a, b) =>
+      a.name.localeCompare(b.name, "fr", { sensitivity: "base" }),
+    );
+    return res.json({ operators });
+  } catch (err) {
+    logger.error({ err }, "admin operator logos");
+    return res.status(502).json({ error: "Impossible de récupérer les moyens de paiement AfribaPay" });
+  }
 });
 router.post("/admin/operator-logos/:code/upload", requireUser, requireAdmin, uploadLogo.single("logo"), async (req, res) => {
   const code = String(req.params.code || "");
