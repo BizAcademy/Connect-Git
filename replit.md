@@ -198,8 +198,5 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 
 ## User Preferences
 
-- **Préférence utilisateur** : après chaque modification de code, toujours donner la commande Shell exacte pour pusher vers GitHub, sans que l'utilisateur ait à la demander :
-  ```bash
-  bash push-to-github.sh "description précise des changements effectués"
-  ```
+- **Préférence utilisateur** : après chaque modification de code validée pour BUZZ BOOSTER, pousser automatiquement les changements vers GitHub avec `push-to-github.sh`, sans attendre une demande séparée.
 - **Préférence utilisateur** : à chaque création ou modification d'une migration SQL, coller systématiquement le contenu complet du fichier directement dans la conversation (bloc ```sql) sans attendre que l'utilisateur le demande.
