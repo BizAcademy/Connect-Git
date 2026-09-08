@@ -6,7 +6,8 @@ export type Advertisement = {
   active: boolean;
   title: string;
   segments: Array<{ text: string; color: string }>;
-  image: string;
+  media: string;
+  mediaType: "" | "image" | "video";
   contactLabel: string;
   contactUrl: string;
   updatedAt: string | null;
@@ -48,8 +49,11 @@ export function AdvertisementModal({ advertisement }: { advertisement: Advertise
             {seconds > 0 ? <span className="text-xs font-bold">{seconds}s</span> : <X size={19} />}
           </button>
         </div>
-        {advertisement.image && (
-          <img src={advertisement.image} alt="" className="max-h-72 w-full object-cover" />
+        {advertisement.media && advertisement.mediaType === "image" && (
+          <img src={advertisement.media} alt="" className="max-h-72 w-full object-cover" />
+        )}
+        {advertisement.media && advertisement.mediaType === "video" && (
+          <video src={advertisement.media} controls autoPlay muted playsInline className="max-h-80 w-full bg-black object-contain" />
         )}
         <div className="space-y-5 p-5">
           {advertisement.segments.length > 0 && (
@@ -59,10 +63,10 @@ export function AdvertisementModal({ advertisement }: { advertisement: Advertise
               ))}
             </p>
           )}
-          {advertisement.contactLabel && advertisement.contactUrl && (
+          {advertisement.contactUrl && (
             <Button asChild className="w-full">
               <a href={advertisement.contactUrl} target={advertisement.contactUrl.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer">
-                {advertisement.contactLabel}<ExternalLink size={14} className="ml-2" />
+                {advertisement.contactLabel || "En savoir plus"}<ExternalLink size={14} className="ml-2" />
               </a>
             </Button>
           )}

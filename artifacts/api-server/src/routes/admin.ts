@@ -1,5 +1,7 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
+import path from "node:path";
+import { promises as fs } from "node:fs";
 import bcrypt from "bcryptjs";
 import type { RowDataPacket } from "mysql2/promise";
 import { requireUser, requireAdmin, type AuthedRequest } from "../lib/auth";
@@ -18,24 +20,80 @@ import multer from "multer";
 const router: IRouter = Router();
 const MAIN_ADMIN_EMAIL = (process.env["MAIN_ADMIN_EMAIL"] || "jude@gmail.com").toLowerCase();
 const uploadLogo = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
+const uploadAdvertisementMedia = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } });
+const ADVERTISEMENT_MEDIA_DIR = path.resolve(process.cwd(), "data", "advertisements");
+const ADVERTISEMENT_MEDIA_PREFIX = "/api/advertisement/media/";
+const ADVERTISEMENT_MIME_EXTENSIONS: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+};
 
 type AdvertisementSegment = { text: string; color: string };
 const COLOR_RE = /^#[0-9a-f]{6}$/i;
-const IMAGE_RE = /^data:image\/(?:png|jpe?g|webp);base64,[a-z0-9+/=\r\n]+$/i;
+const LEGACY_IMAGE_RE = /^data:image\/(?:png|jpe?g|webp);base64,[a-z0-9+/=\r\n]+$/i;
 const CONTACT_RE = /^(?:https?:\/\/|mailto:|tel:)/i;
 
+let advertisementTableReady: Promise<void> | null = null;
+async function ensureAdvertisementTable(): Promise<void> {
+  if (!advertisementTableReady) {
+    advertisementTableReady = (async () => {
+      await getMysqlPool().query(
+        `CREATE TABLE IF NOT EXISTS dashboard_advertisement (
+          id TINYINT UNSIGNED NOT NULL DEFAULT 1,
+          active BOOLEAN NOT NULL DEFAULT FALSE,
+          title VARCHAR(255) NULL,
+          message_segments JSON NULL,
+          image_data LONGTEXT NULL,
+          contact_label VARCHAR(120) NULL,
+          contact_url VARCHAR(500) NULL,
+          updated_by CHAR(36) NULL,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          CONSTRAINT dashboard_advertisement_singleton CHECK (id = 1)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      );
+      await getMysqlPool().query("INSERT IGNORE INTO dashboard_advertisement (id,active) VALUES (1,FALSE)");
+    })().catch(err => {
+      advertisementTableReady = null;
+      throw err;
+    });
+  }
+  await advertisementTableReady;
+}
+
+function advertisementMediaType(media: string): "image" | "video" | "" {
+  if (/^data:image\//i.test(media) || /\.(?:png|jpe?g|webp)(?:\?|$)/i.test(media)) return "image";
+  if (/\.(?:mp4|webm|mov)(?:\?|$)/i.test(media)) return "video";
+  return "";
+}
+
+function advertisementMediaPath(media: string): string | null {
+  if (!media.startsWith(ADVERTISEMENT_MEDIA_PREFIX)) return null;
+  const filename = media.slice(ADVERTISEMENT_MEDIA_PREFIX.length).split("?")[0] || "";
+  return /^[a-f0-9]{32}\.(?:png|jpg|webp|mp4|webm|mov)$/i.test(filename)
+    ? path.join(ADVERTISEMENT_MEDIA_DIR, filename)
+    : null;
+}
+
 function advertisementFromRow(row: RowDataPacket | undefined) {
-  if (!row) return { active: false, title: "", segments: [], image: "", contactLabel: "", contactUrl: "", updatedAt: null };
+  if (!row) return { active: false, title: "", segments: [], media: "", mediaType: "", contactLabel: "", contactUrl: "", updatedAt: null };
   let segments: AdvertisementSegment[] = [];
   try {
     const raw = typeof row.message_segments === "string" ? JSON.parse(row.message_segments) : row.message_segments;
     if (Array.isArray(raw)) segments = raw;
   } catch {}
+  const media = String(row.image_data || "");
   return {
     active: Boolean(row.active),
     title: String(row.title || ""),
     segments,
-    image: String(row.image_data || ""),
+    media,
+    mediaType: advertisementMediaType(media),
     contactLabel: String(row.contact_label || ""),
     contactUrl: String(row.contact_url || ""),
     updatedAt: row.updated_at || null,
@@ -43,6 +101,7 @@ function advertisementFromRow(row: RowDataPacket | undefined) {
 }
 
 async function readAdvertisement() {
+  await ensureAdvertisementTable();
   const [rows] = await getMysqlPool().query<RowDataPacket[]>(
     "SELECT active,title,message_segments,image_data,contact_label,contact_url,updated_at FROM dashboard_advertisement WHERE id=1",
   );
@@ -64,30 +123,63 @@ router.get("/admin/advertisement", requireUser, requireAdmin, async (_req, res) 
   catch (err) { logger.error({ err }, "admin advertisement read"); return res.status(500).json({ error: "Annonce indisponible" }); }
 });
 
+router.get("/advertisement/media/:filename", (req, res) => {
+  const filename = String(req.params["filename"] || "");
+  if (!/^[a-f0-9]{32}\.(?:png|jpg|webp|mp4|webm|mov)$/i.test(filename)) {
+    return res.status(404).end();
+  }
+  return res.sendFile(path.join(ADVERTISEMENT_MEDIA_DIR, filename), err => {
+    if (err && !res.headersSent) res.status(404).end();
+  });
+});
+
+router.post("/admin/advertisement/media", requireUser, requireAdmin, uploadAdvertisementMedia.single("media"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "Sélectionnez une image ou une vidéo" });
+    const extension = ADVERTISEMENT_MIME_EXTENSIONS[req.file.mimetype];
+    if (!extension) return res.status(400).json({ error: "Format accepté : PNG, JPG, WebP, MP4, WebM ou MOV" });
+    await fs.mkdir(ADVERTISEMENT_MEDIA_DIR, { recursive: true });
+    const filename = `${randomUUID().replace(/-/g, "")}.${extension}`;
+    await fs.writeFile(path.join(ADVERTISEMENT_MEDIA_DIR, filename), req.file.buffer, { flag: "wx" });
+    const media = `${ADVERTISEMENT_MEDIA_PREFIX}${filename}`;
+    return res.json({ media, mediaType: req.file.mimetype.startsWith("video/") ? "video" : "image" });
+  } catch (err) {
+    logger.error({ err }, "admin advertisement media upload");
+    return res.status(500).json({ error: "Téléversement du média impossible" });
+  }
+});
+
 router.put("/admin/advertisement", requireUser, requireAdmin, async (req, res) => {
   const b = req.body || {};
   const title = String(b.title || "").trim();
-  const image = String(b.image || "").trim();
+  const media = String(b.media || b.image || "").trim();
   const contactLabel = String(b.contactLabel || "").trim();
-  const contactUrl = String(b.contactUrl || "").trim();
+  let contactUrl = String(b.contactUrl || "").trim();
+  if (contactUrl && /^[+()\d\s.-]{6,30}$/.test(contactUrl)) {
+    contactUrl = `tel:${contactUrl.replace(/[^\d+]/g, "")}`;
+  }
   const segments: AdvertisementSegment[] = Array.isArray(b.segments)
     ? b.segments.map((x: unknown) => {
         const item = x && typeof x === "object" ? x as Record<string, unknown> : {};
         return { text: String(item.text || "").trim(), color: String(item.color || "#374151") };
       }).filter((x: AdvertisementSegment) => x.text)
     : [];
-  if (typeof b.active !== "boolean" || title.length > 255 || segments.length > 20 ||
-      segments.some(x => x.text.length > 1000 || !COLOR_RE.test(x.color)) ||
-      image.length > 6_000_000 || (image && !IMAGE_RE.test(image)) ||
-      contactLabel.length > 120 || contactUrl.length > 500 ||
-      (contactUrl && !CONTACT_RE.test(contactUrl))) {
-    return res.status(400).json({ error: "Contenu de l'annonce invalide" });
+  if (typeof b.active !== "boolean") return res.status(400).json({ error: "État de publication invalide" });
+  if (title.length > 255) return res.status(400).json({ error: "Le titre ne doit pas dépasser 255 caractères" });
+  if (segments.length > 20 || segments.some(x => x.text.length > 1000 || !COLOR_RE.test(x.color))) {
+    return res.status(400).json({ error: "Le texte coloré contient une valeur invalide" });
   }
-  if (b.active && !title && !segments.length && !image && !contactLabel) {
-    return res.status(400).json({ error: "Ajoutez au moins un contenu avant d'activer l'annonce" });
+  if (media.length > 6_000_000 ||
+      (media && !LEGACY_IMAGE_RE.test(media) && !advertisementMediaPath(media))) {
+    return res.status(400).json({ error: "Le média de l'annonce est invalide" });
   }
-  if (contactLabel && !contactUrl) return res.status(400).json({ error: "Ajoutez le lien ou numéro associé au contact" });
+  if (contactLabel.length > 120) return res.status(400).json({ error: "Le texte du contact ne doit pas dépasser 120 caractères" });
+  if (contactUrl.length > 500 || (contactUrl && !CONTACT_RE.test(contactUrl))) {
+    return res.status(400).json({ error: "Utilisez un lien http(s), mailto:, tel: ou un numéro de téléphone" });
+  }
   try {
+    await ensureAdvertisementTable();
+    const previous = await readAdvertisement();
     await getMysqlPool().execute(
       `INSERT INTO dashboard_advertisement
        (id,active,title,message_segments,image_data,contact_label,contact_url,updated_by)
@@ -96,8 +188,12 @@ router.put("/admin/advertisement", requireUser, requireAdmin, async (req, res) =
        message_segments=VALUES(message_segments),image_data=VALUES(image_data),
        contact_label=VALUES(contact_label),contact_url=VALUES(contact_url),
        updated_by=VALUES(updated_by)`,
-      [b.active, title || null, JSON.stringify(segments), image || null, contactLabel || null, contactUrl || null, (req as AuthedRequest).userId],
+      [b.active, title || null, JSON.stringify(segments), media || null, contactLabel || null, contactUrl || null, (req as AuthedRequest).userId],
     );
+    if (previous.media && previous.media !== media) {
+      const oldPath = advertisementMediaPath(previous.media);
+      if (oldPath) await fs.unlink(oldPath).catch(() => undefined);
+    }
     return res.json({ ok: true, advertisement: await readAdvertisement() });
   } catch (err) {
     logger.error({ err }, "admin advertisement save");

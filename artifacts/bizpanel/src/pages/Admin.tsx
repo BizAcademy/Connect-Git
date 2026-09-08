@@ -81,18 +81,21 @@ type AdvertisementForm = {
   active: boolean;
   title: string;
   segments: Array<{ text: string; color: string }>;
-  image: string;
+  media: string;
+  mediaType: "" | "image" | "video";
   contactLabel: string;
   contactUrl: string;
 };
 
 const EMPTY_ADVERTISEMENT: AdvertisementForm = {
   active: false, title: "", segments: [{ text: "", color: "#374151" }],
-  image: "", contactLabel: "", contactUrl: "",
+  media: "", mediaType: "", contactLabel: "", contactUrl: "",
 };
 
 const AdminAdvertisement = () => {
   const [form, setForm] = useState<AdvertisementForm>(EMPTY_ADVERTISEMENT);
+  const [selectedMedia, setSelectedMedia] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -109,23 +112,34 @@ const AdminAdvertisement = () => {
   const save = async () => {
     setSaving(true);
     try {
+      let media = form.media;
+      let mediaType = form.mediaType;
+      if (selectedMedia) {
+        const upload = new FormData();
+        upload.append("media", selectedMedia);
+        const uploaded = await adminApiFetch("/api/admin/advertisement/media", { method: "POST", body: upload });
+        media = uploaded.media;
+        mediaType = uploaded.mediaType;
+      }
       const result = await adminApiFetch("/api/admin/advertisement", {
         method: "PUT",
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, media, mediaType }),
       });
       setForm({ ...form, ...result.advertisement, segments: result.advertisement.segments.length ? result.advertisement.segments : [{ text: "", color: "#374151" }] });
+      setSelectedMedia(null);
+      if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+      setMediaPreview("");
       toast.success(form.active ? "Annonce publiée" : "Annonce enregistrée et désactivée");
     } catch (err) { toast.error((err as Error).message); }
     finally { setSaving(false); }
   };
 
-  const chooseImage = async (file?: File) => {
+  const chooseMedia = (file?: File) => {
     if (!file) return;
-    try {
-      const image = await fileToCompressedDataUrl(file, 1200, 0.8);
-      setForm(current => ({ ...current, image }));
-    }
-    catch (err) { toast.error((err as Error).message); }
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+    setSelectedMedia(file);
+    setMediaPreview(URL.createObjectURL(file));
+    setForm(current => ({ ...current, mediaType: file.type.startsWith("video/") ? "video" : "image" }));
   };
 
   if (loading) return <LogoLoader />;
@@ -151,13 +165,25 @@ const AdminAdvertisement = () => {
           ))}
         </div>
         <div className="space-y-2">
-          <Label>Image (facultative)</Label>
-          <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => void chooseImage(e.target.files?.[0])} />
-          {form.image && <div className="relative"><img src={form.image} alt="Aperçu" className="max-h-64 w-full rounded-xl border object-contain" /><Button type="button" size="sm" variant="destructive" className="absolute right-2 top-2" onClick={() => setForm({ ...form, image: "" })}>Retirer</Button></div>}
+          <Label>Image ou vidéo (facultative, 30 Mo maximum)</Label>
+          <Input type="file" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime" onChange={e => chooseMedia(e.target.files?.[0])} />
+          {(mediaPreview || form.media) && (
+            <div className="relative">
+              {form.mediaType === "video"
+                ? <video src={mediaPreview || form.media} controls className="max-h-80 w-full rounded-xl border bg-black object-contain" />
+                : <img src={mediaPreview || form.media} alt="Aperçu" className="max-h-64 w-full rounded-xl border object-contain" />}
+              <Button type="button" size="sm" variant="destructive" className="absolute right-2 top-2" onClick={() => {
+                if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+                setSelectedMedia(null);
+                setMediaPreview("");
+                setForm({ ...form, media: "", mediaType: "" });
+              }}>Retirer</Button>
+            </div>
+          )}
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div><Label>Texte du contact (facultatif)</Label><Input className="mt-1" maxLength={120} value={form.contactLabel} onChange={e => setForm({ ...form, contactLabel: e.target.value })} placeholder="Nous contacter sur WhatsApp" /></div>
-          <div><Label>Lien / téléphone du contact</Label><Input className="mt-1" maxLength={500} value={form.contactUrl} onChange={e => setForm({ ...form, contactUrl: e.target.value })} placeholder="https://… ou tel:+237…" /></div>
+          <div><Label>Lien / téléphone du contact (facultatif)</Label><Input className="mt-1" maxLength={500} value={form.contactUrl} onChange={e => setForm({ ...form, contactUrl: e.target.value })} placeholder="https://… ou +237…" /></div>
         </div>
         <Button onClick={save} disabled={saving}>{saving ? <Loader2 size={15} className="mr-2 animate-spin" /> : <Save size={15} className="mr-2" />}{form.active ? "Enregistrer et publier" : "Enregistrer"}</Button>
         <p className="text-xs text-muted-foreground">Le bouton de fermeture reste verrouillé pendant 5 secondes. Le texte est rendu sans HTML afin d'empêcher toute injection XSS.</p>
@@ -1634,7 +1660,7 @@ type AdminUserRow = {
 
 async function adminApiFetch(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers || {});
-  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   // authedFetch injects the auth header, refreshes the JWT proactively, and
   // owns the terminal "session expirée" UX (toast + signOut + redirect).
   const r = await authedFetch(path, { ...init, headers });
