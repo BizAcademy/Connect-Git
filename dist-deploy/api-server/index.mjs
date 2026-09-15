@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-08T11:39:57.565Z";
+var BUILD_TIME = "2026-09-15T22:21:47.887Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -73699,8 +73699,8 @@ async function deleteEntry(serviceId, providerId = 1) {
   return loadPricing(providerId);
 }
 var USD_TO_LOCAL_RATES = {
-  peakerr: { XAF: 1e3, XOF: 1111, GMD: 80, CDF: 9e3, GNF: 9e3 },
-  default: { XAF: 900, XOF: 1e3, GMD: 73, CDF: 8100, GNF: 7300 }
+  peakerr: { XAF: 800, XOF: 850, GMD: 80, CDF: 7e3, GNF: 15e3 },
+  default: { XAF: 800, XOF: 850, GMD: 73, CDF: 7e3, GNF: 15e3 }
 };
 var _usdRatesOverride = null;
 function getUsdRates() {

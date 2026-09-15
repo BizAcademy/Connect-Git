@@ -331,7 +331,7 @@ export default function NewOrder() {
   const qty = Number(quantity) || 0;
   const minQ = selectedService ? Number(selectedService.min) : 0;
   const maxQ = selectedService ? Number(selectedService.max) : 0;
-  const currencyInfo = getCurrencyInfo(profile?.country);
+  const currencyInfo = getCurrencyInfo(profile?.country, profile?.currency);
   const pricePerK = selectedService
     ? getLocalPricePerK(selectedService, currencyInfo.currency, currencyInfo.fcfaPerUnit, usdRates)
     : 0;

@@ -33,8 +33,20 @@ export const COUNTRY_CURRENCY: Record<string, CurrencyInfo> = {
 };
 
 const DEFAULT: CurrencyInfo = { currency: "XOF", fcfaPerUnit: 1, symbol: "XOF" };
+const CURRENCY_INFO: Record<string, CurrencyInfo> = {
+  XAF: { currency: "XAF", fcfaPerUnit: 1, symbol: "XAF" },
+  XOF: { currency: "XOF", fcfaPerUnit: 0.90, symbol: "XOF" },
+  CDF: { currency: "CDF", fcfaPerUnit: 0.1111, symbol: "CDF" },
+  GNF: { currency: "GNF", fcfaPerUnit: 0.0625, symbol: "GNF" },
+  GMD: { currency: "GMD", fcfaPerUnit: 6.6667, symbol: "GMD" },
+};
 
-export function getCurrencyInfo(country: string | null | undefined): CurrencyInfo {
+export function getCurrencyInfo(
+  country: string | null | undefined,
+  preferredCurrency?: string | null,
+): CurrencyInfo {
+  const configured = preferredCurrency?.toUpperCase();
+  if (configured && CURRENCY_INFO[configured]) return CURRENCY_INFO[configured]!;
   if (!country) return DEFAULT;
   return COUNTRY_CURRENCY[country.toUpperCase()] ?? DEFAULT;
 }

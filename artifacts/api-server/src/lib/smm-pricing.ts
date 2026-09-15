@@ -66,10 +66,11 @@ export async function deleteEntry(
 // These define how much local currency the user pays per 1 USD of provider
 // service cost. One rate per (provider group × currency code).
 //
-// Peakerr (provider 4) uses premium rates; all other providers use default.
+// All providers use the same public selling rates. Keeping the two groups in
+// the API contract preserves compatibility with the existing admin interface.
 export const USD_TO_LOCAL_RATES: Record<"peakerr" | "default", Record<string, number>> = {
-  peakerr: { XAF: 1000, XOF: 1111, GMD: 80,  CDF: 9000, GNF: 9000 },
-  default:  { XAF: 900,  XOF: 1000, GMD: 73,  CDF: 8100, GNF: 7300 },
+  peakerr: { XAF: 800, XOF: 850, GMD: 80, CDF: 7000, GNF: 15000 },
+  default: { XAF: 800, XOF: 850, GMD: 73, CDF: 7000, GNF: 15000 },
 };
 
 // ---------------------------------------------------------------------------
