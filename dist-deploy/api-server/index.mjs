@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-15T22:32:27.561Z";
+var BUILD_TIME = "2026-09-15T22:59:48.511Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -73880,16 +73880,50 @@ async function loadProviderConfig() {
 async function updateProviderConfig(providerId, patch) {
   const columns = Object.entries(patch).filter(([, v]) => v !== void 0);
   if (!columns.length) return { ok: true };
+  const requestedOrder = patch.display_order;
+  if (requestedOrder !== void 0 && (!Number.isInteger(Number(requestedOrder)) || Number(requestedOrder) < 1 || Number(requestedOrder) > 1e3)) {
+    return { ok: false, error: "Ordre d'affichage invalide" };
+  }
+  const db = getMysqlPool();
+  const conn = await db.getConnection();
   try {
-    await getMysqlPool().execute(
+    await conn.beginTransaction();
+    const [providerRows] = await conn.query(
+      "SELECT provider_id,display_order FROM smm_providers_config FOR UPDATE"
+    );
+    const current = providerRows.find((row) => Number(row.provider_id) === providerId);
+    if (!current) {
+      await conn.rollback();
+      return { ok: false, error: "Fournisseur introuvable" };
+    }
+    const currentOrder = Number(current.display_order);
+    const nextOrder = requestedOrder === void 0 ? void 0 : Number(requestedOrder);
+    const occupant = nextOrder !== void 0 && nextOrder !== currentOrder ? providerRows.find(
+      (row) => Number(row.provider_id) !== providerId && Number(row.display_order) === nextOrder
+    ) : void 0;
+    if (occupant) {
+      await conn.execute(
+        "UPDATE smm_providers_config SET display_order=? WHERE provider_id=?",
+        [-1e3 - providerId, providerId]
+      );
+      await conn.execute(
+        "UPDATE smm_providers_config SET display_order=? WHERE provider_id=?",
+        [currentOrder, Number(occupant.provider_id)]
+      );
+    }
+    await conn.execute(
       `UPDATE smm_providers_config SET ${columns.map(([k]) => `${k}=?`).join(",")} WHERE provider_id=?`,
       [...columns.map(([, v]) => v), providerId]
     );
+    await conn.commit();
     invalidateProviderConfigCache();
     return { ok: true };
   } catch (err) {
+    await conn.rollback().catch(() => void 0);
     logger.error({ err, providerId }, "smm provider config update failed");
     return { ok: false, error: "Mise \xE0 jour impossible" };
+  } finally {
+    conn.release();
   }
 }
 
