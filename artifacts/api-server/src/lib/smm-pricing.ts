@@ -80,6 +80,18 @@ export const USD_TO_LOCAL_RATES: Record<"peakerr" | "default", Record<string, nu
 // Falls back to the hardcoded defaults above when null.
 
 let _usdRatesOverride: typeof USD_TO_LOCAL_RATES | null = null;
+const usdRatesListeners = new Set<(rates: typeof USD_TO_LOCAL_RATES) => void>();
+
+function notifyUsdRatesListeners(): void {
+  const rates = getUsdRates();
+  for (const listener of usdRatesListeners) listener(rates);
+}
+
+/** Subscribe to live admin USD-rate changes. Returns an unsubscribe callback. */
+export function subscribeUsdRates(listener: (rates: typeof USD_TO_LOCAL_RATES) => void): () => void {
+  usdRatesListeners.add(listener);
+  return () => usdRatesListeners.delete(listener);
+}
 
 /** Returns current USD→local rates (admin DB override if set, else hardcoded defaults). */
 export function getUsdRates(): typeof USD_TO_LOCAL_RATES {
@@ -92,11 +104,13 @@ export function setUsdRatesOverride(rates: typeof USD_TO_LOCAL_RATES): void {
     default:  { ...USD_TO_LOCAL_RATES.default,  ...rates.default  },
     peakerr:  { ...USD_TO_LOCAL_RATES.peakerr,  ...rates.peakerr  },
   };
+  notifyUsdRatesListeners();
 }
 
 /** Clear the in-memory override (reverts to hardcoded defaults). */
 export function clearUsdRatesOverride(): void {
   _usdRatesOverride = null;
+  notifyUsdRatesListeners();
 }
 
 // FCFA per unit of local currency — mirrors frontend currency.ts fcfaPerUnit.

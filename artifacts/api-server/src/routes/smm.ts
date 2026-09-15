@@ -4,7 +4,7 @@ import type { PoolConnection, RowDataPacket } from "mysql2/promise";
 import { logger } from "../lib/logger";
 import { getMysqlPool } from "../lib/mysql";
 import { requireUser, requireAdmin, type AuthedRequest } from "../lib/auth";
-import { enrichServices, defaultPriceFcfaForCurrency, loadPricing, getUsdRates } from "../lib/smm-pricing";
+import { enrichServices, defaultPriceFcfaForCurrency, loadPricing, getUsdRates, subscribeUsdRates } from "../lib/smm-pricing";
 import { callProvider, getProvider, parseProviderId, ALL_PROVIDER_IDS, loadProviderConfig, type ProviderId } from "../lib/smm-providers";
 import { FINAL_REFUND_STATUSES, mapProviderStatus, isSupportedServiceType } from "../lib/smm-status";
 import { appendEarning, estimateGainFromRevenue } from "../lib/earnings";
@@ -87,6 +87,25 @@ async function compensateFailedPlacement(orderId: string): Promise<void> {
 
 router.get("/smm/providers", async (_req, res) => { try { const cfg = await loadProviderConfig(); res.json({ providers: cfg.filter(p => p.enabled && getProvider(p.provider_id)?.configured).map(p => ({ provider_id:p.provider_id, display_order:p.display_order, header_title:p.header_title, header_text:p.header_text })) }); } catch (err) { res.status(500).json({ error:(err as Error).message }); } });
 router.get("/smm/currency-rates", (_req, res) => { res.set("Cache-Control", "no-store"); res.json({ usd_rates:getUsdRates() }); });
+router.get("/smm/currency-rates/stream", (req, res) => {
+  res.set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+  res.flushHeaders();
+  const send = (rates: ReturnType<typeof getUsdRates>) => {
+    res.write(`data: ${JSON.stringify({ usd_rates: rates })}\n\n`);
+  };
+  send(getUsdRates());
+  const unsubscribe = subscribeUsdRates(send);
+  const keepAlive = setInterval(() => res.write(": keep-alive\n\n"), 25_000);
+  req.on("close", () => {
+    clearInterval(keepAlive);
+    unsubscribe();
+  });
+});
 router.get("/smm/popular-services", async (req, res) => {
   const provider = parseProviderId(req.query["provider"]);
   try { const [rows] = await getMysqlPool().execute<RowDataPacket[]>("SELECT service_name FROM orders WHERE provider = ? AND status = 'completed' ORDER BY created_at DESC LIMIT 2000", [provider]); const scores: Record<string,number> = {}; rows.forEach(r => { const k=String(r.service_name||"").trim().toLowerCase(); if(k) scores[k]=(scores[k]||0)+1; }); res.json({ scores, provider }); } catch (err) { logger.error({err},"popular-services failed"); res.json({scores:{},provider}); }

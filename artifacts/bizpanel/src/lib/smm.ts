@@ -43,14 +43,32 @@ export type UsdRates = typeof USD_TO_LOCAL_RATES;
 export function useUsdRates(): UsdRates {
   const [rates, setRates] = useState<UsdRates | null>(null);
   useEffect(() => {
-    fetch("/api/smm/currency-rates")
-      .then(r => r.json())
-      .then((data: { usd_rates?: UsdRates }) => {
-        if (data?.usd_rates?.default && data?.usd_rates?.peakerr) {
-          setRates(data.usd_rates);
-        }
-      })
-      .catch(() => {});
+    let active = true;
+    const apply = (data: { usd_rates?: UsdRates }) => {
+      if (active && data?.usd_rates?.default && data?.usd_rates?.peakerr) {
+        setRates(data.usd_rates);
+      }
+    };
+    const refresh = () => {
+      fetch("/api/smm/currency-rates")
+        .then(r => r.json())
+        .then(apply)
+        .catch(() => {});
+    };
+    refresh();
+
+    // Active order pages update immediately when an admin saves new rates.
+    // Periodic refresh remains as a fallback for proxies that interrupt SSE.
+    const events = new EventSource("/api/smm/currency-rates/stream");
+    events.onmessage = event => {
+      try { apply(JSON.parse(event.data) as { usd_rates?: UsdRates }); } catch {}
+    };
+    const fallback = window.setInterval(refresh, 30_000);
+    return () => {
+      active = false;
+      events.close();
+      window.clearInterval(fallback);
+    };
   }, []);
   return rates ?? USD_TO_LOCAL_RATES;
 }

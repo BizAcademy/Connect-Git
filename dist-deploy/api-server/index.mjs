@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-15T22:21:47.887Z";
+var BUILD_TIME = "2026-09-15T22:32:27.561Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -73703,6 +73703,15 @@ var USD_TO_LOCAL_RATES = {
   default: { XAF: 800, XOF: 850, GMD: 73, CDF: 7e3, GNF: 15e3 }
 };
 var _usdRatesOverride = null;
+var usdRatesListeners = /* @__PURE__ */ new Set();
+function notifyUsdRatesListeners() {
+  const rates = getUsdRates();
+  for (const listener of usdRatesListeners) listener(rates);
+}
+function subscribeUsdRates(listener) {
+  usdRatesListeners.add(listener);
+  return () => usdRatesListeners.delete(listener);
+}
 function getUsdRates() {
   return _usdRatesOverride ?? USD_TO_LOCAL_RATES;
 }
@@ -73711,9 +73720,11 @@ function setUsdRatesOverride(rates) {
     default: { ...USD_TO_LOCAL_RATES.default, ...rates.default },
     peakerr: { ...USD_TO_LOCAL_RATES.peakerr, ...rates.peakerr }
   };
+  notifyUsdRatesListeners();
 }
 function clearUsdRatesOverride() {
   _usdRatesOverride = null;
+  notifyUsdRatesListeners();
 }
 var FCFA_PER_LOCAL = {
   XAF: 1,
@@ -74085,6 +74096,27 @@ router2.get("/smm/providers", async (_req, res) => {
 router2.get("/smm/currency-rates", (_req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ usd_rates: getUsdRates() });
+});
+router2.get("/smm/currency-rates/stream", (req, res) => {
+  res.set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no"
+  });
+  res.flushHeaders();
+  const send = (rates) => {
+    res.write(`data: ${JSON.stringify({ usd_rates: rates })}
+
+`);
+  };
+  send(getUsdRates());
+  const unsubscribe = subscribeUsdRates(send);
+  const keepAlive = setInterval(() => res.write(": keep-alive\n\n"), 25e3);
+  req.on("close", () => {
+    clearInterval(keepAlive);
+    unsubscribe();
+  });
 });
 router2.get("/smm/popular-services", async (req, res) => {
   const provider = parseProviderId(req.query["provider"]);
