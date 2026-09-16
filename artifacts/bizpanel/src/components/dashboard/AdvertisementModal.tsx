@@ -30,7 +30,7 @@ export function AdvertisementModal({ advertisement }: { advertisement: Advertise
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Annonce">
-      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="relative max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center gap-3 border-b border-orange-100 bg-orange-50 px-5 py-4">
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500 text-white">
             <Megaphone size={20} />
@@ -50,7 +50,11 @@ export function AdvertisementModal({ advertisement }: { advertisement: Advertise
           </button>
         </div>
         {advertisement.media && advertisement.mediaType === "image" && (
-          <img src={advertisement.media} alt="" className="max-h-72 w-full object-cover" />
+          <img
+            src={advertisement.media}
+            alt=""
+            className="block h-auto max-h-[60vh] w-full object-contain bg-white"
+          />
         )}
         {advertisement.media && advertisement.mediaType === "video" && (
           <video src={advertisement.media} controls autoPlay muted playsInline className="max-h-80 w-full bg-black object-contain" />
