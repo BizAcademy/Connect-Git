@@ -4817,6 +4817,10 @@ const TICKET_STATUS_LABELS: Record<string, string> = {
   closed: "Fermé",
 };
 
+function ticketOrderNumber(ticket: SupportTicket): string | null {
+  return ticket.order_number || ticket.order_external_id || ticket.order_local_id || null;
+}
+
 function TicketStatusBadge({ status }: { status: string }) {
   return (
     <span
@@ -5091,9 +5095,9 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
                 </div>
                 <div className="text-[10px] sm:text-[11px] font-medium text-foreground truncate">
                   {TICKET_ACTION_LABELS[t.action_type]}
-                  {t.order_external_id && (
+                  {ticketOrderNumber(t) && (
                     <span className="hidden sm:inline text-muted-foreground ml-1">
-                      · #{t.order_external_id}
+                      · Commande #{ticketOrderNumber(t)}
                     </span>
                   )}
                 </div>
@@ -5140,10 +5144,10 @@ const AdminTickets = ({ onChanged }: { onChanged?: () => void }) => {
                       : <span className="font-mono">{active.user_id.slice(0, 8)}…</span>}
                   </span>
                 </div>
-                {active.order_external_id && (
+                {ticketOrderNumber(active) && (
                   <div>
                     <strong className="text-foreground">Commande :</strong>{" "}
-                    <span className="font-mono">#{active.order_external_id}</span>
+                    <span className="font-mono">#{ticketOrderNumber(active)}</span>
                     {active.provider_id != null && (
                       <span className="ml-2">
                         <strong className="text-foreground">Fournisseur :</strong> #{active.provider_id}

@@ -10,6 +10,7 @@ export type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
 export interface Ticket {
   id: string; short_code: string; ts: string; user_id: string;
   order_external_id: string | null; order_local_id: string | null;
+  order_number: string | null;
   provider_id: number | null; service_name: string | null; action_type: TicketActionType;
   message: string; status: TicketStatus; admin_response?: string; resolved_at?: string;
   resolved_by?: string; cancel_executed?: boolean; cancel_executed_at?: string;
@@ -20,6 +21,7 @@ const map = (r: RowDataPacket): Ticket => ({
   action_type: r.action_type as TicketActionType, message: String(r.message), status: r.status as TicketStatus,
   ts: new Date(r.ts).toISOString(), order_external_id: r.order_external_id ?? null,
   order_local_id: r.order_local_id ?? null, provider_id: r.provider_id ?? null,
+  order_number: r.order_external_id ?? r.order_local_id ?? null,
   service_name: r.service_name ?? null, admin_response: r.admin_response ?? undefined,
   resolved_at: r.resolved_at ? new Date(r.resolved_at).toISOString() : undefined,
   resolved_by: r.resolved_by ?? undefined, cancel_executed: Boolean(r.cancel_executed),

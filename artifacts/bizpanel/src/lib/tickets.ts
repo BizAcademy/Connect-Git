@@ -16,6 +16,7 @@ export interface Ticket {
   user_id: string;
   order_external_id: string | null;
   order_local_id: string | null;
+  order_number: string | null;
   provider_id: number | null;
   service_name: string | null;
   action_type: TicketActionType;

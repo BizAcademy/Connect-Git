@@ -39,6 +39,10 @@ function genTempCode(): string {
   return `T-${s}`;
 }
 
+function orderNumber(order: any): string {
+  return String(order?.order_number || order?.external_order_id || order?.provider_order_id || order?.id || "—");
+}
+
 export default function CancelOrder() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -62,7 +66,7 @@ export default function CancelOrder() {
       action === "refund" ? "obtenir un remboursement pour ma commande" :
       action === "speed_up" ? "accélérer la livraison de ma commande" :
       "demander une intervention sur ma commande";
-    const ref = order?.external_order_id ? ` n°${order.external_order_id}` : "";
+    const ref = order ? ` n°${orderNumber(order)}` : "";
     return [
       `Numéro de ticket : ${tempCode}`,
       ``,
@@ -189,7 +193,7 @@ export default function CancelOrder() {
               <span className="font-semibold text-base">Commande {TERMINAL_LABELS[orderStatus] ?? orderStatus}</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              La commande <strong>#{order.external_order_id || order.id.slice(0, 8)}</strong> est
+               La commande <strong>#{orderNumber(order)}</strong> est
               déjà <strong>{TERMINAL_LABELS[orderStatus] ?? orderStatus}</strong>. Aucune action
               supplémentaire n'est nécessaire. Vous ne pouvez pas ouvrir un ticket pour une
               commande dans cet état.
@@ -206,7 +210,7 @@ export default function CancelOrder() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              Commande #{order.external_order_id || order.id.slice(0, 8)}
+               Commande #{orderNumber(order)}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">

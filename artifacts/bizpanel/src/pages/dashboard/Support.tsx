@@ -43,11 +43,16 @@ const STATUS_LABELS: Record<string, string> = {
   closed: "Fermé",
 };
 
+function ticketOrderNumber(ticket: Ticket): string | null {
+  return ticket.order_number || ticket.order_external_id || ticket.order_local_id || null;
+}
+
 function TicketCard({ ticket }: { ticket: Ticket }) {
   const [open, setOpen] = useState(ticket.admin_response ? true : false);
   const hasReply = !!ticket.admin_response;
   const statusStyle = STATUS_STYLES[ticket.status] || STATUS_STYLES.closed;
   const statusLabel = STATUS_LABELS[ticket.status] || ticket.status;
+  const orderRef = ticketOrderNumber(ticket);
 
   return (
     <div className={`border rounded-lg overflow-hidden w-full max-w-full ${hasReply && ticket.status !== "closed" ? "ring-2 ring-primary/30" : ""}`}>
@@ -71,7 +76,7 @@ function TicketCard({ ticket }: { ticket: Ticket }) {
           )}
           <span className="text-xs text-muted-foreground basis-full sm:basis-auto truncate sm:min-w-0">
             {ACTION_LABELS[ticket.action_type] || ticket.action_type}
-            {ticket.order_external_id ? ` · #${ticket.order_external_id}` : ""}
+            {orderRef ? ` · Commande #${orderRef}` : ""}
           </span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 pt-0.5 sm:pt-0">
@@ -87,6 +92,11 @@ function TicketCard({ ticket }: { ticket: Ticket }) {
 
           <div className="bg-white border rounded-md p-3 overflow-hidden">
             <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Votre message</div>
+            {orderRef && (
+              <p className="text-xs font-semibold text-primary mb-2">
+                Commande concernée : #{orderRef}
+              </p>
+            )}
             <p className="text-sm whitespace-pre-wrap break-words text-foreground">{ticket.message}</p>
           </div>
 
