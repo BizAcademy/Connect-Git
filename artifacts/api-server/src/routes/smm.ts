@@ -40,7 +40,15 @@ async function profile(userId: string) {
 }
 function currency(country: string | null, configured: string | null) { return configured || (country ? COUNTRY_TO_CURRENCY[country.toUpperCase()] : undefined) || "XOF"; }
 function orderView(row: RowDataPacket) {
-  return { ...row, price: minorToFcfa(row.charge_minor), balance_before: row.balance_before_minor == null ? null : minorToFcfa(row.balance_before_minor), balance_after: row.balance_after_minor == null ? null : minorToFcfa(row.balance_after_minor), external_order_id: row.external_order_id ?? row.provider_order_id };
+  const externalOrderId = row.external_order_id ?? row.provider_order_id;
+  return {
+    ...row,
+    price: minorToFcfa(row.charge_minor),
+    balance_before: row.balance_before_minor == null ? null : minorToFcfa(row.balance_before_minor),
+    balance_after: row.balance_after_minor == null ? null : minorToFcfa(row.balance_after_minor),
+    external_order_id: externalOrderId,
+    order_number: String(externalOrderId ?? row.id),
+  };
 }
 
 /** Credits a negative order exactly once while holding both order and profile locks. */

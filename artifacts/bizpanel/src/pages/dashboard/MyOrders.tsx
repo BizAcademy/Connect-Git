@@ -136,6 +136,31 @@ function CopyBtn({ text }: { text: string }) {
   );
 }
 
+function orderNumber(order: any): string {
+  return String(order.order_number || order.external_order_id || order.provider_order_id || order.id || "—");
+}
+
+function sameOrderSnapshot(previous: any[], next: any[]): boolean {
+  if (previous.length !== next.length) return false;
+  const keys = [
+    "id",
+    "order_number",
+    "external_order_id",
+    "provider_order_id",
+    "status",
+    "created_at",
+    "updated_at",
+    "quantity",
+    "price",
+    "refunded_at",
+    "refunded_amount_minor",
+  ];
+  return previous.every((oldOrder, index) => {
+    const newOrder = next[index];
+    return keys.every((key) => String(oldOrder?.[key] ?? "") === String(newOrder?.[key] ?? ""));
+  });
+}
+
 export default function MyOrders() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
@@ -150,6 +175,7 @@ export default function MyOrders() {
   // "Annuler" est gelé pour ces commandes — empêche les doubles soumissions.
   const [pendingCancelOrderIds, setPendingCancelOrderIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
+  const initialLoadDoneRef = useRef(false);
 
   // Évite les race conditions : seul le dernier loadDetails déclenché est pris
   // en compte. Les anciens fetchs en vol sont ignorés à leur retour, ce qui
@@ -177,19 +203,19 @@ export default function MyOrders() {
       const r = await authedFetch("/api/smm/user-orders");
       if (!r.ok) {
         console.error("[MyOrders] user-orders returned", r.status);
-        setLoading(false);
         return;
       }
       const initial: any[] = await r.json();
       setOrders(initial);
-      setLoading(false);
       const { orders: synced, refunds } = await syncOrdersStatusWithRefunds(initial);
       setOrders(synced);
       notifyRefunds(refunds);
       void loadDetails(synced);
     } catch (err) {
       console.error("[MyOrders] load error:", err);
+    } finally {
       setLoading(false);
+      initialLoadDoneRef.current = true;
     }
   };
 
@@ -264,18 +290,37 @@ export default function MyOrders() {
   useEffect(() => { load(); }, [user]);
 
   // Periodic silent refresh + visibility listener so newly placed orders
-  // always appear even if a prior refresh was missed.
+  // always appear without resetting loading state, filters, scroll position,
+  // or the current route. Requests never overlap.
   useEffect(() => {
     if (!user) return;
+    let disposed = false;
+    let running = false;
     const silentLoad = async () => {
-      const r = await authedFetch("/api/smm/user-orders");
-      if (r.ok) setOrders(await r.json() as any[]);
+      if (
+        disposed ||
+        !initialLoadDoneRef.current ||
+        running ||
+        document.visibilityState !== "visible"
+      ) return;
+      running = true;
+      try {
+        const r = await authedFetch("/api/smm/user-orders");
+        if (!r.ok || disposed) return;
+        const next = await r.json() as any[];
+        setOrders((previous) => sameOrderSnapshot(previous, next) ? previous : next);
+      } catch {
+        // Silent refresh failures must not interrupt the user's navigation.
+      } finally {
+        running = false;
+      }
     };
     const onVisible = () => { if (document.visibilityState === "visible") void silentLoad(); };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", silentLoad);
-    const id = setInterval(silentLoad, 15000);
+    const id = setInterval(silentLoad, 1000);
     return () => {
+      disposed = true;
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", silentLoad);
       clearInterval(id);
@@ -497,7 +542,7 @@ export default function MyOrders() {
               <table className="w-full text-xs">
                 <thead className="bg-muted text-muted-foreground">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium">ID</th>
+                    <th className="px-3 py-2 text-left font-medium">N° commande</th>
                     <th className="px-3 py-2 text-left font-medium">Date</th>
                     <th className="px-3 py-2 text-left font-medium">Service</th>
                     <th className="px-3 py-2 text-left font-medium">Lien</th>
@@ -529,8 +574,8 @@ export default function MyOrders() {
                       <tr key={o.id} className="border-t hover:bg-muted/30">
                         <td className="px-3 py-2 font-mono">
                           <div className="flex items-center gap-1">
-                            <span>{o.external_order_id || "—"}</span>
-                            {o.external_order_id && <CopyBtn text={String(o.external_order_id)} />}
+                            <span>#{orderNumber(o)}</span>
+                            <CopyBtn text={orderNumber(o)} />
                           </div>
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap">
@@ -677,13 +722,14 @@ export default function MyOrders() {
                       </div>
                     )}
                     <div className="flex items-center justify-between pt-1 text-[10px] text-muted-foreground border-t">
-                      <span>
+                      <span className="whitespace-nowrap">
                         {new Date(o.created_at).toLocaleDateString("fr-FR")}{" "}
                         {new Date(o.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                       </span>
-                      {o.external_order_id && (
-                        <span className="font-mono">#{o.external_order_id}</span>
-                      )}
+                      <span className="flex items-center gap-1 font-mono">
+                        <span>N° #{orderNumber(o)}</span>
+                        <CopyBtn text={orderNumber(o)} />
+                      </span>
                     </div>
                     {cancellable && o.external_order_id && (
                       <div className="pt-1">
