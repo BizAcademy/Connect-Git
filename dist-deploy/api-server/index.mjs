@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-18T22:47:52.370Z";
+var BUILD_TIME = "2026-09-18T22:50:15.302Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -78169,6 +78169,7 @@ var map = (r) => ({
   order_external_id: r.order_external_id ?? null,
   order_local_id: r.order_local_id ?? null,
   provider_id: r.provider_id ?? null,
+  order_number: r.order_external_id ?? r.order_local_id ?? null,
   service_name: r.service_name ?? null,
   admin_response: r.admin_response ?? void 0,
   resolved_at: r.resolved_at ? new Date(r.resolved_at).toISOString() : void 0,
