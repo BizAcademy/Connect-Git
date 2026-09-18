@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-18T22:50:15.302Z";
+var BUILD_TIME = "2026-09-18T23:04:36.213Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -77394,7 +77394,7 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
       args.push(userId);
     }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-    const [rows] = await getMysqlPool().query(`SELECT * FROM (SELECT CONCAT('o-',o.id) id,o.id local_order_id,'order' kind,o.created_at,o.charge_minor amount,o.status,o.refunded_at,o.refunded_amount_minor,o.user_id,COALESCE(p.username,p.email,o.user_id) user_label,p.email user_email,CONCAT_WS(' \xB7 ',o.service_category,o.service_name) detail,COALESCE(o.external_order_id,o.provider_order_id) reference,o.provider,p.country,o.currency FROM orders o LEFT JOIN profiles p ON p.user_id=o.user_id UNION ALL SELECT CONCAT('p-',x.id),NULL,'deposit',x.created_at,x.amount_minor,x.status,NULL,NULL,x.user_id,COALESCE(p.username,p.email,x.user_id),p.email,CONCAT('D\xE9p\xF4t \xB7 ',COALESCE(x.method,'')),COALESCE(x.transaction_id,x.order_id,x.provider_reference),NULL,x.country,x.currency FROM payments x LEFT JOIN profiles p ON p.user_id=x.user_id) t ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`, [...args, limit, offset]);
+    const [rows] = await getMysqlPool().query(`SELECT * FROM (SELECT CONCAT('o-',o.id) id,o.id local_order_id,'order' kind,o.created_at,o.charge_minor amount,o.status,o.refunded_at,o.refunded_amount_minor,o.user_id,COALESCE(p.username,p.email,o.user_id) user_label,p.email user_email,CONCAT_WS(' \xB7 ',o.service_category,o.service_name) detail,COALESCE(o.external_order_id,o.provider_order_id) reference,COALESCE(o.external_order_id,o.provider_order_id,o.id) order_number,o.provider,p.country,o.currency FROM orders o LEFT JOIN profiles p ON p.user_id=o.user_id UNION ALL SELECT CONCAT('p-',x.id),NULL,'deposit',x.created_at,x.amount_minor,x.status,NULL,NULL,x.user_id,COALESCE(p.username,p.email,x.user_id),p.email,CONCAT('D\xE9p\xF4t \xB7 ',COALESCE(x.method,'')),COALESCE(x.transaction_id,x.order_id,x.provider_reference),COALESCE(x.transaction_id,x.order_id,x.provider_reference),NULL,x.country,x.currency FROM payments x LEFT JOIN profiles p ON p.user_id=x.user_id) t ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`, [...args, limit, offset]);
     return res.json({ rows: rows.map((r) => ({ ...r, amount: Number(r.amount) / 100, refunded_amount: r.refunded_amount_minor == null ? null : Number(r.refunded_amount_minor) / 100 })), total_count: null, has_more: rows.length === limit });
   } catch (err) {
     logger.error({ err }, "transactions");

@@ -2426,7 +2426,8 @@ const AdminOrders = () => {
         ...row,
         id: String(row.id).replace(/^o-/, ""),
         price: row.amount,
-        external_order_id: row.reference,
+        external_order_id: row.reference || row.order_number || null,
+        order_number: String(row.order_number || row.reference || row.local_order_id || ""),
         service_name: row.detail,
       }));
       setOrders(list);
@@ -2498,7 +2499,7 @@ const AdminOrders = () => {
         if (norm !== statusF) return false;
       }
       if (ql) {
-        const hay = `${o.id} ${o.external_order_id || ""} ${o.service_name || ""} ${o.link || ""} ${usernames[o.user_id] || ""}`.toLowerCase();
+        const hay = `${o.id} ${o.order_number || ""} ${o.external_order_id || ""} ${o.service_name || ""} ${o.link || ""} ${usernames[o.user_id] || ""}`.toLowerCase();
         if (!hay.includes(ql)) return false;
       }
       return true;
@@ -2597,7 +2598,7 @@ const AdminOrders = () => {
                       <div className="flex gap-3 mt-1 flex-wrap text-[11px] text-muted-foreground">
                         <span>👤 {usernames[o.user_id] || o.user_id?.slice(0, 8) || "—"}</span>
                         <span>📅 {new Date(o.created_at).toLocaleDateString("fr-FR")} {new Date(o.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
-                        {o.external_order_id && <span className="font-mono">#{o.external_order_id}</span>}
+                        {o.order_number && <span className="font-mono">N° commande #{o.order_number}</span>}
                       </div>
                     </div>
                     <select
