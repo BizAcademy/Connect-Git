@@ -617,8 +617,11 @@ const AdminTransactions = () => {
   const [search, setSearch] = useState("");
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [refunding, setRefunding] = useState<string | null>(null);
+  const refreshInFlightRef = useRef(false);
 
   const load = async (silent = false) => {
+    if (refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
     if (!silent) setLoading(true);
     try {
       // Source the unified journal from the server (service-role, RLS-bypass).
@@ -679,8 +682,14 @@ const AdminTransactions = () => {
       });
 
       setRows(updated);
+    } catch (err) {
+      if (!silent) {
+        setRows([]);
+        toast.error(`Impossible de charger les transactions : ${(err as Error).message}`);
+      }
     } finally {
       if (!silent) setLoading(false);
+      refreshInFlightRef.current = false;
     }
   };
 
@@ -844,14 +853,14 @@ const AdminTransactions = () => {
             className="w-full pl-7 pr-2 py-1.5 text-xs border rounded-md bg-background"
           />
         </div>
-        <Button variant="outline" size="sm" onClick={() => load()} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={() => void load(true)} disabled={loading}>
           <RefreshCw size={13} className={`mr-1 ${loading ? "animate-spin" : ""}`} />
           Actualiser
         </Button>
       </div>
 
       {/* Table */}
-      {loading ? (
+      {loading && rows.length === 0 ? (
         <LogoLoader />
       ) : filtered.length === 0 ? (
         <p className="text-center text-sm text-muted-foreground py-8">Aucune transaction pour ces filtres.</p>
@@ -2417,9 +2426,12 @@ const AdminOrders = () => {
   const [statusF, setStatusF] = useState<string>("all");
   const [q, setQ] = useState("");
   const [usernames, setUsernames] = useState<Record<string, string>>({});
+  const refreshInFlightRef = useRef(false);
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
+    if (!silent) setLoading(true);
     try {
       const journal = await adminApiFetch("/api/admin/transactions?limit=all&type=order");
       const list: any[] = (journal.rows || []).map((row: any) => ({
@@ -2436,18 +2448,21 @@ const AdminOrders = () => {
       for (const order of list) map[order.user_id] = order.user_label || order.user_email || String(order.user_id).slice(0, 8);
       setUsernames(map);
     } catch (err) {
-      setOrders([]);
-      setUsernames({});
-      toast.error(`Impossible de charger toutes les commandes : ${(err as Error).message}`);
+      if (!silent) {
+        setOrders([]);
+        setUsernames({});
+        toast.error(`Impossible de charger toutes les commandes : ${(err as Error).message}`);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
+      refreshInFlightRef.current = false;
     }
   };
 
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
-    const id = window.setInterval(() => { void load(); }, 20_000);
+    const id = window.setInterval(() => { void load(true); }, 20_000);
     return () => window.clearInterval(id);
   }, []);
 
@@ -2522,7 +2537,7 @@ const AdminOrders = () => {
         <p className="text-sm text-muted-foreground">
           {filtered.length} sur {orders.length} commande{orders.length > 1 ? "s" : ""}
         </p>
-        <Button variant="outline" size="sm" onClick={load}><RefreshCw size={14} className="mr-1" />Actualiser</Button>
+        <Button variant="outline" size="sm" onClick={() => void load(true)}><RefreshCw size={14} className="mr-1" />Actualiser</Button>
       </div>
 
       <Card>
@@ -2572,7 +2587,7 @@ const AdminOrders = () => {
         </CardContent>
       </Card>
 
-      {loading ? (
+      {loading && orders.length === 0 ? (
         <LogoLoader />
       ) : filtered.length === 0 ? (
         <p className="text-center text-sm text-muted-foreground py-8">Aucune commande pour ces filtres.</p>
