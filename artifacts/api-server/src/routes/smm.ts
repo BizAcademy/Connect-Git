@@ -225,10 +225,19 @@ export async function syncOrderInternal(opts:{localOrderId?:string;externalId?:s
       provider_cost_usd:0, ...gain, provider, order_id:String(order.id), currency:String(order.currency??"XOF"),
     });
   }
-  // Persist completed status only after its durable earning has been accepted;
-  // otherwise a subsequent poll/manual sync can retry the ledger write.
+  // Credit the wallet before persisting a terminal refund status. If the
+  // transaction fails, leaving the previous non-final status in place lets
+  // the poller retry on its next tick instead of permanently skipping an
+  // unrefunded failed/canceled order.
+  let refund:any={refunded:false,amountMinor:0};
+  if((FINAL_REFUND_STATUSES.has(status)||status==="partial"||opts.forceRefund)&&!order.refunded_at){
+    let amount=Number(order.charge_minor);
+    if(status==="partial"&&!opts.forceRefund)amount=remains&&Number(order.quantity)>0?Math.round(remains/Number(order.quantity)*amount):0;
+    if(amount>0)refund=await refundOrderAtomic(String(order.id),amount);
+  }
+  // Persist completed status only after its durable earning has been accepted,
+  // and refund statuses only after the wallet credit has succeeded.
   if(status!==order.status)await getMysqlPool().execute("UPDATE orders SET status=? WHERE id=?",[status,order.id]);
-  let refund:any={refunded:false,amountMinor:0};if((FINAL_REFUND_STATUSES.has(status)||status==="partial"||opts.forceRefund)&&!order.refunded_at){let amount=Number(order.charge_minor);if(status==="partial"&&!opts.forceRefund)amount=remains&&Number(order.quantity)>0?Math.round(remains/Number(order.quantity)*amount):0;if(amount>0)refund=await refundOrderAtomic(String(order.id),amount);}
   return{ok:true,status,previous_status:String(order.status),refunded:refund.refunded,refunded_amount:refund.refunded?minorToFcfa(refund.amountMinor):undefined,user_id:String(order.user_id),provider};
 }
 function pquery(q:unknown):ProviderId|null{const n=Number(q);return n===1||n===3||n===4||n===5?n as ProviderId:null;}

@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-18T23:04:36.213Z";
+var BUILD_TIME = "2026-09-20T09:45:29.361Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -74371,13 +74371,13 @@ async function syncOrderInternal(opts) {
       currency: String(order.currency ?? "XOF")
     });
   }
-  if (status !== order.status) await getMysqlPool().execute("UPDATE orders SET status=? WHERE id=?", [status, order.id]);
   let refund = { refunded: false, amountMinor: 0 };
   if ((FINAL_REFUND_STATUSES.has(status) || status === "partial" || opts.forceRefund) && !order.refunded_at) {
     let amount = Number(order.charge_minor);
     if (status === "partial" && !opts.forceRefund) amount = remains && Number(order.quantity) > 0 ? Math.round(remains / Number(order.quantity) * amount) : 0;
     if (amount > 0) refund = await refundOrderAtomic(String(order.id), amount);
   }
+  if (status !== order.status) await getMysqlPool().execute("UPDATE orders SET status=? WHERE id=?", [status, order.id]);
   return { ok: true, status, previous_status: String(order.status), refunded: refund.refunded, refunded_amount: refund.refunded ? minorToFcfa(refund.amountMinor) : void 0, user_id: String(order.user_id), provider };
 }
 function pquery(q) {
@@ -78969,7 +78969,7 @@ async function purgeSensitiveSettingRows() {
 
 // src/lib/order-status-poller.ts
 init_logger();
-var POLL_INTERVAL_MS = 6e4;
+var POLL_INTERVAL_MS = 1e4;
 var WINDOW_DAYS = 30;
 var BATCH_LIMIT = 100;
 var PROVIDER_STATUS_BATCH = 100;
@@ -78996,9 +78996,16 @@ async function batchStatuses(pid, ids) {
   for (const part of chunk(ids, PROVIDER_STATUS_BATCH)) try {
     const response = await callProvider(pid, "status", { orders: part.join(",") });
     if (Array.isArray(response)) {
-      for (const row of response) if (row?.order != null && !row.error && typeof row.status === "string") out.set(String(row.order), row.status);
-      else if (response && typeof response === "object") {
-        for (const [id, row2] of Object.entries(response)) if (row2 && !row2.error && typeof row2.status === "string") out.set(id, row2.status);
+      for (const row of response) {
+        if (row?.order != null && !row.error && typeof row.status === "string") {
+          out.set(String(row.order), row.status);
+        }
+      }
+    } else if (response && typeof response === "object") {
+      for (const [id, row] of Object.entries(response)) {
+        if (row && !row.error && typeof row.status === "string") {
+          out.set(id, row.status);
+        }
       }
     }
   } catch (err) {
@@ -79055,7 +79062,7 @@ function startOrderStatusPoller(syncFn) {
 
 // src/lib/missed-refund-scanner.ts
 init_logger();
-var SCAN_INTERVAL_MS = 5 * 6e4;
+var SCAN_INTERVAL_MS = 1e4;
 var WINDOW_DAYS2 = 90;
 var PAGE_SIZE = 200;
 var timer2 = null;
@@ -79071,8 +79078,12 @@ async function scanOnce() {
   );
   let refunded = 0;
   for (const order of orders) {
-    const result = await refundOrderAtomic(String(order.id));
-    if (result.refunded) refunded++;
+    try {
+      const result = await refundOrderAtomic(String(order.id));
+      if (result.refunded) refunded++;
+    } catch (err) {
+      logger.error({ err, orderId: String(order.id) }, "missed-refund-scanner: order refund failed");
+    }
   }
   if (orders.length) logger.info({ total: orders.length, refunded }, "missed-refund-scanner: scan complete");
 }
@@ -79092,7 +79103,7 @@ function startMissedRefundScanner() {
   };
   setTimeout(() => {
     void safeScan();
-  }, 1e4);
+  }, 2e3);
   timer2 = setInterval(() => {
     void safeScan();
   }, SCAN_INTERVAL_MS);

@@ -4,7 +4,7 @@ import { getMysqlPool } from "./mysql";
 import { callProvider, ALL_PROVIDER_IDS, type ProviderId } from "./smm-providers";
 import { mapProviderStatus, FINAL_REFUND_STATUSES } from "./smm-status";
 
-const POLL_INTERVAL_MS = 60_000, WINDOW_DAYS = 30, BATCH_LIMIT = 100, PROVIDER_STATUS_BATCH = 100, SYNC_CONCURRENCY = 4;
+const POLL_INTERVAL_MS = 10_000, WINDOW_DAYS = 30, BATCH_LIMIT = 100, PROVIDER_STATUS_BATCH = 100, SYNC_CONCURRENCY = 4;
 const FINAL_STATUSES = ["completed", "canceled", "cancelled", "refunded", "failed"];
 let timer: NodeJS.Timeout | null = null, bootTimer: NodeJS.Timeout | null = null, started = false, tickInFlight = false;
 export type PollerProviderId = ProviderId;
@@ -26,8 +26,19 @@ async function batchStatuses(pid: PollerProviderId, ids: string[]) {
   const out = new Map<string, string>();
   for (const part of chunk(ids, PROVIDER_STATUS_BATCH)) try {
     const response: any = await callProvider(pid, "status", { orders: part.join(",") });
-    if (Array.isArray(response)) for (const row of response) if (row?.order != null && !row.error && typeof row.status === "string") out.set(String(row.order), row.status);
-    else if (response && typeof response === "object") for (const [id, row] of Object.entries(response)) if (row && !(row as any).error && typeof (row as any).status === "string") out.set(id, (row as any).status);
+    if (Array.isArray(response)) {
+      for (const row of response) {
+        if (row?.order != null && !row.error && typeof row.status === "string") {
+          out.set(String(row.order), row.status);
+        }
+      }
+    } else if (response && typeof response === "object") {
+      for (const [id, row] of Object.entries(response)) {
+        if (row && !(row as any).error && typeof (row as any).status === "string") {
+          out.set(id, (row as any).status);
+        }
+      }
+    }
   } catch (err) { logger.warn({ err, pid }, "order-poller: batch status failed"); }
   return out;
 }
