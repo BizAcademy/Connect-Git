@@ -1063,15 +1063,16 @@ function buildAdminInvoice(r: TxRow): InvoiceData {
   }
   if (r.type === "refund") {
     const o = r.raw;
+    const orderId = String(o.local_order_id || o.id).replace(/^r-/, "");
     return {
-      number: `BP-REM-${shortAdminId(o.id)}`,
+      number: `BP-REM-${shortAdminId(orderId)}`,
       date: o.refunded_at,
       type: "refund",
       customer,
       amount: Number(o.refunded_amount),
       status: "Crédité",
       details: [
-        { label: "Commande d'origine", value: `BP-CMD-${shortAdminId(o.id)}` },
+        { label: "Commande d'origine", value: `BP-CMD-${shortAdminId(orderId)}` },
         { label: "Service", value: `${o.service_category || ""} · ${o.service_name || ""}`.replace(/^ · /, "") },
         { label: "ID fournisseur", value: o.external_order_id ? `#${o.external_order_id}` : "—" },
         { label: "Utilisateur", value: r.user_label },

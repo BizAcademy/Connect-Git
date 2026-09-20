@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-20T09:45:29.361Z";
+var BUILD_TIME = "2026-09-20T09:48:57.101Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -77381,7 +77381,10 @@ router3.post("/admin/deposits/:id/status", requireUser, requireAdmin, async (req
 router3.post("/admin/deposits/:id/credit-bonus", requireUser, requireAdmin, async (_req, res) => res.status(409).json({ error: "Le cr\xE9dit de bonus doit \xEAtre trait\xE9 par le service de paiement" }));
 router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) => {
   try {
-    const limit = String(req.query.limit) === "all" ? 1e5 : Math.min(Math.max(Number(req.query.limit) || 200, 1), 1e3), offset = Math.max(Number(req.query.offset) || 0, 0), type = String(req.query.type || "all"), userId = String(req.query.user_id || "").trim();
+    const limit = String(req.query.limit) === "all" ? 1e5 : Math.min(Math.max(Number(req.query.limit) || 200, 1), 1e3);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+    const type = String(req.query.type || "all");
+    const userId = String(req.query.user_id || "").trim();
     const clauses = [];
     const args = [];
     if (type !== "all") {
@@ -77394,8 +77397,63 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
       args.push(userId);
     }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-    const [rows] = await getMysqlPool().query(`SELECT * FROM (SELECT CONCAT('o-',o.id) id,o.id local_order_id,'order' kind,o.created_at,o.charge_minor amount,o.status,o.refunded_at,o.refunded_amount_minor,o.user_id,COALESCE(p.username,p.email,o.user_id) user_label,p.email user_email,CONCAT_WS(' \xB7 ',o.service_category,o.service_name) detail,COALESCE(o.external_order_id,o.provider_order_id) reference,COALESCE(o.external_order_id,o.provider_order_id,o.id) order_number,o.provider,p.country,o.currency FROM orders o LEFT JOIN profiles p ON p.user_id=o.user_id UNION ALL SELECT CONCAT('p-',x.id),NULL,'deposit',x.created_at,x.amount_minor,x.status,NULL,NULL,x.user_id,COALESCE(p.username,p.email,x.user_id),p.email,CONCAT('D\xE9p\xF4t \xB7 ',COALESCE(x.method,'')),COALESCE(x.transaction_id,x.order_id,x.provider_reference),COALESCE(x.transaction_id,x.order_id,x.provider_reference),NULL,x.country,x.currency FROM payments x LEFT JOIN profiles p ON p.user_id=x.user_id) t ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`, [...args, limit, offset]);
-    return res.json({ rows: rows.map((r) => ({ ...r, amount: Number(r.amount) / 100, refunded_amount: r.refunded_amount_minor == null ? null : Number(r.refunded_amount_minor) / 100 })), total_count: null, has_more: rows.length === limit });
+    const [rows] = await getMysqlPool().query(
+      `SELECT * FROM (
+        SELECT
+          CONCAT('o-',o.id) id,o.id local_order_id,'order' kind,o.created_at,
+          o.charge_minor amount,o.status,o.refunded_at,o.refunded_amount_minor,
+          o.user_id,COALESCE(p.username,p.email,o.user_id) user_label,p.email user_email,
+          CONCAT_WS(' \xB7 ',o.service_category,o.service_name) detail,
+          COALESCE(o.external_order_id,o.provider_order_id) reference,
+          COALESCE(o.external_order_id,o.provider_order_id,o.id) order_number,
+          o.provider,p.country,o.currency,
+          COALESCE(o.external_order_id,o.provider_order_id) external_order_id,
+          o.service_category,o.service_name
+        FROM orders o
+        LEFT JOIN profiles p ON p.user_id=o.user_id
+
+        UNION ALL
+
+        SELECT
+          CONCAT('r-',o.id) id,o.id local_order_id,'refund' kind,o.refunded_at created_at,
+          o.refunded_amount_minor amount,'completed' status,o.refunded_at,o.refunded_amount_minor,
+          o.user_id,COALESCE(p.username,p.email,o.user_id) user_label,p.email user_email,
+          CONCAT('Remboursement \xB7 ',CONCAT_WS(' \xB7 ',o.service_category,o.service_name)) detail,
+          COALESCE(o.external_order_id,o.provider_order_id,o.id) reference,
+          COALESCE(o.external_order_id,o.provider_order_id,o.id) order_number,
+          o.provider,p.country,o.currency,
+          COALESCE(o.external_order_id,o.provider_order_id) external_order_id,
+          o.service_category,o.service_name
+        FROM orders o
+        LEFT JOIN profiles p ON p.user_id=o.user_id
+        WHERE o.refunded_at IS NOT NULL AND o.refunded_amount_minor > 0
+
+        UNION ALL
+
+        SELECT
+          CONCAT('p-',x.id) id,NULL local_order_id,'deposit' kind,x.created_at,
+          x.amount_minor amount,x.status,NULL refunded_at,NULL refunded_amount_minor,
+          x.user_id,COALESCE(p.username,p.email,x.user_id) user_label,p.email user_email,
+          CONCAT('D\xE9p\xF4t \xB7 ',COALESCE(x.method,'')) detail,
+          COALESCE(x.transaction_id,x.order_id,x.provider_reference) reference,
+          COALESCE(x.transaction_id,x.order_id,x.provider_reference) order_number,
+          NULL provider,x.country,x.currency,NULL external_order_id,
+          NULL service_category,NULL service_name
+        FROM payments x
+        LEFT JOIN profiles p ON p.user_id=x.user_id
+      ) t ${where}
+      ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      [...args, limit, offset]
+    );
+    return res.json({
+      rows: rows.map((r) => ({
+        ...r,
+        amount: Number(r.amount) / 100,
+        refunded_amount: r.refunded_amount_minor == null ? null : Number(r.refunded_amount_minor) / 100
+      })),
+      total_count: null,
+      has_more: rows.length === limit
+    });
   } catch (err) {
     logger.error({ err }, "transactions");
     return res.status(500).json({ error: "Erreur lecture transactions" });
