@@ -1,0 +1,40 @@
+Contexte : mon site est un SMM panel. L'API Afribapay est déjà intégrée pour les dépôts mobile money. Les soldes utilisateurs sont actuellement affichés dans la monnaie locale de l'utilisateur (XAF, CDF, XOF, GNF, etc.).
+
+Objectif : ajouter les paiements crypto via l'API izipay et introduire un deuxième solde en USD, sans casser le système actuel.
+
+1) BASE DE DONNÉES
+- Conserver le solde en monnaie locale existant (balance_local + currency_local).
+- Ajouter un champ balance_usd (decimal, défaut 0) sur chaque utilisateur.
+- Ajouter/adapter la table des transactions : type (mobile_money | crypto), provider (afribapay | izipay), amount, currency, status (pending | success | failed), provider_reference (unique), wallet_credited (local | usd), created_at.
+- Migration sans perte des données existantes.
+
+2) INTERFACE UTILISATEUR
+- Afficher deux soldes dans le header/dashboard : "Solde local" (avec sa devise) et "Solde USD".
+- Page "Dépôt" : au clic sur Dépôt, l'utilisateur choisit entre "Dépôt Mobile Money" et "Dépôt Crypto".
+- Mobile Money : conserver le flux Afribapay actuel. Le montant est crédité automatiquement dans le solde local.
+- Crypto : formulaire avec le montant en USD, puis redirection vers la page de paiement izipay (ou affichage de l'adresse/QR selon ce que l'API fournit). Le montant est crédité dans le solde USD.
+- Historique des dépôts avec type, montant, statut et solde crédité.
+
+3) INTÉGRATION IZIPAY (crypto)
+- Lis d'abord la documentation officielle de l'API izipay (création de paiement, webhook/IPN, vérification de statut, signature) et suis-la strictement. Demande-moi les clés API nécessaires et stocke-les dans les Secrets Replit (jamais en dur dans le code).
+- Endpoint backend pour créer le paiement crypto (montant en USD, référence unique, URL de retour, URL de webhook).
+- Endpoint webhook pour recevoir les notifications de paiement :
+  * vérifier la signature de la requête ;
+  * vérifier le statut auprès de l'API izipay avant de créditer ;
+  * créditer balance_usd uniquement quand le paiement est confirmé, immédiatement après confirmation ;
+  * idempotence : ne jamais créditer deux fois la même transaction (contrôle par provider_reference + statut).
+- Gérer les cas : paiement expiré, sous-paiement/sur-paiement, échec, annulation.
+
+4) UTILISATION DES SOLDES
+- Les commandes du panel peuvent être payées avec le solde USD ou le solde local. Le prix du service est en USD ; en solde local, appliquer la conversion selon le taux déjà utilisé sur le site.
+- L'utilisateur choisit quel solde utiliser lors de la commande, avec vérification du solde suffisant côté serveur.
+- Toute opération sur les soldes dans une transaction de base de données atomique.
+
+5) SÉCURITÉ ET QUALITÉ
+- Aucune confiance dans les montants envoyés par le front : recalculer/valider côté serveur.
+- Logs des webhooks et erreurs, messages d'erreur clairs pour l'utilisateur.
+- Ne modifie pas le flux Afribapay existant, sauf pour l'adapter à la nouvelle page de choix du dépôt.
+
+6) LIVRAISON
+- Explique-moi les variables d'environnement à configurer et l'URL du webhook à renseigner dans mon compte izipay.
+- Teste les deux flux (mobile money → solde local, crypto → solde USD) et résume les changements effectués.
