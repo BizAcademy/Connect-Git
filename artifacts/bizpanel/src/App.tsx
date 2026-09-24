@@ -36,6 +36,11 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <PageMessages />
+      {import.meta.env.DEV && import.meta.env.VITE_PLESK_LIVE_PREVIEW === "true" && (
+        <div role="status" className="relative z-50 bg-amber-100 border-b border-amber-300 px-4 py-2 text-center text-sm font-medium text-amber-950">
+          Aperçu relié à Plesk : vos connexions et actions utilisent les données réelles du site.
+        </div>
+      )}
 
       <BrowserRouter>
         <AuthProvider>

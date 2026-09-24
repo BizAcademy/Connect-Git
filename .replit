@@ -25,5 +25,9 @@ timeoutMs = 20000
 SMM_PANEL_5_API_URL = "https://exosupplier.com/api/v2"
 AFRIBAPAY_API_BASE = "https://api.afribapay.com"
 
+[userenv.development]
+DEV_PLESK_API_ORIGIN = "https://buzzbooster.site"
+VITE_PLESK_LIVE_PREVIEW = "true"
+
 [nix]
 channel = "stable-25_05"

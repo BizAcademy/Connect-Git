@@ -14,6 +14,7 @@ process.on("unhandledRejection", (reason) => {
 });
 
 import app from "./app";
+import { livePreviewProxyEnabled } from "./lib/development-api-proxy";
 import { logger } from "./lib/logger";
 import { startSupportCleanup } from "./lib/support";
 import { purgeSensitiveSettingRows } from "./lib/settings-cleanup";
@@ -53,6 +54,10 @@ app.listen(port, async (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  if (livePreviewProxyEnabled) {
+    logger.warn("Development preview proxies API requests to live Plesk; skipping local database jobs");
+    return;
+  }
   startSupportCleanup();
   void purgeSensitiveSettingRows();
   // Load admin-configured USD→local pricing from the DB BEFORE warming the

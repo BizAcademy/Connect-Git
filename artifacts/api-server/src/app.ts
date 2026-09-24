@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { getMysqlPool } from "./lib/mysql";
+import { developmentApiProxy, livePreviewProxyEnabled } from "./lib/development-api-proxy";
 
 const app: Express = express();
 
@@ -46,6 +47,9 @@ app.use(
     },
   }),
 );
+// Explicit development-only switch: preview uses the live Plesk API, including
+// login cookies. Production always uses its own local routes and database.
+if (livePreviewProxyEnabled) app.use("/api", developmentApiProxy);
 app.use(compression());
 app.use(cors({ origin: true, credentials: true }));
 
