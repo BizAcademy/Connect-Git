@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 const missingApiMessage = "Le dépôt crypto n'est pas encore disponible sur le serveur Plesk. Le backend et la migration doivent être mis à jour avant tout paiement.";
+const depositFeeBps = 150;
+const formatUsd = (minor: number) => `${(minor / 100).toFixed(2)} USD`;
 
-async function cryptoResponse(res: Response): Promise<{ error?: string; available?: boolean; status?: string; payment_url?: string }> {
+async function cryptoResponse(res: Response): Promise<{ error?: string; available?: boolean; deposit_fee_bps?: number; status?: string; payment_url?: string; amount_minor?: number; fee_minor?: number; charge_minor?: number }> {
   if (!res.headers.get("content-type")?.includes("application/json")) {
     throw new Error(res.status === 404 ? missingApiMessage : "Le serveur de paiement a renvoyé une réponse inattendue. Aucun paiement n'a été lancé.");
   }
@@ -23,11 +25,16 @@ export default function CryptoDeposit() {
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [availability, setAvailability] = useState<"checking" | "ready" | "unavailable">("checking");
+  const validAmount = /^(?:0|[1-9]\d{0,6})(?:\.\d{1,2})?$/.test(amount);
+  const amountMinor = validAmount ? Math.round(Number(amount) * 100) : null;
+  const feeMinor = amountMinor == null ? null : Math.round(amountMinor * depositFeeBps / 10_000);
+  const chargeMinor = amountMinor == null || feeMinor == null ? null : amountMinor + feeMinor;
   useEffect(() => {
     let live = true;
     void authedFetch("/api/payments/crypto/availability").then(async res => {
       const data = await cryptoResponse(res);
       if (!res.ok || !data.available) throw new Error(data.error || "Le dépôt crypto est momentanément indisponible.");
+      if (data.deposit_fee_bps !== depositFeeBps) throw new Error("Le serveur n'applique pas encore les frais de dépôt de 1,5 %. Aucun paiement ne sera lancé.");
       if (live) setAvailability("ready");
     }).catch(err => {
       if (!live) return;
@@ -58,7 +65,7 @@ export default function CryptoDeposit() {
   }, [paymentId, refreshProfile, availability]);
   const initiate = async () => {
     if (availability !== "ready") return;
-    if (!/^(?:0|[1-9]\d{0,6})(?:\.\d{1,2})?$/.test(amount) || Number(amount) < 1) {
+    if (amountMinor == null || amountMinor < 100 || amountMinor > 100_000_000 || feeMinor == null || chargeMinor == null) {
       setError("Saisissez un montant valide en USD (minimum 1 USD).");
       return;
     }
@@ -66,10 +73,13 @@ export default function CryptoDeposit() {
     try {
       const res = await authedFetch("/api/payments/crypto", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ amount, deposit_fee_bps: depositFeeBps, charge_minor: chargeMinor }),
       });
       const data = await cryptoResponse(res);
       if (!res.ok) throw new Error(data.error || "Création du paiement impossible");
+      if (data.amount_minor !== amountMinor || data.fee_minor !== feeMinor || data.charge_minor !== chargeMinor) {
+        throw new Error("Le montant du paiement ne correspond pas au récapitulatif. Ne payez pas ce lien.");
+      }
       if (!data.payment_url || !data.payment_url.startsWith("https://")) throw new Error("Lien de paiement invalide. Aucun paiement n'a été lancé.");
       window.location.assign(data.payment_url);
     } catch (err) { setError(err instanceof Error ? err.message : "Erreur réseau"); setLoading(false); }
@@ -87,7 +97,14 @@ export default function CryptoDeposit() {
       <CardContent className="space-y-3">
         <label htmlFor="crypto-amount" className="text-sm font-medium">Montant à créditer (USD)</label>
         <Input id="crypto-amount" type="number" min="1" max="1000000" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Ex. 10.00" />
-        <p className="text-xs text-muted-foreground">Vous serez redirigé vers la page sécurisée IziChange Pay. Les paiements incomplets ou irréguliers ne sont pas crédités automatiquement.</p>
+        {availability === "ready" && amountMinor != null && amountMinor >= 100 && amountMinor <= 100_000_000 && feeMinor != null && chargeMinor != null && (
+          <div className="rounded-md border p-3 text-sm space-y-1">
+            <div className="flex justify-between gap-3"><span>Montant crédité</span><span>{formatUsd(amountMinor)}</span></div>
+            <div className="flex justify-between gap-3"><span>Frais de dépôt (1,5 %)</span><span>{formatUsd(feeMinor)}</span></div>
+            <div className="flex justify-between gap-3 font-semibold"><span>Total à payer</span><span>{formatUsd(chargeMinor)}</span></div>
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">Vous paierez le montant total affiché sur la page sécurisée IziChange Pay. Seul le montant du dépôt sera crédité après confirmation ; les paiements incomplets ou irréguliers ne sont pas crédités automatiquement.</p>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <Button onClick={initiate} disabled={loading || availability !== "ready"}>{loading ? "Création en cours…" : availability === "checking" ? "Vérification du service…" : "Continuer vers le paiement"}</Button>
       </CardContent></Card>

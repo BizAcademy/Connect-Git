@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-24T01:45:47.903Z";
+var BUILD_TIME = "2026-09-24T02:37:08.357Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -78229,6 +78229,18 @@ init_logger();
 
 // src/lib/izipay.ts
 import crypto9 from "node:crypto";
+var CRYPTO_DEPOSIT_FEE_BPS = 150;
+function quoteCryptoDeposit(amountMinor) {
+  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) throw new Error("Montant USD invalide");
+  const feeMinor = Math.round(amountMinor * CRYPTO_DEPOSIT_FEE_BPS / 1e4);
+  return { feeMinor, chargeMinor: amountMinor + feeMinor };
+}
+function storedCryptoCharge(amountMinor, feeMinor, chargeMinor) {
+  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || !Number.isSafeInteger(feeMinor) || feeMinor < 0 || !Number.isSafeInteger(amountMinor + feeMinor) || (chargeMinor == null ? feeMinor !== 0 : chargeMinor !== amountMinor + feeMinor)) {
+    throw new Error("Montants du paiement incoh\xE9rents");
+  }
+  return chargeMinor ?? amountMinor;
+}
 function parseUsdMinor(value) {
   if (typeof value !== "string" || !/^(?:0|[1-9]\d{0,6})(?:\.\d{1,2})?$/.test(value)) return null;
   const [whole, cents = ""] = value.split(".");
@@ -78294,8 +78306,13 @@ async function reconcileCryptoPayment(paymentId) {
   const [rows] = await db.execute("SELECT * FROM payments WHERE id=? AND provider='izipay'", [paymentId]);
   const payment = rows[0];
   if (!payment || !payment.provider_reference) throw new Error("Intention crypto introuvable");
+  const chargedMinor = storedCryptoCharge(
+    Number(payment.amount_minor),
+    Number(payment.fee_minor),
+    payment.charge_minor == null ? null : Number(payment.charge_minor)
+  );
   const intent = await retrieveIntent(String(payment.provider_reference));
-  if (intent.id !== payment.provider_reference || intent.merchantReference !== payment.order_id || intent.currencyRequested !== "USD" || intent.requestedCurrencyType !== "fiat" || parseUsdMinor(intent.amountRequested) !== Number(payment.amount_minor)) {
+  if (intent.id !== payment.provider_reference || intent.merchantReference !== payment.order_id || intent.currencyRequested !== "USD" || intent.requestedCurrencyType !== "fiat" || parseUsdMinor(intent.amountRequested) !== chargedMinor) {
     throw new Error("Incoh\xE9rence entre le paiement et l'intention IziChange Pay");
   }
   const irregular = intent.status === "irregular" || intent.paymentResult != null && intent.paymentResult !== "exact" || intent.irregularStatus != null && !["none", ""].includes(intent.irregularStatus);
@@ -78304,7 +78321,13 @@ async function reconcileCryptoPayment(paymentId) {
     await conn.beginTransaction();
     const [locked] = await conn.execute("SELECT * FROM payments WHERE id=? FOR UPDATE", [paymentId]);
     const row = locked[0];
-    if (!row || row.provider !== "izipay" || row.provider_reference !== intent.id) throw new Error("Paiement modifi\xE9");
+    if (!row || row.provider !== "izipay" || row.provider_reference !== intent.id || row.order_id !== payment.order_id || Number(row.amount_minor) !== Number(payment.amount_minor) || Number(row.fee_minor) !== Number(payment.fee_minor) || storedCryptoCharge(
+      Number(row.amount_minor),
+      Number(row.fee_minor),
+      row.charge_minor == null ? null : Number(row.charge_minor)
+    ) !== chargedMinor) {
+      throw new Error("Paiement modifi\xE9");
+    }
     if (row.credited_at) {
       await conn.commit();
       return "completed";
@@ -78353,7 +78376,7 @@ router6.get("/payments/crypto/availability", requireUser, async (_req, res) => {
     await getMysqlPool().query("SELECT balance_usd_minor FROM profiles LIMIT 0");
     await getMysqlPool().query("SELECT wallet_credited FROM payments LIMIT 0");
     await getMysqlPool().query("SELECT wallet_charged FROM orders LIMIT 0");
-    return res.json({ available: true });
+    return res.json({ available: true, deposit_fee_bps: CRYPTO_DEPOSIT_FEE_BPS });
   } catch (err) {
     logger.error({ err }, "IziChange Pay database readiness failed");
     return res.status(503).json({ available: false, error: "La base de donn\xE9es crypto n'est pas encore pr\xEAte." });
@@ -78362,6 +78385,10 @@ router6.get("/payments/crypto/availability", requireUser, async (_req, res) => {
 router6.post("/payments/crypto", requireUser, async (req, res) => {
   const amountMinor = parseUsdMinor(req.body?.amount);
   if (amountMinor == null || amountMinor < 100 || amountMinor > 1e8) return res.status(400).json({ error: "Montant USD invalide (1 \xE0 1 000 000 USD)" });
+  const { feeMinor, chargeMinor } = quoteCryptoDeposit(amountMinor);
+  if (req.body?.deposit_fee_bps !== CRYPTO_DEPOSIT_FEE_BPS || req.body?.charge_minor !== chargeMinor) {
+    return res.status(409).json({ error: "Les frais de d\xE9p\xF4t ont chang\xE9. Actualisez la page pour voir le montant \xE0 payer avant de continuer." });
+  }
   const origin = process.env["PUBLIC_API_URL"]?.replace(/\/+$/, "");
   if (!origin || !/^https:\/\//.test(origin) || !process.env["IZIPAY_API_KEY"] || !process.env["IZIPAY_WEBHOOK_SECRET"])
     return res.status(503).json({ error: "Paiement crypto non configur\xE9" });
@@ -78370,14 +78397,17 @@ router6.post("/payments/crypto", requireUser, async (req, res) => {
   try {
     const [users] = await getMysqlPool().execute("SELECT email FROM users WHERE id=?", [req.userId]);
     await getMysqlPool().execute(
-      "INSERT INTO payments (id,user_id,amount_minor,currency,status,provider,method,order_id,wallet_credited) VALUES (?,?,?,'USD','pending','izipay','crypto',?,'usd')",
-      [id, req.userId, amountMinor, reference]
+      "INSERT INTO payments (id,user_id,amount_minor,fee_minor,charge_minor,currency,status,provider,method,order_id,wallet_credited) VALUES (?,?,?,?,?,'USD','pending','izipay','crypto',?,'usd')",
+      [id, req.userId, amountMinor, feeMinor, chargeMinor, reference]
     );
-    const intent = await createIntent(amountMinor, reference, `${origin}/dashboard/deposit?crypto=${id}`, String(users[0]?.email ?? ""));
+    const intent = await createIntent(chargeMinor, reference, `${origin}/dashboard/deposit?crypto=${id}`, String(users[0]?.email ?? ""));
+    if (intent.currencyRequested !== "USD" || intent.requestedCurrencyType !== "fiat" || parseUsdMinor(intent.amountRequested) !== chargeMinor || intent.merchantReference !== reference) {
+      throw new Error("Montant de l'intention de paiement inattendu");
+    }
     const url = intent.paymentLink ?? intent.paymentUrl;
     if (!intent.id || !url || !/^https:\/\//.test(url)) throw new Error("Lien de paiement absent");
     await getMysqlPool().execute("UPDATE payments SET provider_reference=? WHERE id=? AND provider_reference IS NULL", [intent.id, id]);
-    return res.json({ payment_id: id, payment_url: url });
+    return res.json({ payment_id: id, payment_url: url, amount_minor: amountMinor, fee_minor: feeMinor, charge_minor: chargeMinor });
   } catch (err) {
     logger.error({ err, paymentId: id }, "IziChange Pay intent creation failed");
     return res.status(502).json({ error: "Impossible de cr\xE9er le paiement crypto. R\xE9essayez plus tard." });

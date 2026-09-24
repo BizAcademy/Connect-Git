@@ -84,7 +84,10 @@ export default function PaymentHistory() {
                   </div>
                   <div className="text-right shrink-0">
                     {/* amount is stored in the user's local currency at the time of payment */}
-                    <p className="font-bold text-primary text-sm">+{p.amount.toLocaleString()} {p.currency || "FCFA"}</p>
+                    <p className="font-bold text-primary text-sm">{p.method === "crypto" ? `${p.status === "completed" ? "Crédité" : "À créditer"} : ${Number(p.amount).toFixed(2)}` : `+${p.amount.toLocaleString()}`} {p.currency || "FCFA"}</p>
+                    {p.method === "crypto" && Number(p.fee) > 0 && p.charge != null && (
+                      <p className="text-xs text-muted-foreground">Payé : {Number(p.charge).toFixed(2)} USD (dont {Number(p.fee).toFixed(2)} USD de frais)</p>
+                    )}
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {new Date(p.created_at).toLocaleDateString("fr-FR")} {new Date(p.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                     </p>

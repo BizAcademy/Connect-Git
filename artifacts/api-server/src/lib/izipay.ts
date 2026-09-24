@@ -9,6 +9,22 @@ type Intent = {
   paymentLink?: string; paymentUrl?: string;
 };
 
+export const CRYPTO_DEPOSIT_FEE_BPS = 150;
+
+export function quoteCryptoDeposit(amountMinor: number) {
+  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) throw new Error("Montant USD invalide");
+  const feeMinor = Math.round(amountMinor * CRYPTO_DEPOSIT_FEE_BPS / 10_000);
+  return { feeMinor, chargeMinor: amountMinor + feeMinor };
+}
+
+export function storedCryptoCharge(amountMinor: number, feeMinor: number, chargeMinor: number | null): number {
+  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || !Number.isSafeInteger(feeMinor) || feeMinor < 0 ||
+      !Number.isSafeInteger(amountMinor + feeMinor) || (chargeMinor == null ? feeMinor !== 0 : chargeMinor !== amountMinor + feeMinor)) {
+    throw new Error("Montants du paiement incohérents");
+  }
+  return chargeMinor ?? amountMinor;
+}
+
 export function parseUsdMinor(value: unknown): number | null {
   if (typeof value !== "string" || !/^(?:0|[1-9]\d{0,6})(?:\.\d{1,2})?$/.test(value)) return null;
   const [whole, cents = ""] = value.split(".");
@@ -71,10 +87,13 @@ export async function reconcileCryptoPayment(paymentId: string) {
   const [rows] = await db.execute<RowDataPacket[]>("SELECT * FROM payments WHERE id=? AND provider='izipay'", [paymentId]);
   const payment = rows[0];
   if (!payment || !payment.provider_reference) throw new Error("Intention crypto introuvable");
+  // Older pending deposits have no surcharge and a NULL charge_minor.
+  const chargedMinor = storedCryptoCharge(Number(payment.amount_minor), Number(payment.fee_minor),
+    payment.charge_minor == null ? null : Number(payment.charge_minor));
   const intent = await retrieveIntent(String(payment.provider_reference));
   if (intent.id !== payment.provider_reference || intent.merchantReference !== payment.order_id ||
       intent.currencyRequested !== "USD" || intent.requestedCurrencyType !== "fiat" ||
-      parseUsdMinor(intent.amountRequested) !== Number(payment.amount_minor)) {
+      parseUsdMinor(intent.amountRequested) !== chargedMinor) {
     throw new Error("Incohérence entre le paiement et l'intention IziChange Pay");
   }
   // An irregular payment may be manually encashed later. Never automatically grant
@@ -87,7 +106,13 @@ export async function reconcileCryptoPayment(paymentId: string) {
     await conn.beginTransaction();
     const [locked] = await conn.execute<RowDataPacket[]>("SELECT * FROM payments WHERE id=? FOR UPDATE", [paymentId]);
     const row = locked[0];
-    if (!row || row.provider !== "izipay" || row.provider_reference !== intent.id) throw new Error("Paiement modifié");
+    if (!row || row.provider !== "izipay" || row.provider_reference !== intent.id ||
+        row.order_id !== payment.order_id || Number(row.amount_minor) !== Number(payment.amount_minor) ||
+        Number(row.fee_minor) !== Number(payment.fee_minor) ||
+        storedCryptoCharge(Number(row.amount_minor), Number(row.fee_minor),
+          row.charge_minor == null ? null : Number(row.charge_minor)) !== chargedMinor) {
+      throw new Error("Paiement modifié");
+    }
     if (row.credited_at) { await conn.commit(); return "completed"; }
     if (irregular) {
       await conn.execute("UPDATE payments SET status='irregular' WHERE id=?", [paymentId]);
