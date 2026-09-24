@@ -274,14 +274,15 @@ function fmtDepositAmount(
 ): string {
   const cur = (currency || (country ? COUNTRY_CURRENCY_MAP[country?.toUpperCase() ?? ""]?.currency : null) || "").toUpperCase();
   if (cur === "USD") return `${amount.toFixed(2)} USD`;
-  if (!cur || cur === "XOF" || cur === "XAF") return fmt(amount);
+  if (cur === "XOF" || cur === "XAF") return `${Math.round(amount).toLocaleString("fr-FR")} ${cur}`;
+  if (!cur) return fmt(amount);
   const upper = country?.toUpperCase() ?? "";
   const fcfaPerUnit = (rateOverrides && upper && rateOverrides[upper] !== undefined)
     ? rateOverrides[upper]
     : DEFAULT_FCFA_PER_UNIT[cur] ?? null;
   if (fcfaPerUnit === null) return `${Math.round(amount).toLocaleString()} ${cur}`;
   const fcfa = Math.round(amount * fcfaPerUnit);
-  return `${Math.round(amount).toLocaleString()} ${cur} → ${fcfa.toLocaleString()} FCFA`;
+  return `${Math.round(amount).toLocaleString("fr-FR")} ${cur} → ${fcfa.toLocaleString("fr-FR")} FCFA`;
 }
 
 /**
@@ -575,6 +576,8 @@ type TxRow = {
   provider?: number | null;
   country?: string | null;
   currency?: string | null;
+  payment_provider?: string | null;
+  payment_method?: string | null;
 };
 
 // Minimal shape for order updates from API payloads.
@@ -606,6 +609,9 @@ const paymentStatusMap: Record<string, { label: string; color: string }> = {
   completed: { label: "Validé", color: "bg-green-100 text-green-700" },
   pending: { label: "En attente", color: "bg-yellow-100 text-yellow-700" },
   rejected: { label: "Rejeté", color: "bg-red-100 text-red-700" },
+  failed: { label: "Échoué", color: "bg-red-100 text-red-700" },
+  irregular: { label: "Écart de montant", color: "bg-orange-100 text-orange-700" },
+  expired: { label: "Expiré", color: "bg-gray-100 text-gray-700" },
 };
 
 const AdminTransactions = () => {
@@ -614,8 +620,8 @@ const AdminTransactions = () => {
   const [period, setPeriod] = useState<"today" | "month" | "total" | "custom">("month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [type, setType] = useState<"all" | "order" | "deposit" | "refund" | "adjustment" | "commission">("all");
-  const [status, setStatus] = useState<"all" | "completed" | "pending" | "rejected" | "processing">("all");
+  const [type, setType] = useState<"all" | "order" | "deposit" | "crypto_deposit" | "mobile_deposit" | "refund" | "adjustment" | "commission">("all");
+  const [status, setStatus] = useState<"all" | "completed" | "pending" | "rejected" | "processing" | "failed" | "irregular" | "expired">("all");
   const [search, setSearch] = useState("");
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [refunding, setRefunding] = useState<string | null>(null);
@@ -655,7 +661,13 @@ const AdminTransactions = () => {
           status_color: m.color,
           user_label: row.user_label,
           user_email: row.user_email,
-          detail: row.detail,
+          detail: row.kind === "deposit"
+            ? row.payment_provider === "izipay" || row.payment_method === "crypto"
+              ? "Dépôt crypto"
+              : row.payment_provider === "afribapay" || row.payment_method === "afribapay"
+                ? "Dépôt Mobile Money"
+                : formatPaymentMethod(row.payment_method) === "—" ? "Dépôt" : `Dépôt ${formatPaymentMethod(row.payment_method)}`
+            : row.detail,
           reference: row.reference,
           raw: row,
           external_order_id: row.external_order_id || null,
@@ -664,6 +676,8 @@ const AdminTransactions = () => {
           provider: typeof row.provider === "number" ? row.provider : null,
           country: row.country || null,
           currency: row.currency || null,
+          payment_provider: row.payment_provider || null,
+          payment_method: row.payment_method || null,
         };
       });
 
@@ -717,7 +731,9 @@ const AdminTransactions = () => {
       if (dateFrom && t < customFrom) return false;
       if (dateTo && t > customTo) return false;
     }
-    if (type !== "all" && r.type !== type) return false;
+    if (type === "crypto_deposit" && !(r.type === "deposit" && (r.payment_provider === "izipay" || r.payment_method === "crypto"))) return false;
+    if (type === "mobile_deposit" && !(r.type === "deposit" && (r.payment_provider === "afribapay" || r.payment_method === "afribapay"))) return false;
+    if (type !== "all" && type !== "crypto_deposit" && type !== "mobile_deposit" && r.type !== type) return false;
     if (status !== "all" && r.status !== status) return false;
     if (search) {
       const s = search.toLowerCase();
@@ -734,7 +750,11 @@ const AdminTransactions = () => {
   const totalOrders = filtered.filter((r) => r.type === "order");
   const totalDeposits = filtered.filter((r) => r.type === "deposit");
   const sumOrders = totalOrders.reduce((s, r) => s + r.amount, 0);
-  const sumDepositsCompleted = totalDeposits.filter((r) => r.status === "completed").reduce((s, r) => s + r.amount, 0);
+  const depositsByCurrency = Object.entries(totalDeposits.filter(r => r.status === "completed").reduce<Record<string, number>>((totals, r) => {
+    const currency = r.currency || "XAF";
+    totals[currency] = (totals[currency] || 0) + r.amount;
+    return totals;
+  }, {})).sort(([a], [b]) => a.localeCompare(b));
 
   return (
     <div className="space-y-4">
@@ -752,7 +772,11 @@ const AdminTransactions = () => {
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[11px] text-muted-foreground uppercase">Dépôts</p>
           <p className="text-xl font-bold mt-1">{totalDeposits.length.toLocaleString()}</p>
-          <p className="text-[11px] text-muted-foreground">{sumDepositsCompleted.toLocaleString()} FCFA validés</p>
+          {depositsByCurrency.length ? depositsByCurrency.map(([currency, amount]) => (
+            <p key={currency} className="text-[11px] text-muted-foreground">
+              {amount.toLocaleString("fr-FR", { minimumFractionDigits: currency === "USD" ? 2 : 0, maximumFractionDigits: 2 })} {currency} validés
+            </p>
+          )) : <p className="text-[11px] text-muted-foreground">Aucun dépôt validé</p>}
         </div>
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[11px] text-muted-foreground uppercase">En attente</p>
@@ -819,6 +843,8 @@ const AdminTransactions = () => {
             { key: "all", label: "Tous", icon: Receipt },
             { key: "order", label: "Commandes", icon: ArrowUpCircle },
             { key: "deposit", label: "Dépôts", icon: ArrowDownCircle },
+            { key: "crypto_deposit", label: "Dépôts crypto · USD", icon: ArrowDownCircle },
+            { key: "mobile_deposit", label: "Dépôts Mobile Money", icon: ArrowDownCircle },
             { key: "refund", label: "Remboursements", icon: RotateCcw },
             { key: "adjustment", label: "Ajustements", icon: Wallet },
             { key: "commission", label: "Commissions", icon: Gift },
@@ -845,6 +871,9 @@ const AdminTransactions = () => {
           <option value="processing">En cours</option>
           <option value="pending">En attente</option>
           <option value="rejected">Rejeté</option>
+          <option value="failed">Échoué</option>
+          <option value="irregular">Écart de montant</option>
+          <option value="expired">Expiré</option>
         </select>
         <div className="relative flex-1 min-w-[160px]">
           <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -926,7 +955,7 @@ const AdminTransactions = () => {
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-green-600">
-                          <ArrowDownCircle size={12} /> Dépôt
+                           <ArrowDownCircle size={12} /> {r.detail.startsWith("Dépôt") ? r.detail : "Dépôt"}
                         </span>
                       )}
                     </td>
@@ -1039,10 +1068,11 @@ function buildAdminInvoice(r: TxRow): InvoiceData {
       amount: Number(p.amount),
       status: r.status_label,
       details: [
-        { label: "Méthode", value: formatPaymentMethod(p.method) },
+        { label: "Méthode", value: formatPaymentMethod(p.payment_method) },
         { label: "Référence", value: p.reference || "—" },
         { label: "Utilisateur", value: r.user_label },
       ],
+      currencyLabel: r.currency || "XAF",
     };
   }
   if (r.type === "commission") {
@@ -2665,7 +2695,7 @@ const AdminPayments = () => {
         method: "POST",
         body: JSON.stringify({ status: "completed" }),
       });
-      toast.success(`${Number(payment.amount).toLocaleString()} FCFA crédités`);
+      toast.success(`Dépôt validé : ${Number(payment.amount).toLocaleString("fr-FR")} ${payment.currency || "XAF"}`);
       load();
     } catch (err: any) {
       toast.error(err?.message || "Erreur lors de la validation");
@@ -2697,7 +2727,7 @@ const AdminPayments = () => {
             <Card key={p.id}>
               <CardContent className="p-4 flex items-center gap-3 flex-wrap">
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm">{Number(p.amount).toLocaleString()} FCFA</p>
+                  <p className="font-bold text-sm">{Number(p.amount).toLocaleString("fr-FR", { minimumFractionDigits: p.currency === "USD" ? 2 : 0 })} {p.currency || "XAF"}</p>
                   <p className="text-xs text-muted-foreground">{(p.profiles as any)?.username} · {formatPaymentMethod(p.method)}</p>
                   <p className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString("fr-FR")}</p>
                   {p.reference && <p className="text-xs text-muted-foreground">Réf: {p.reference}</p>}
@@ -2705,7 +2735,7 @@ const AdminPayments = () => {
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.status === "completed" ? "bg-green-100 text-green-700" : p.status === "rejected" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`}>
                   {p.status === "completed" ? "Validé" : p.status === "rejected" ? "Rejeté" : "En attente"}
                 </span>
-                {p.status === "pending" && (
+                {p.status === "pending" && p.method !== "crypto" && (
                   <div className="flex gap-1">
                     <Button size="sm" className="h-7 px-2 text-xs" onClick={() => validate(p)}>Valider</Button>
                     <Button size="sm" variant="destructive" className="h-7 px-2 text-xs" onClick={() => reject(p.id)}>Rejeter</Button>

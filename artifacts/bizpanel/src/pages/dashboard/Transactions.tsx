@@ -59,6 +59,17 @@ const paymentStatusMap: Record<string, { label: string; color: string }> = {
 
 function shortId(id: string) { return id.replace(/-/g, "").slice(0, 8).toUpperCase(); }
 
+function transactionAmount(r: TxRow, country?: string | null): string {
+  if (r.kind === "deposit") {
+    const amount = r.amount.toLocaleString("fr-FR", {
+      minimumFractionDigits: r.currency === "USD" ? 2 : 0,
+      maximumFractionDigits: 2,
+    });
+    return `${amount} ${r.currency}`;
+  }
+  return r.currency === "USD" ? `${r.amount.toFixed(2)} USD` : formatBalance(Math.round(r.amount), country);
+}
+
 export default function Transactions() {
   const { user, profile } = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
@@ -66,7 +77,7 @@ export default function Transactions() {
   const [commissions, setCommissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<"all" | "today" | "month" | "year">("all");
-  const [kindF, setKindF] = useState<"all" | TxKind>("all");
+  const [kindF, setKindF] = useState<"all" | TxKind | "crypto_deposit" | "mobile_deposit">("all");
   const [q, setQ] = useState("");
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [providerLabels, setProviderLabels] = useState<Record<number, string>>({});
@@ -143,7 +154,7 @@ export default function Transactions() {
         kind: "deposit",
         date: p.created_at,
         amount: Number(p.amount),
-        currency: p.wallet_credited === "usd" ? "USD" : "local",
+        currency: p.currency || (p.wallet_credited === "usd" ? "USD" : getCurrencyInfo(profile?.country).currency),
         status: p.status,
         status_label: m.label,
         status_color: m.color,
@@ -199,7 +210,7 @@ export default function Transactions() {
       }
     }
     return out.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [orders, payments, commissions]);
+  }, [orders, payments, commissions, profile?.country]);
 
   const filtered = useMemo(() => {
     const now = new Date();
@@ -212,7 +223,9 @@ export default function Transactions() {
       if (period === "today" && t < startOfDay) return false;
       if (period === "month" && t < startOfMonth) return false;
       if (period === "year" && t < startOfYear) return false;
-      if (kindF !== "all" && r.kind !== kindF) return false;
+      if (kindF === "crypto_deposit" && !(r.kind === "deposit" && (r.raw?.provider === "izipay" || r.raw?.method === "crypto"))) return false;
+      if (kindF === "mobile_deposit" && !(r.kind === "deposit" && (r.raw?.provider === "afribapay" || r.raw?.method === "afribapay"))) return false;
+      if (kindF !== "all" && kindF !== "crypto_deposit" && kindF !== "mobile_deposit" && r.kind !== kindF) return false;
       if (ql) {
         const hay = `${r.id} ${r.detail} ${r.reference || ""}`.toLowerCase();
         if (!hay.includes(ql)) return false;
@@ -228,8 +241,17 @@ export default function Transactions() {
         // Only count orders that were NOT refunded as a real debit
         const ref = r.raw?.refunded_at;
         if (!ref) debit += r.amount;
+      } else if (r.kind === "deposit") {
+        // Journal rows show the paid local currency, but the balance summary
+        // must use the FCFA actually credited (including any deposit bonus).
+        if (r.status === "completed") {
+          const before = r.raw?.balance_before_minor;
+          const after = r.raw?.balance_after_minor;
+          credit += before != null && after != null
+            ? (Number(after) - Number(before)) / 100
+            : r.amount * getCurrencyInfo(r.raw?.country, r.currency).fcfaPerUnit;
+        }
       } else {
-        // deposit only counts as credit when "completed"
         if (r.kind === "refund" || r.status === "completed") credit += r.amount;
       }
     }
@@ -375,7 +397,7 @@ export default function Transactions() {
             ))}
           </div>
           <div className="flex flex-wrap gap-2">
-            {([["all","Tous"],["deposit","Dépôts"],["order","Commandes"],["refund","Remboursements"],["commission","Commissions"]] as const).map(([k,l]) => (
+            {([["all","Tous"],["deposit","Dépôts"],["crypto_deposit","Dépôts crypto · USD"],["mobile_deposit","Dépôts Mobile Money"],["order","Commandes"],["refund","Remboursements"],["commission","Commissions"]] as const).map(([k,l]) => (
               <button key={k} onClick={() => setKindF(k as any)}
                 className={`px-3 py-1.5 rounded-md text-xs border ${kindF === k ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground hover:bg-muted"}`}>
                 {l}
@@ -421,7 +443,10 @@ export default function Transactions() {
               </thead>
               <tbody>
                 {filtered.map((r) => {
-                  const meta = kindMeta[r.kind];
+                  const meta = r.kind === "deposit" && (r.raw?.provider === "izipay" || r.raw?.method === "crypto")
+                    ? { ...kindMeta.deposit, label: "Dépôt crypto" }
+                    : r.kind === "deposit" && (r.raw?.provider === "afribapay" || r.raw?.method === "afribapay")
+                      ? { ...kindMeta.deposit, label: "Dépôt Mobile Money" } : kindMeta[r.kind];
                   const Icon = meta.icon;
                   return (
                     <tr key={r.id} className="border-t hover:bg-muted/30">
@@ -439,7 +464,7 @@ export default function Transactions() {
                       <td className="px-3 py-2 max-w-[280px] truncate" title={r.detail}>{r.detail}</td>
                       <td className="px-3 py-2 font-mono text-[11px]">{r.reference || "—"}</td>
                       <td className={`px-3 py-2 text-right font-semibold whitespace-nowrap ${meta.color}`}>
-        {meta.sign}{r.currency === "USD" ? `${r.amount.toFixed(2)} USD` : formatBalance(Math.round(r.amount), profile?.country)}
+                         {meta.sign}{transactionAmount(r, profile?.country)}
                       </td>
                       <td className="px-3 py-2">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full border ${r.status_color}`}>{r.status_label}</span>
@@ -460,7 +485,10 @@ export default function Transactions() {
           {/* Mobile */}
           <div className="md:hidden space-y-3">
             {filtered.map((r) => {
-              const meta = kindMeta[r.kind];
+              const meta = r.kind === "deposit" && (r.raw?.provider === "izipay" || r.raw?.method === "crypto")
+                ? { ...kindMeta.deposit, label: "Dépôt crypto" }
+                : r.kind === "deposit" && (r.raw?.provider === "afribapay" || r.raw?.method === "afribapay")
+                  ? { ...kindMeta.deposit, label: "Dépôt Mobile Money" } : kindMeta[r.kind];
               const Icon = meta.icon;
               return (
                 <Card key={r.id}>
@@ -482,7 +510,7 @@ export default function Transactions() {
                         <FileText size={12} /> Facture
                       </button>
                       <span className={`font-bold text-sm ${meta.color}`}>
-                        {meta.sign}{r.currency === "USD" ? `${r.amount.toFixed(2)} USD` : formatBalance(Math.round(r.amount), profile?.country)}
+                        {meta.sign}{transactionAmount(r, profile?.country)}
                       </span>
                     </div>
                   </CardContent>

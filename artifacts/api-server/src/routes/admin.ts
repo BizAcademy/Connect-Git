@@ -319,6 +319,7 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req,res) => 
           COALESCE(o.external_order_id,o.provider_order_id) reference,
           COALESCE(o.external_order_id,o.provider_order_id,o.id) order_number,
           o.provider,p.country,o.currency,
+          NULL payment_provider,NULL payment_method,
           COALESCE(o.external_order_id,o.provider_order_id) external_order_id,
           o.service_category,o.service_name
         FROM orders o
@@ -334,6 +335,7 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req,res) => 
           COALESCE(o.external_order_id,o.provider_order_id,o.id) reference,
           COALESCE(o.external_order_id,o.provider_order_id,o.id) order_number,
           o.provider,p.country,o.currency,
+          NULL payment_provider,NULL payment_method,
           COALESCE(o.external_order_id,o.provider_order_id) external_order_id,
           o.service_category,o.service_name
         FROM orders o
@@ -346,10 +348,10 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req,res) => 
           CONCAT('p-',x.id) id,NULL local_order_id,'deposit' kind,x.created_at,
           x.amount_minor amount,x.status,NULL refunded_at,NULL refunded_amount_minor,
           x.user_id,COALESCE(p.username,p.email,x.user_id) user_label,p.email user_email,
-          CONCAT('Dépôt · ',COALESCE(x.method,'')) detail,
+          'Dépôt' detail,
           COALESCE(x.transaction_id,x.order_id,x.provider_reference) reference,
           COALESCE(x.transaction_id,x.order_id,x.provider_reference) order_number,
-          NULL provider,x.country,x.currency,NULL external_order_id,
+          NULL provider,x.country,x.currency,x.provider payment_provider,x.method payment_method,NULL external_order_id,
           NULL service_category,NULL service_name
         FROM payments x
         LEFT JOIN profiles p ON p.user_id=x.user_id

@@ -112,7 +112,7 @@ export function InvoiceModal({ data, onClose }: { data: InvoiceData; onClose: ()
             <p className={`font-bold text-2xl ${color}`}>
               {sign}
               {data.currencyLabel
-                ? `${Math.round(data.amount).toLocaleString("fr-FR")} ${data.currencyLabel}`
+                ? `${data.amount.toLocaleString("fr-FR", { minimumFractionDigits: data.currencyLabel === "USD" ? 2 : 0, maximumFractionDigits: 2 })} ${data.currencyLabel}`
                 : formatBalance(data.amount, data.country)}
             </p>
           </div>
