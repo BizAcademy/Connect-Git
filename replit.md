@@ -191,6 +191,10 @@ migration; rows captured there can be re-imported via the admin
   `https://<domaine-public>/api/payments/crypto/webhook` et activer les
   événements `payment_intent.*`. `PUBLIC_API_URL` doit être le même domaine
   public HTTPS (également utilisé comme URL de retour du dépôt).
+- Dans l'interface BizPanel, côté client comme côté administration, ne jamais
+  afficher le nom du prestataire crypto : utiliser des libellés neutres tels
+  que « Cryptomonnaie » ou « service de paiement ». Les identifiants du
+  prestataire restent réservés au code et aux journaux internes.
 - Avant de déployer ce changement, appliquer `migrations/mysql/007_crypto_usd_wallet.sql`
   à la base MariaDB/MySQL existante (via `pnpm --filter @workspace/api-server
   run migrate:mysql` dans l'environnement où la base est accessible).
