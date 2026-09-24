@@ -91,9 +91,9 @@ export default function CryptoDeposit() {
     </CardContent></Card>
     {paymentId && <Card><CardContent className="p-5 space-y-2">
       <p className="font-semibold">Paiement crypto : {status === "completed" ? "Crédité sur votre solde USD" : status === "irregular" ? "Écart de montant : examen nécessaire, aucun crédit automatique" : status === "expired" ? "Expiré" : status === "failed" || status === "canceled" ? "Échoué ou annulé" : "En attente de confirmation"}</p>
-      <p className="text-sm text-muted-foreground">La confirmation est vérifiée auprès d’IziChange Pay. Ne payez pas deux fois en attendant la validation.</p>
+      <p className="text-sm text-muted-foreground">La confirmation du paiement peut prendre quelques minutes. Ne payez pas deux fois en attendant la validation.</p>
     </CardContent></Card>}
-    <Card><CardHeader><CardTitle className="text-base">Dépôt crypto via IziChange Pay</CardTitle></CardHeader>
+    <Card><CardHeader><CardTitle className="text-base">Dépôt en cryptomonnaie</CardTitle></CardHeader>
       <CardContent className="space-y-3">
         <label htmlFor="crypto-amount" className="text-sm font-medium">Montant à créditer (USD)</label>
         <Input id="crypto-amount" type="number" min="1" max="1000000" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Ex. 10.00" />
@@ -104,7 +104,7 @@ export default function CryptoDeposit() {
             <div className="flex justify-between gap-3 font-semibold"><span>Total à payer</span><span>{formatUsd(chargeMinor)}</span></div>
           </div>
         )}
-        <p className="text-xs text-muted-foreground">Vous paierez le montant total affiché sur la page sécurisée IziChange Pay. Seul le montant du dépôt sera crédité après confirmation ; les paiements incomplets ou irréguliers ne sont pas crédités automatiquement.</p>
+        <p className="text-xs text-muted-foreground">Vous paierez le montant total affiché sur la page sécurisée de paiement. Seul le montant du dépôt sera crédité après confirmation ; les paiements incomplets ou irréguliers ne sont pas crédités automatiquement.</p>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <Button onClick={initiate} disabled={loading || availability !== "ready"}>{loading ? "Création en cours…" : availability === "checking" ? "Vérification du service…" : "Continuer vers le paiement"}</Button>
       </CardContent></Card>

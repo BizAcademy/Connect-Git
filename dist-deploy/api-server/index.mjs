@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-24T02:37:08.357Z";
+var BUILD_TIME = "2026-09-24T02:39:23.296Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -76481,7 +76481,7 @@ async function creditDeposit(paymentId, opts) {
     const payment = mapPayment(row);
     if (row.provider === "izipay") {
       await conn.rollback();
-      return { ok: false, error: "Le d\xE9p\xF4t crypto doit \xEAtre v\xE9rifi\xE9 aupr\xE8s d'IziChange Pay avant cr\xE9dit", status: 409 };
+      return { ok: false, error: "Le d\xE9p\xF4t crypto doit \xEAtre confirm\xE9 par le service de paiement avant cr\xE9dit", status: 409 };
     }
     const localAmount = fcfa(row.amount_minor);
     let amount = payment.currency ? toFcfaByCurrency(localAmount, payment.currency) : toFcfa(localAmount, payment.country ?? null);

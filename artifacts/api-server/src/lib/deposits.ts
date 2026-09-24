@@ -72,7 +72,7 @@ export async function creditDeposit(paymentId: string, opts?: { userToken?: stri
     const row = payments[0]; const payment = mapPayment(row);
     if (row.provider === "izipay") {
       await conn.rollback();
-      return { ok: false, error: "Le dépôt crypto doit être vérifié auprès d'IziChange Pay avant crédit", status: 409 };
+      return { ok: false, error: "Le dépôt crypto doit être confirmé par le service de paiement avant crédit", status: 409 };
     }
     const localAmount = fcfa(row.amount_minor);
     let amount = payment.currency ? toFcfaByCurrency(localAmount, payment.currency) : toFcfa(localAmount, payment.country ?? null);
