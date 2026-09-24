@@ -124,8 +124,7 @@ router.post("/auth/login", authLimiter, async (req: AuthedRequest, res) => {
   if (!email || !password) return invalid();
   try {
     const [rows] = await getMysqlPool().execute<mysql.RowDataPacket[]>(
-      `SELECT u.id, u.email, u.password_hash, p.username, p.country, p.currency, p.balance_minor, p.balance_usd_minor,
-        p.affiliate_earnings_minor, p.avatar_url, p.referral_code,
+      `SELECT p.*, u.id, u.email, u.password_hash,
         EXISTS(SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role = 'admin') AS is_admin
        FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.email = ? AND u.disabled_at IS NULL LIMIT 1`, [email],
     );
@@ -158,8 +157,7 @@ router.get("/auth/me", requireUser, async (req: AuthedRequest, res) => {
   if (!req.userId) return res.status(401).json({ error: "Authentification requise" });
   try {
     const [rows] = await getMysqlPool().execute<mysql.RowDataPacket[]>(
-      `SELECT u.id, u.email, p.username, p.country, p.currency, p.balance_minor, p.balance_usd_minor,
-        p.affiliate_earnings_minor, p.avatar_url, p.referral_code,
+      `SELECT p.*, u.id, u.email,
         EXISTS(SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role = 'admin') AS is_admin
        FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.id = ? LIMIT 1`, [req.userId],
     );

@@ -27,13 +27,17 @@ router.get("/profile", requireUser, async (req: AuthedRequest, res) => {
     const userId = String(req.userId);
     await ensureProfile(userId);
     const [rows] = await getMysqlPool().execute<RowDataPacket[]>(
-      `SELECT user_id, email, username, country, currency, balance_minor, balance_usd_minor,
-              affiliate_earnings_minor, avatar_url, referral_code
-       FROM profiles WHERE user_id = ? LIMIT 1`, [userId],
+      "SELECT * FROM profiles WHERE user_id = ? LIMIT 1", [userId],
     );
     const p = rows[0];
     if (!p) return res.status(404).json({ error: "Profil introuvable" });
-    return res.json({ ...p, balance: Number(p.balance_minor) / 100, balance_usd: Number(p.balance_usd_minor) / 100, affiliate_earnings: Number(p.affiliate_earnings_minor) / 100 });
+    return res.json({
+      user_id: p.user_id, email: p.email, username: p.username, country: p.country, currency: p.currency,
+      balance_minor: p.balance_minor, balance_usd_minor: p.balance_usd_minor ?? 0,
+      affiliate_earnings_minor: p.affiliate_earnings_minor, avatar_url: p.avatar_url, referral_code: p.referral_code,
+      balance: Number(p.balance_minor) / 100, balance_usd: Number(p.balance_usd_minor || 0) / 100,
+      affiliate_earnings: Number(p.affiliate_earnings_minor) / 100,
+    });
   } catch (err) {
     logger.error({ err }, "profile read error");
     return res.status(503).json({ error: "Profil temporairement indisponible" });
