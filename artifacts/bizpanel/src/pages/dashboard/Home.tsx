@@ -113,6 +113,7 @@ export default function DashboardHome() {
           </p>
           <p className="text-2xl font-black text-white leading-tight">
             {formatBalance(balance, profile?.country)}
+            <span className="block text-sm">{Number(profile?.balance_usd || 0).toFixed(2)} USD</span>
           </p>
           <Button
             size="sm"
@@ -130,6 +131,7 @@ export default function DashboardHome() {
         <div>
           <p className="text-[10px] text-gray-400 uppercase tracking-wide">Mon solde</p>
           <p className="text-xl font-black text-orange-500">{formatBalance(balance, profile?.country)}</p>
+          <p className="text-sm font-bold text-orange-500">{Number(profile?.balance_usd || 0).toFixed(2)} USD</p>
         </div>
         <Button size="sm" className="h-8" onClick={() => navigate("/dashboard/deposit")}>
           <Wallet size={13} className="mr-1.5" /> Recharger

@@ -7,3 +7,4 @@
 - [Referral payout atomicity](referral-payout-atomicity.md) — credit multi-leg bonuses ONLY via the atomic SQL RPC (flag = proof of credit); never split claim/credit across PostgREST calls.
 - [Dashboard ads safety](dashboard-ads-safety.md) — colored ad copy uses validated text segments, never admin-authored HTML; preserve this structure to prevent stored XSS.
 - [Order refund retryability](order-refund-retryability.md) — credit wallets before persisting terminal refund statuses; recovery scans must isolate failures per order.
+- [IziChange Pay credit policy](izichange-credit-policy.md) — USD wallet credits require signed webhook plus live intent retrieval; irregular amounts stay uncredited.

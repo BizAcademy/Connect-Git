@@ -20,6 +20,7 @@ type TxRow = {
   kind: TxKind;
   date: string;
   amount: number;       // positive number; sign derived from kind
+  currency?: string;
   status: string;
   status_label: string;
   status_color: string;
@@ -48,6 +49,9 @@ const orderStatusMap: Record<string, { label: string; color: string }> = {
 };
 const paymentStatusMap: Record<string, { label: string; color: string }> = {
   completed: { label: "Validé",     color: "bg-green-100 text-green-800 border-green-200" },
+  irregular: { label: "Écart de montant", color: "bg-orange-100 text-orange-800 border-orange-200" },
+  expired: { label: "Expiré", color: "bg-gray-100 text-gray-800 border-gray-200" },
+  canceled: { label: "Annulé", color: "bg-gray-100 text-gray-800 border-gray-200" },
   pending:   { label: "En attente", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
   failed:    { label: "Échoué",     color: "bg-red-100 text-red-800 border-red-200" },
   rejected:  { label: "Rejeté",     color: "bg-red-100 text-red-800 border-red-200" },
@@ -139,10 +143,11 @@ export default function Transactions() {
         kind: "deposit",
         date: p.created_at,
         amount: Number(p.amount),
+        currency: p.wallet_credited === "usd" ? "USD" : "local",
         status: p.status,
         status_label: m.label,
         status_color: m.color,
-        detail: p.method === "admin_adjustment" ? "Dépôt" : `Dépôt ${formatPaymentMethod(p.method)}`,
+        detail: p.method === "admin_adjustment" ? "Dépôt" : `Dépôt ${formatPaymentMethod(p.method)} · solde ${p.wallet_credited === "usd" ? "USD" : "local"}`,
         reference: p.reference || null,
         raw: p,
       });
@@ -169,6 +174,7 @@ export default function Transactions() {
         kind: "order",
         date: o.created_at,
         amount: Number(o.price),
+        currency: o.wallet_charged === "usd" ? "USD" : "local",
         status: o.status,
         status_label: m.label,
         status_color: m.color,
@@ -182,6 +188,7 @@ export default function Transactions() {
           kind: "refund",
           date: o.refunded_at,
           amount: Number(o.refunded_amount),
+          currency: o.wallet_charged === "usd" ? "USD" : "local",
           status: "completed",
           status_label: "Remboursé",
           status_color: "bg-purple-100 text-purple-800 border-purple-200",
@@ -216,7 +223,7 @@ export default function Transactions() {
 
   const totals = useMemo(() => {
     let credit = 0, debit = 0;
-    for (const r of filtered) {
+    for (const r of filtered.filter(row => row.currency !== "USD")) {
       if (r.kind === "order") {
         // Only count orders that were NOT refunded as a real debit
         const ref = r.raw?.refunded_at;
@@ -226,7 +233,9 @@ export default function Transactions() {
         if (r.kind === "refund" || r.status === "completed") credit += r.amount;
       }
     }
-    return { credit, debit, net: credit - debit };
+    const usdCredit = filtered.filter(r => r.currency === "USD" && r.kind !== "order" && (r.status === "completed" || r.kind === "refund")).reduce((sum, r) => sum + r.amount, 0);
+    const usdDebit = filtered.filter(r => r.currency === "USD" && r.kind === "order" && !r.raw?.refunded_at).reduce((sum, r) => sum + r.amount, 0);
+    return { credit, debit, net: credit - debit, usdCredit, usdDebit };
   }, [filtered]);
 
   const buildInvoice = (r: TxRow): InvoiceData => {
@@ -235,6 +244,7 @@ export default function Transactions() {
       const p = r.raw;
       const details: { label: string; value: string }[] = [
         { label: "Méthode", value: formatPaymentMethod(p.method) },
+        { label: "Solde crédité", value: p.wallet_credited === "usd" ? "USD" : "Local" },
       ];
       if (p.order_id)       details.push({ label: "Réf. commande",    value: String(p.order_id) });
       if (p.transaction_id) details.push({ label: "Réf. paiement",    value: String(p.transaction_id) });
@@ -271,9 +281,10 @@ export default function Transactions() {
           { label: "ID fournisseur", value: o.external_order_id ? `#${o.external_order_id}` : "—" },
         ],
         note: o.refunded_at
-          ? `Cette commande a été remboursée le ${new Date(o.refunded_at).toLocaleString("fr-FR")} pour ${formatBalance(Number(o.refunded_amount), profile?.country)}.`
+          ? `Cette commande a été remboursée le ${new Date(o.refunded_at).toLocaleString("fr-FR")} pour ${o.wallet_charged === "usd" ? `${Number(o.refunded_amount).toFixed(2)} USD` : formatBalance(Number(o.refunded_amount), profile?.country)}.`
           : undefined,
-        country: profile?.country,
+        country: o.wallet_charged === "usd" ? undefined : profile?.country,
+        currencyLabel: o.wallet_charged === "usd" ? "USD" : undefined,
       };
     }
     if (r.kind === "commission") {
@@ -309,8 +320,9 @@ export default function Transactions() {
         { label: "ID fournisseur", value: o.external_order_id ? `#${o.external_order_id}` : "—" },
         { label: "Motif", value: "Annulation/échec confirmé(e) chez le fournisseur" },
       ],
-      note: "Le montant a été automatiquement recrédité sur votre solde BUZZ BOOSTER.",
-      country: profile?.country,
+      note: `Le montant a été automatiquement recrédité sur votre solde ${o.wallet_charged === "usd" ? "USD" : "local"}.`,
+      country: o.wallet_charged === "usd" ? undefined : profile?.country,
+      currencyLabel: o.wallet_charged === "usd" ? "USD" : undefined,
     };
   };
 
@@ -335,16 +347,19 @@ export default function Transactions() {
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[11px] text-muted-foreground uppercase">Crédité</p>
           <p className="text-xl font-bold mt-1 text-green-600">+{formatBalance(totals.credit, profile?.country)}</p>
+          <p className="text-sm text-green-600">+{totals.usdCredit.toFixed(2)} USD</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[11px] text-muted-foreground uppercase">Débité</p>
           <p className="text-xl font-bold mt-1 text-red-600">−{formatBalance(totals.debit, profile?.country)}</p>
+          <p className="text-sm text-red-600">−{totals.usdDebit.toFixed(2)} USD</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[11px] text-muted-foreground uppercase">Solde net</p>
           <p className={`text-xl font-bold mt-1 ${totals.net >= 0 ? "text-green-600" : "text-red-600"}`}>
             {totals.net >= 0 ? "+" : "−"}{formatBalance(Math.abs(totals.net), profile?.country)}
           </p>
+          <p className="text-sm">USD net : {(totals.usdCredit - totals.usdDebit).toFixed(2)} USD</p>
         </div>
       </div>
 
@@ -424,7 +439,7 @@ export default function Transactions() {
                       <td className="px-3 py-2 max-w-[280px] truncate" title={r.detail}>{r.detail}</td>
                       <td className="px-3 py-2 font-mono text-[11px]">{r.reference || "—"}</td>
                       <td className={`px-3 py-2 text-right font-semibold whitespace-nowrap ${meta.color}`}>
-                        {meta.sign}{formatBalance(Math.round(r.amount), profile?.country)}
+        {meta.sign}{r.currency === "USD" ? `${r.amount.toFixed(2)} USD` : formatBalance(Math.round(r.amount), profile?.country)}
                       </td>
                       <td className="px-3 py-2">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full border ${r.status_color}`}>{r.status_label}</span>
@@ -467,7 +482,7 @@ export default function Transactions() {
                         <FileText size={12} /> Facture
                       </button>
                       <span className={`font-bold text-sm ${meta.color}`}>
-                        {meta.sign}{formatBalance(Math.round(r.amount), profile?.country)}
+                        {meta.sign}{r.currency === "USD" ? `${r.amount.toFixed(2)} USD` : formatBalance(Math.round(r.amount), profile?.country)}
                       </span>
                     </div>
                   </CardContent>

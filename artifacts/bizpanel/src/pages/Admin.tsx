@@ -273,6 +273,7 @@ function fmtDepositAmount(
   rateOverrides?: Record<string, number>,
 ): string {
   const cur = (currency || (country ? COUNTRY_CURRENCY_MAP[country?.toUpperCase() ?? ""]?.currency : null) || "").toUpperCase();
+  if (cur === "USD") return `${amount.toFixed(2)} USD`;
   if (!cur || cur === "XOF" || cur === "XAF") return fmt(amount);
   const upper = country?.toUpperCase() ?? "";
   const fcfaPerUnit = (rateOverrides && upper && rateOverrides[upper] !== undefined)
@@ -297,6 +298,7 @@ function fmtTxAmount(
   currency?: string | null,
   rateOverrides?: Record<string, number>,
 ): string {
+  if (currency === "USD") return `${amount.toFixed(2)} USD`;
   if (type === "deposit") {
     return fmtDepositAmount(amount, currency, country, rateOverrides);
   }

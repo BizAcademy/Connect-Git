@@ -70,6 +70,10 @@ export async function creditDeposit(paymentId: string, opts?: { userToken?: stri
     const [payments] = await conn.execute<RowDataPacket[]>("SELECT * FROM payments WHERE id = ? FOR UPDATE", [paymentId]);
     if (!payments[0]) { await conn.rollback(); return { ok: false, error: "Paiement introuvable", status: 404 }; }
     const row = payments[0]; const payment = mapPayment(row);
+    if (row.provider === "izipay") {
+      await conn.rollback();
+      return { ok: false, error: "Le dépôt crypto doit être vérifié auprès d'IziChange Pay avant crédit", status: 409 };
+    }
     const localAmount = fcfa(row.amount_minor);
     let amount = payment.currency ? toFcfaByCurrency(localAmount, payment.currency) : toFcfa(localAmount, payment.country ?? null);
     amount = Math.round(amount);
@@ -102,7 +106,7 @@ export async function creditDeposit(paymentId: string, opts?: { userToken?: stri
   } finally { conn.release(); }
 }
 export async function markPaymentStatus(paymentId: string, status: "failed" | "rejected" | "pending", _userToken?: string): Promise<{ ok: boolean; error?: string; status?: number }> {
-  const [result] = await getMysqlPool().execute("UPDATE payments SET status=? WHERE id=? AND credited_at IS NULL", [status, paymentId]);
+  const [result] = await getMysqlPool().execute("UPDATE payments SET status=? WHERE id=? AND credited_at IS NULL AND (provider IS NULL OR provider <> 'izipay')", [status, paymentId]);
   if ((result as any).affectedRows) return { ok: true };
   const payment = await fetchPayment(paymentId);
   return payment ? { ok: false, error: "Ce dépôt a déjà été crédité — un changement de statut nécessite un remboursement manuel.", status: 409 } : { ok: false, error: "Paiement introuvable", status: 404 };

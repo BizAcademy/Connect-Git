@@ -65,7 +65,7 @@ const apiLimiter = rateLimit({
   // NB : le limiteur est monté sur "/api", donc req.path ne contient PAS le
   // préfixe /api (req.path = "/payments/webhook"). On utilise req.originalUrl
   // qui contient toujours l'URL complète, sinon l'exemption ne matche jamais.
-  skip: (req) => req.originalUrl.startsWith("/api/payments/webhook"),
+  skip: (req) => req.originalUrl.startsWith("/api/payments/webhook") || req.originalUrl.startsWith("/api/payments/crypto/webhook"),
   handler: (_req, res) => {
     res.status(429).json({ error: "Trop de requêtes — réessayez dans 1 minute." });
   },
@@ -76,7 +76,7 @@ const apiLimiter = rateLimit({
 // the raw string to `req.rawBody` only for the webhook path to keep memory
 // footprint minimal everywhere else.
 function captureRawBody(req: Request, _res: unknown, buf: Buffer) {
-  if (req.url && req.url.startsWith("/api/payments/webhook")) {
+  if (req.url && (req.url.startsWith("/api/payments/webhook") || req.url.startsWith("/api/payments/crypto/webhook"))) {
     (req as Request & { rawBody?: string }).rawBody = buf.toString("utf8");
   }
 }

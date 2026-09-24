@@ -189,7 +189,7 @@ export default function MyOrders() {
     for (const ev of events) {
       toast({
         title: "Commande remboursée",
-        description: `+${formatBalance(ev.amount, profile?.country)} recrédités sur votre solde (commande #${ev.externalId}).`,
+        description: `+${ev.currency === "USD" ? `${ev.amount.toFixed(2)} USD` : formatBalance(ev.amount, profile?.country)} recrédités sur votre solde (commande #${ev.externalId}).`,
       });
     }
     // Tell the rest of the dashboard (header balance, etc.) to refetch.
@@ -600,7 +600,7 @@ export default function MyOrders() {
                           </a>
                         </td>
                         <td className="px-3 py-2 text-right whitespace-nowrap">
-                          <div className="font-medium text-primary">{formatBalance(Number(o.price), profile?.country)}</div>
+                          <div className="font-medium text-primary">{o.currency === "USD" ? `${Number(o.price).toFixed(2)} USD` : formatBalance(Number(o.price), profile?.country)}</div>
                           {d.charge !== undefined && (
                             <div className="text-[10px] text-muted-foreground">
                               {d.charge} {d.currency || "USD"}
@@ -704,7 +704,7 @@ export default function MyOrders() {
                       </div>
                       <div>
                         <span className="text-muted-foreground">Charge :</span>{" "}
-                        <span className="font-medium text-primary">{formatBalance(Number(o.price), profile?.country)}</span>
+                        <span className="font-medium text-primary">{o.currency === "USD" ? `${Number(o.price).toFixed(2)} USD` : formatBalance(Number(o.price), profile?.country)}</span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Démarrage :</span>{" "}

@@ -4,7 +4,7 @@ import type { PoolConnection, RowDataPacket } from "mysql2/promise";
 import { logger } from "../lib/logger";
 import { getMysqlPool } from "../lib/mysql";
 import { requireUser, requireAdmin, type AuthedRequest } from "../lib/auth";
-import { enrichServices, defaultPriceFcfaForCurrency, loadPricing, getUsdRates, subscribeUsdRates } from "../lib/smm-pricing";
+import { enrichServices, defaultPriceFcfaForCurrency, loadPricing, getUsdRates, subscribeUsdRates, usdToLocalRate } from "../lib/smm-pricing";
 import { callProvider, getProvider, parseProviderId, ALL_PROVIDER_IDS, loadProviderConfig, type ProviderId } from "../lib/smm-providers";
 import { FINAL_REFUND_STATUSES, mapProviderStatus, isSupportedServiceType } from "../lib/smm-status";
 import { appendEarning, estimateGainFromRevenue } from "../lib/earnings";
@@ -60,26 +60,29 @@ export async function refundOrderAtomic(orderId: string, requestedMinor?: number
     const order = orders[0]; if (!order || order.refunded_at) { await conn.rollback(); return { refunded: false, amountMinor: 0 }; }
     const amount = Math.max(0, Math.min(Math.round(requestedMinor ?? Number(order.charge_minor)), Number(order.charge_minor)));
     if (!amount) { await conn.rollback(); return { refunded: false, amountMinor: 0 }; }
-    const [profiles] = await conn.execute<RowDataPacket[]>("SELECT balance_minor FROM profiles WHERE user_id = ? FOR UPDATE", [order.user_id]);
+    const wallet = order.wallet_charged === "usd" ? "usd" : "local";
+    const column = wallet === "usd" ? "balance_usd_minor" : "balance_minor";
+    const [profiles] = await conn.execute<RowDataPacket[]>(`SELECT ${column} FROM profiles WHERE user_id = ? FOR UPDATE`, [order.user_id]);
     if (!profiles[0]) throw new Error("Profile introuvable");
-    const before = Number(profiles[0].balance_minor), after = before + amount, now = new Date();
-    await conn.execute("UPDATE profiles SET balance_minor = ? WHERE user_id = ?", [after, order.user_id]);
+    const before = Number(profiles[0][column]), after = before + amount, now = new Date();
+    await conn.execute(`UPDATE profiles SET ${column} = ? WHERE user_id = ?`, [after, order.user_id]);
     await conn.execute("UPDATE orders SET refunded_at = ?, refunded_amount_minor = ? WHERE id = ?", [now, amount, order.id]);
     await conn.execute("INSERT INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?,?,'refund','order',?)", [crypto.randomUUID(), order.user_id, amount, after, order.currency, order.id]);
     await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason) VALUES (?,?,?,'smm_order_refund')", [order.user_id, before, after]);
     await conn.commit(); return { refunded: true, amountMinor: amount, newBalanceMinor: after, userId: String(order.user_id) };
   } catch (err) { await conn.rollback(); throw err; } finally { conn.release(); }
 }
-async function debitAndCreate(input: { userId: string; provider: number; service: number; name: string; category: string; link: string; quantity: number; chargeMinor: number; currency: string; clientRequestId: string }) {
+async function debitAndCreate(input: { userId: string; provider: number; service: number; name: string; category: string; link: string; quantity: number; chargeMinor: number; revenueFcfaMinor: number; currency: string; wallet: "local" | "usd"; clientRequestId: string }) {
   const conn = await getMysqlPool().getConnection(), id = crypto.randomUUID();
   try {
     await conn.beginTransaction();
-    const [profiles] = await conn.execute<RowDataPacket[]>("SELECT balance_minor FROM profiles WHERE user_id = ? FOR UPDATE", [input.userId]);
+    const column = input.wallet === "usd" ? "balance_usd_minor" : "balance_minor";
+    const [profiles] = await conn.execute<RowDataPacket[]>(`SELECT ${column} FROM profiles WHERE user_id = ? FOR UPDATE`, [input.userId]);
     const p = profiles[0]; if (!p) throw Object.assign(new Error("Profil introuvable"), { code: "PROFILE" });
-    const before = Number(p.balance_minor); if (before < input.chargeMinor) throw Object.assign(new Error("Solde insuffisant. Rechargez votre compte."), { code: "FUNDS" });
+    const before = Number(p[column]); if (before < input.chargeMinor) throw Object.assign(new Error("Solde insuffisant. Rechargez votre compte."), { code: "FUNDS" });
     const after = before - input.chargeMinor;
-    await conn.execute("UPDATE profiles SET balance_minor = ? WHERE user_id = ?", [after, input.userId]);
-    await conn.execute(`INSERT INTO orders (id,user_id,provider,service_id,service_name,service_category,link,quantity,charge_minor,currency,balance_before_minor,balance_after_minor,client_request_id,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 'pending')`, [id,input.userId,input.provider,String(input.service),input.name,input.category,input.link,input.quantity,input.chargeMinor,input.currency,before,after,input.clientRequestId]);
+    await conn.execute(`UPDATE profiles SET ${column} = ? WHERE user_id = ?`, [after, input.userId]);
+    await conn.execute(`INSERT INTO orders (id,user_id,provider,service_id,service_name,service_category,link,quantity,charge_minor,revenue_fcfa_minor,currency,balance_before_minor,balance_after_minor,client_request_id,wallet_charged,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'pending')`, [id,input.userId,input.provider,String(input.service),input.name,input.category,input.link,input.quantity,input.chargeMinor,input.revenueFcfaMinor,input.currency,before,after,input.clientRequestId,input.wallet]);
     await conn.execute("INSERT INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?,?,'order_debit','order',?)", [crypto.randomUUID(),input.userId,-input.chargeMinor,after,input.currency,id]);
     await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason) VALUES (?,?,?,'smm_order_debit')", [input.userId,before,after]);
     await conn.commit(); return { id, before, after };
@@ -125,6 +128,8 @@ router.post("/smm/order", requireUser, rateLimitOrders, async (req: AuthedReques
   const { service, link, quantity, provider } = req.body || {}, providerId = parseProviderId(provider), serviceNum = Number(service), qty = Number(quantity), linkStr = typeof link === "string" ? link.trim() : "";
   const suppliedRequestId = typeof req.body?.client_request_id === "string" ? req.body.client_request_id.trim() : "";
   const clientRequestId = suppliedRequestId || crypto.randomUUID();
+  const wallet = req.body?.wallet ?? "local";
+  if (wallet !== "local" && wallet !== "usd") return res.status(400).json({ error: "Solde de paiement invalide" });
   if (!/^[A-Za-z0-9_-]{16,128}$/.test(clientRequestId)) return res.status(400).json({ error: "client_request_id invalide" });
   if (!Number.isInteger(serviceNum) || serviceNum <= 0) return res.status(400).json({error:"service invalide"});
   if (!Number.isInteger(qty) || qty < 1 || qty > 10_000_000) return res.status(400).json({error:"quantity invalide (1 — 10 000 000)"});
@@ -141,9 +146,16 @@ router.post("/smm/order", requireUser, rateLimitOrders, async (req: AuthedReques
     const override=(await loadPricing(providerId))[String(serviceNum)]; if(override?.hidden) return res.status(403).json({error:"Service non disponible"});
     const p=await profile(req.userId!); if(!p) return res.status(500).json({error:"Impossible de lire votre solde"});
     const priceFcfa=typeof override?.price_fcfa==="number"?override.price_fcfa:defaultPriceFcfaForCurrency(svc.rate,providerId,currency(p.country,p.currency));
-    const totalFcfa=Math.ceil(qty/1000*priceFcfa), chargeMinor=fcfaToMinor(totalFcfa);
+    const totalFcfa=Math.ceil(qty/1000*priceFcfa);
+    // The same selling rate that produced the FCFA price converts it back to
+    // USD; always round up to cents, never trust a client-provided amount.
+    const fcfaPerLocal: Record<string, number>={XAF:1,XOF:0.90,GMD:6.6667,CDF:0.1111,GNF:0.0625};
+    const localCurrency=currency(p.country,p.currency);
+    const usdRateFcfa=usdToLocalRate(providerId,localCurrency)*(fcfaPerLocal[localCurrency]??1);
+    const chargeMinor=wallet==="usd"?Math.ceil(totalFcfa/usdRateFcfa*100):fcfaToMinor(totalFcfa);
+    if (!Number.isSafeInteger(chargeMinor) || chargeMinor<=0) return res.status(400).json({error:"Prix invalide"});
     let created: {id:string;before:number;after:number};
-    try { created=await debitAndCreate({userId:req.userId!,provider:providerId,service:serviceNum,name:String(svc.name??serviceNum),category:String(svc.category??""),link:linkStr,quantity:qty,chargeMinor,currency:currency(p.country,p.currency),clientRequestId}); } catch(err:any) {
+    try { created=await debitAndCreate({userId:req.userId!,provider:providerId,service:serviceNum,name:String(svc.name??serviceNum),category:String(svc.category??""),link:linkStr,quantity:qty,chargeMinor,revenueFcfaMinor:fcfaToMinor(totalFcfa),currency:wallet==="usd"?"USD":localCurrency,wallet,clientRequestId}); } catch(err:any) {
       if (err?.code === "ER_DUP_ENTRY") {
         const [duplicate] = await getMysqlPool().execute<RowDataPacket[]>("SELECT * FROM orders WHERE user_id=? AND client_request_id=? LIMIT 1", [req.userId!, clientRequestId]);
         if (duplicate[0]) return res.json({ order: duplicate[0].provider_order_id ?? duplicate[0].external_order_id ?? undefined, provider: Number(duplicate[0].provider), local_order_id: String(duplicate[0].id), status: String(duplicate[0].status), reused: true });
@@ -197,7 +209,7 @@ router.get("/smm/dashboard-summary",requireUser,async(req:AuthedRequest,res)=>{
   }
 });
 router.get("/smm/user-payments",requireUser,async(req:AuthedRequest,res)=>{try{const [rows]=await getMysqlPool().execute<RowDataPacket[]>("SELECT *, amount_minor / 100 AS amount, fee_minor / 100 AS fee, bonus_amount_minor / 100 AS bonus_amount, charge_minor / 100 AS charge FROM payments WHERE user_id=? ORDER BY created_at DESC",[req.userId!]);res.json(rows);}catch(err){req.log.error({err},"user-payments failed");res.json([]);}});
-router.get("/smm/quote",requireUser,async(req:AuthedRequest,res)=>{const provider=parseProviderId(req.query["provider"]), service=Number(req.query["service"]), quantity=Number(req.query["quantity"]);if(!Number.isInteger(service)||service<=0)return res.status(400).json({error:"service invalide"});if(!Number.isInteger(quantity)||quantity<1)return res.status(400).json({error:"quantity invalide"});try{const svc=(await getRawServices(provider)).find((s:any)=>Number(s.service)===service);if(!svc)return res.status(404).json({error:"service introuvable"});const ov=(await loadPricing(provider))[String(service)];if(ov?.hidden)return res.status(403).json({error:"Service non disponible"});const p=await profile(req.userId!);const custom=typeof ov?.price_fcfa === "number";const per=custom?ov!.price_fcfa:defaultPriceFcfaForCurrency(svc.rate,provider,currency(p?.country??null,p?.currency??null));return res.json({service,provider,quantity,price_per_1000_fcfa:per,total_fcfa:Math.ceil(quantity/1000*per),price_is_custom:custom});}catch(err){return res.status(500).json({error:(err as Error).message});}});
+router.get("/smm/quote",requireUser,async(req:AuthedRequest,res)=>{const provider=parseProviderId(req.query["provider"]), service=Number(req.query["service"]), quantity=Number(req.query["quantity"]);if(!Number.isInteger(service)||service<=0)return res.status(400).json({error:"service invalide"});if(!Number.isInteger(quantity)||quantity<1)return res.status(400).json({error:"quantity invalide"});try{const svc=(await getRawServices(provider)).find((s:any)=>Number(s.service)===service);if(!svc)return res.status(404).json({error:"service introuvable"});const ov=(await loadPricing(provider))[String(service)];if(ov?.hidden)return res.status(403).json({error:"Service non disponible"});const p=await profile(req.userId!);const custom=typeof ov?.price_fcfa === "number";const per=custom?ov!.price_fcfa:defaultPriceFcfaForCurrency(svc.rate,provider,currency(p?.country??null,p?.currency??null));const total=Math.ceil(quantity/1000*per);const cur=currency(p?.country??null,p?.currency??null);const unit:Record<string,number>={XAF:1,XOF:0.90,GMD:6.6667,CDF:0.1111,GNF:0.0625};return res.json({service,provider,quantity,price_per_1000_fcfa:per,total_fcfa:total,total_usd:Math.ceil(total/(usdToLocalRate(provider,cur)*(unit[cur]??1))*100)/100,price_is_custom:custom});}catch(err){return res.status(500).json({error:(err as Error).message});}});
 router.get("/smm/status",requireUser,async(req:AuthedRequest,res)=>{const external=String(req.query["order"]||""),provider=parseProviderId(req.query["provider"]);if(!external)return res.status(400).json({error:"order id required"});try{const [rows]=await getMysqlPool().execute<RowDataPacket[]>("SELECT user_id FROM orders WHERE provider=? AND (provider_order_id=? OR external_order_id=?) LIMIT 1",[provider,external,external]);if(!rows[0]||String(rows[0].user_id)!==req.userId)return res.status(403).json({error:"Commande introuvable ou accès refusé"});return res.json({...await callProvider(provider,"status",{order:external}),provider});}catch(err){return res.status(500).json({error:(err as Error).message});}});
 
 export async function syncOrderInternal(opts:{localOrderId?:string;externalId?:string;providerId?:ProviderId;expectedUserId?:string;forceRefund?:boolean}):Promise<any>{
@@ -216,7 +228,7 @@ export async function syncOrderInternal(opts:{localOrderId?:string;externalId?:s
   // provider_order_id) unique key makes concurrent poller/manual sync calls
   // idempotent.
   if(status==="completed"&&external){
-    const revenueFcfa=minorToFcfa(order.charge_minor);
+    const revenueFcfa=minorToFcfa(order.revenue_fcfa_minor ?? order.charge_minor);
     const gain=estimateGainFromRevenue(revenueFcfa);
     await appendEarning({
       ts:new Date().toISOString(), provider_order_id:external, user_id:String(order.user_id),

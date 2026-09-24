@@ -170,9 +170,10 @@ export const DashboardLayout = () => {
           </div>
         </div>
         <div className="mt-2.5 bg-primary/10 rounded-lg px-3 py-2 flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Solde</span>
+          <span className="text-xs text-muted-foreground">Solde local / USD</span>
           <p className="font-bold text-primary text-sm">
             {formatBalance(Number(profile?.balance || 0), profile?.country)}
+            <span className="block text-xs">{Number(profile?.balance_usd || 0).toFixed(2)} USD</span>
           </p>
         </div>
         <Button
@@ -312,9 +313,10 @@ export const DashboardLayout = () => {
 
           {/* Solde */}
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] text-muted-foreground leading-tight hidden sm:block">Solde disponible</p>
+            <p className="text-[11px] text-muted-foreground leading-tight hidden sm:block">Solde local / USD</p>
             <p className="font-bold text-sm text-primary leading-tight truncate">
               {formatBalance(Number(profile?.balance || 0), profile?.country)}
+              <span className="block text-xs">{Number(profile?.balance_usd || 0).toFixed(2)} USD</span>
             </p>
           </div>
 

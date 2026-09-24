@@ -102,6 +102,7 @@ export interface SmmQuote {
   quantity: number;
   price_per_1000_fcfa: number;
   total_fcfa: number;
+  total_usd: number;
   price_is_custom: boolean;
   error?: string;
 }
@@ -258,6 +259,7 @@ export async function placeSmmOrder(input: {
   quantity: number | string;
   provider?: number;
   client_request_id?: string;
+  wallet?: "local" | "usd";
 }): Promise<SmmOrderResult> {
   const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
   const body = { ...input, provider: input.provider ?? 1, client_request_id: input.client_request_id ?? crypto.randomUUID() };

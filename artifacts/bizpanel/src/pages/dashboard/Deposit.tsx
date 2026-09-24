@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getAuthHeaders, authedFetch } from "@/lib/authFetch";
 import { formatBalance, getCurrencyInfo, toFcfa } from "@/lib/currency";
 import { toast } from "@/lib/toast";
+import CryptoDeposit from "./CryptoDeposit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -204,6 +205,7 @@ function getUssdCode(countryCode: string, operatorCode: string, amount: number):
 export default function Deposit() {
   const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const [method, setMethod] = useState<"mobile" | "crypto" | null>(() => new URLSearchParams(window.location.search).has("crypto") ? "crypto" : null);
 
   const [countries, setCountries] = useState<Country[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(true);
@@ -456,6 +458,14 @@ export default function Deposit() {
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
+  if (method !== "mobile") return <div className="space-y-5 max-w-2xl">
+    <h2 className="text-xl font-bold">Recharger mon solde</h2>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <Button variant={method === null ? "default" : "outline"} onClick={() => setMethod("mobile")}>Dépôt Mobile Money</Button>
+      <Button variant={method === "crypto" ? "default" : "outline"} onClick={() => setMethod("crypto")}>Dépôt Crypto</Button>
+    </div>
+    {method === "crypto" && <CryptoDeposit />}
+  </div>;
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Header */}
@@ -478,8 +488,9 @@ export default function Deposit() {
             <Wallet size={22} />
           </div>
           <div>
-            <p className="text-sm opacity-80">Solde actuel</p>
+            <p className="text-sm opacity-80">Solde local</p>
             <p className="text-3xl font-bold">{formatBalance(Number(profile?.balance || 0), profile?.country)}</p>
+            <p className="text-sm mt-1">Solde USD : {Number(profile?.balance_usd || 0).toFixed(2)} USD</p>
           </div>
         </CardContent>
       </Card>

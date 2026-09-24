@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   fetchSmmServices,
   placeSmmOrder,
+  fetchSmmQuote,
   fetchSmmProviders,
   getLocalPricePerK,
   useUsdRates,
@@ -187,6 +188,8 @@ export default function NewOrder() {
   const [categorySearch, setCategorySearch] = useState("");
   const [search, setSearch] = useState("");
   const [selectedService, setSelectedService] = useState<SmmService | null>(null);
+  const [wallet, setWallet] = useState<"local" | "usd">("local");
+  const [usdQuote, setUsdQuote] = useState<{ key: string; total: number } | null>(null);
   const [link, setLink] = useState("");
   const [quantity, setQuantity] = useState("");
   const [loading, setLoading] = useState(false);
@@ -340,6 +343,18 @@ export default function NewOrder() {
   // price: FCFA equivalent used for balance check (balance is always stored in FCFA)
   const price = Math.round(localTotal * currencyInfo.fcfaPerUnit);
   const balance = Number(profile?.balance || 0);
+  const usdBalance = Number(profile?.balance_usd || 0);
+  const quoteKey = `${providerId}:${selectedService?.service}:${qty}`;
+  const usdPrice = usdQuote?.key === quoteKey ? usdQuote.total : null;
+  const insufficient = wallet === "usd" ? usdPrice !== null && usdPrice > usdBalance : price > balance;
+  useEffect(() => {
+    if (!selectedService || qty < 1) return;
+    let live = true;
+    fetchSmmQuote(selectedService.service, qty, providerId)
+      .then(q => { if (live) setUsdQuote(Number.isFinite(q.total_usd) ? { key: `${providerId}:${selectedService.service}:${qty}`, total: q.total_usd } : null); })
+      .catch(() => { if (live) setUsdQuote(null); });
+    return () => { live = false; };
+  }, [selectedService?.service, qty, providerId]);
 
   const platformLabel =
     PLATFORMS.find((p) => p.key === (selectedService ? detectPlatform(selectedService.category, selectedService.name) : ""))?.label || "";
@@ -354,7 +369,8 @@ export default function NewOrder() {
     if (!link.trim()) { toast.error("Entrez le lien de votre compte/post"); return; }
     if (qty < minQ) { toast.error(`Minimum ${minQ.toLocaleString()} pour ce service`); return; }
     if (qty > maxQ) { toast.error(`Maximum ${maxQ.toLocaleString()} pour ce service`); return; }
-    if (price > balance) { toast.error("Solde insuffisant. Rechargez votre compte."); return; }
+    if (wallet === "usd" && usdPrice === null) { toast.error("Prix USD indisponible. Réessayez."); return; }
+    if (insufficient) { toast.error("Solde insuffisant. Rechargez votre compte."); return; }
 
     setLoading(true);
     try {
@@ -365,6 +381,7 @@ export default function NewOrder() {
         link: link.trim(),
         quantity: qty,
         provider: providerId,
+        wallet,
         client_request_id: orderRequestId.current,
       });
 
@@ -432,8 +449,8 @@ export default function NewOrder() {
 
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="p-4 flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Solde disponible</span>
-          <span className="font-bold text-primary text-lg">{formatBalance(balance, profile?.country)}</span>
+          <span className="text-sm text-muted-foreground">Solde local / USD</span>
+          <span className="font-bold text-primary text-lg">{formatBalance(balance, profile?.country)} · {usdBalance.toFixed(2)} USD</span>
         </CardContent>
       </Card>
 
@@ -736,9 +753,17 @@ export default function NewOrder() {
                 <span className="text-muted-foreground font-medium">Total à payer</span>
                 <span className="font-bold text-primary text-base">{localTotal.toLocaleString()} {currencyInfo.symbol}</span>
               </div>
-              {price > balance && (
+              <div className="space-y-2 border-t pt-3">
+                <p className="text-sm font-medium">Payer avec</p>
+                <div className="flex gap-2">
+                  <Button type="button" variant={wallet === "local" ? "default" : "outline"} onClick={() => setWallet("local")}>Solde local</Button>
+                  <Button type="button" variant={wallet === "usd" ? "default" : "outline"} onClick={() => setWallet("usd")}>Solde USD</Button>
+                </div>
+                {wallet === "usd" && <p className="font-bold">Total USD : {usdPrice === null ? "Calcul en cours…" : `${usdPrice.toFixed(2)} USD`}</p>}
+              </div>
+              {insufficient && (
                 <p className="text-xs text-destructive">
-                  Solde insuffisant (solde actuel : {Math.round(balance / currencyInfo.fcfaPerUnit).toLocaleString()} {currencyInfo.symbol})
+                  Solde insuffisant ({wallet === "usd" ? `${usdBalance.toFixed(2)} USD` : `${Math.round(balance / currencyInfo.fcfaPerUnit).toLocaleString()} ${currencyInfo.symbol}`})
                 </p>
               )}
             </div>
@@ -746,10 +771,10 @@ export default function NewOrder() {
             <Button
               className="w-full h-11"
               onClick={handleOrder}
-              disabled={loading || !link || qty < minQ || qty > maxQ || price > balance}
+              disabled={loading || !link || qty < minQ || qty > maxQ || insufficient || (wallet === "usd" && usdPrice === null)}
             >
               <ShoppingCart size={16} className="mr-2" />
-              {loading ? "Traitement…" : `Commander — ${localTotal.toLocaleString()} ${currencyInfo.symbol}`}
+              {loading ? "Traitement…" : wallet === "usd" ? `Commander — ${usdPrice?.toFixed(2) ?? "…"} USD` : `Commander — ${localTotal.toLocaleString()} ${currencyInfo.symbol}`}
             </Button>
           </CardContent>
         </Card>

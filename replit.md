@@ -183,6 +183,18 @@ migration; rows captured there can be re-imported via the admin
 - `PUBLIC_API_URL` — URL publique du serveur d'API utilisée comme
   `notify_url` envoyée à AfribaPay. À défaut, le serveur déduit l'URL
   depuis `REPLIT_DEV_DOMAIN` en environnement Replit.
+- `IZIPAY_API_KEY` et `IZIPAY_WEBHOOK_SECRET` — Secrets serveur IziChange Pay
+  (compte business avec accès API). Utiliser une clé `sk_test_` pour le sandbox
+  ou `sk_live_` pour la production. La clé sélectionne automatiquement l'API
+  sandbox ou production. Ne jamais exposer ces valeurs dans le frontend.
+- Dans le tableau de bord IziChange Pay, renseigner le webhook HTTPS
+  `https://<domaine-public>/api/payments/crypto/webhook` et activer les
+  événements `payment_intent.*`. `PUBLIC_API_URL` doit être le même domaine
+  public HTTPS (également utilisé comme URL de retour du dépôt).
+- Avant de déployer ce changement, appliquer `migrations/mysql/007_crypto_usd_wallet.sql`
+  à la base MariaDB/MySQL existante (via `pnpm --filter @workspace/api-server
+  run migrate:mysql` dans l'environnement où la base est accessible).
+  C'est une migration additive : les anciens soldes et transactions restent intacts.
 - `SUPABASE_SERVICE_ROLE_KEY` — required for the public webhook to write
   to Supabase (bypasses RLS). Never expose client-side.
 

@@ -42,6 +42,7 @@ export interface SyncRefundEvent {
   orderId: any;
   externalId: string;
   amount: number;
+  currency?: string;
 }
 
 export interface SyncResult<T> {
@@ -102,7 +103,7 @@ export async function syncOrdersStatusWithRefunds<
             updates.set(o.id, newStatus);
           }
           if (data.refunded && typeof data.refunded_amount === "number") {
-            refunds.push({ orderId: o.id, externalId: ext, amount: data.refunded_amount });
+            refunds.push({ orderId: o.id, externalId: ext, amount: data.refunded_amount, currency: (o as { currency?: string }).currency });
           }
         } catch {}
       }),

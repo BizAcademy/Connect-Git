@@ -8,6 +8,7 @@ export function formatPaymentMethod(method?: string | null): string {
     return "Mobile Money";
   }
   if (m === "card" || m === "carte") return "Carte bancaire";
+  if (m === "crypto" || m === "izipay") return "Crypto · IziChange Pay";
   if (m === "bank" || m === "virement") return "Virement bancaire";
   return m.charAt(0).toUpperCase() + m.slice(1);
 }
