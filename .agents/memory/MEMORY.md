@@ -8,3 +8,4 @@
 - [Dashboard ads safety](dashboard-ads-safety.md) — colored ad copy uses validated text segments, never admin-authored HTML; preserve this structure to prevent stored XSS.
 - [Order refund retryability](order-refund-retryability.md) — credit wallets before persisting terminal refund statuses; recovery scans must isolate failures per order.
 - [IziChange Pay credit policy](izichange-credit-policy.md) — USD wallet credits require signed webhook plus live intent retrieval; irregular amounts stay uncredited.
+- [Crypto webhook recovery](izipay-webhook-recovery.md) — five consecutive failed deliveries disable the provider endpoint; acknowledge signed events quickly only with durable intent records and independent reconciliation.

@@ -36,6 +36,7 @@ async function fetchPendingPayments(): Promise<PendingPayment[]> {
     const [rows] = await getMysqlPool().execute<RowDataPacket[]>(
       `SELECT id,user_id,order_id,created_at,amount_minor FROM payments
        WHERE status='pending' AND credited_at IS NULL AND order_id IS NOT NULL
+       AND (provider IS NULL OR provider <> 'izipay')
        AND created_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE) ORDER BY created_at ASC LIMIT ?`, [PAGE_SIZE],
     );
     return rows.map(r => ({ id: String(r.id), user_id: String(r.user_id), order_id: String(r.order_id),

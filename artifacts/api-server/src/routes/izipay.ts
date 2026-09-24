@@ -7,6 +7,27 @@ import { requireUser, type AuthedRequest } from "../lib/auth";
 import { CRYPTO_DEPOSIT_FEE_BPS, createIntent, parseUsdMinor, quoteCryptoDeposit, reconcileCryptoPayment, verifyIzipayWebhook } from "../lib/izipay";
 
 const router: IRouter = Router();
+const webhookInFlight = new Set<string>();
+
+async function processCryptoWebhook(intentId: string): Promise<void> {
+  if (webhookInFlight.has(intentId)) return;
+  webhookInFlight.add(intentId);
+  try {
+    const [rows] = await getMysqlPool().execute<RowDataPacket[]>("SELECT id FROM payments WHERE provider='izipay' AND provider_reference=?", [intentId]);
+    if (!rows[0]) {
+      logger.warn({ intentId }, "IziChange Pay webhook has no matching payment");
+      return;
+    }
+    const status = await reconcileCryptoPayment(String(rows[0].id));
+    logger.info({ paymentId: rows[0].id, status }, "IziChange Pay webhook processed");
+  } catch (err) {
+    // The independent scanner retries registered, uncredited intents even if
+    // this worker crashes or the provider/database is temporarily unavailable.
+    logger.error({ err, intentId }, "IziChange Pay webhook processing failed; scanner will retry");
+  } finally {
+    webhookInFlight.delete(intentId);
+  }
+}
 
 router.get("/payments/crypto/availability", requireUser, async (_req, res) => {
   const origin = process.env["PUBLIC_API_URL"]?.replace(/\/+$/, "");
@@ -80,16 +101,16 @@ router.post("/payments/crypto/webhook", async (req: Request & { rawBody?: string
     return res.status(401).json({ error: "Signature invalide" });
   }
   if (!event.event.startsWith("payment_intent.")) return res.json({ received: true });
-  try {
-    const [rows] = await getMysqlPool().execute<RowDataPacket[]>("SELECT id FROM payments WHERE provider='izipay' AND provider_reference=?", [event.data.intentId]);
-    if (!rows[0]) return res.status(503).json({ error: "Intention non enregistrée" });
-    const status = await reconcileCryptoPayment(String(rows[0].id));
-    logger.info({ paymentId: rows[0].id, status }, "IziChange Pay webhook processed");
+  if (event.stale) {
+    logger.warn({ intentId: event.data.intentId }, "Old signed crypto webhook acknowledged; scanner will retrieve current state");
     return res.json({ received: true });
-  } catch (err) {
-    logger.error({ err, intentId: event.data.intentId }, "IziChange Pay webhook processing failed");
-    return res.status(503).json({ error: "Vérification indisponible" });
   }
+  // Every checkout URL is returned only after its intent reference is stored
+  // in payments. Acknowledge a signed delivery immediately; recovery scans
+  // those durable rows if asynchronous processing fails or this process dies.
+  const response = res.json({ received: true });
+  setImmediate(() => { void processCryptoWebhook(event.data.intentId); });
+  return response;
 });
 
 export default router;

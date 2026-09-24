@@ -10,6 +10,34 @@ type Intent = {
 };
 
 export const CRYPTO_DEPOSIT_FEE_BPS = 150;
+const RETRIEVE_SPACING_MS = 1_500;
+let retrieveQueue: Promise<void> = Promise.resolve();
+let nextRetrieveAt = 0;
+let retrieveCooldownUntil = 0;
+
+async function paceIntentRetrieval(): Promise<void> {
+  let release!: () => void;
+  const previous = retrieveQueue;
+  retrieveQueue = new Promise<void>(resolve => { release = resolve; });
+  await previous;
+  try {
+    const delay = Math.max(nextRetrieveAt, retrieveCooldownUntil) - Date.now();
+    if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+    nextRetrieveAt = Date.now() + RETRIEVE_SPACING_MS;
+  } finally {
+    release();
+  }
+}
+
+function noteRateLimit(response: Response): void {
+  const retryAfter = response.headers.get("retry-after");
+  const seconds = retryAfter == null ? NaN : Number(retryAfter);
+  const milliseconds = Number.isFinite(seconds)
+    ? seconds * 1_000
+    : retryAfter ? Date.parse(retryAfter) - Date.now() : NaN;
+  const delay = Number.isFinite(milliseconds) ? Math.min(Math.max(milliseconds, 0), 5 * 60_000) : 60_000;
+  retrieveCooldownUntil = Math.max(retrieveCooldownUntil, Date.now() + delay);
+}
 
 export function quoteCryptoDeposit(amountMinor: number) {
   if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) throw new Error("Montant USD invalide");
@@ -48,7 +76,10 @@ async function api(path: string, init?: { method: string; body: unknown; idempot
     body: init ? JSON.stringify(init.body) : undefined,
     signal: AbortSignal.timeout(10000),
   });
-  if (!response.ok) throw new Error(`IziChange Pay a répondu ${response.status}`);
+  if (!response.ok) {
+    if (response.status === 429 && !init) noteRateLimit(response);
+    throw new Error(`IziChange Pay a répondu ${response.status}`);
+  }
   const value: unknown = await response.json();
   if (!value || typeof value !== "object" || typeof (value as Intent).id !== "string") throw new Error("Réponse IziChange Pay invalide");
   return value as Intent;
@@ -66,20 +97,24 @@ export function createIntent(amountMinor: number, reference: string, returnUrl: 
     },
   });
 }
-export function retrieveIntent(id: string) {
+export async function retrieveIntent(id: string) {
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) throw new Error("Identifiant d'intention invalide");
+  await paceIntentRetrieval();
   return api(`/${encodeURIComponent(id)}`);
 }
-export function verifyIzipayWebhook(raw: string | undefined, header: string | undefined): { event: string; data: { intentId: string } } {
+export function verifyIzipayWebhook(raw: string | undefined, header: string | undefined): { event: string; data: { intentId: string }; stale: boolean } {
   const secret = process.env["IZIPAY_WEBHOOK_SECRET"];
   if (!secret || !raw || !header || !/^sha256=[0-9a-f]{64}$/i.test(header)) throw new Error("Signature absente");
   const expected = crypto.createHmac("sha256", secret).update(raw).digest();
   const actual = Buffer.from(header.slice(7), "hex");
   if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) throw new Error("Signature invalide");
   const body = JSON.parse(raw);
-  if (!Number.isInteger(body.timestamp) || Math.abs(Date.now() / 1000 - body.timestamp) > 300) throw new Error("Webhook expiré");
+  if (!Number.isInteger(body.timestamp)) throw new Error("Webhook sans horodatage");
   if (typeof body.event !== "string" || typeof body.data?.intentId !== "string") throw new Error("Webhook invalide");
-  return body;
+  // A provider retry can carry the original signed timestamp. Never perform
+  // immediate work for a stale signed body; the durable scanner retrieves the
+  // current provider state without relying on the old webhook payload.
+  return { event: body.event, data: { intentId: body.data.intentId }, stale: Math.abs(Date.now() / 1000 - body.timestamp) > 300 };
 }
 
 export async function reconcileCryptoPayment(paymentId: string) {

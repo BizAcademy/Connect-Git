@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-24T02:39:23.296Z";
+var BUILD_TIME = "2026-09-24T02:56:33.008Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -77724,8 +77724,8 @@ function startSupportCleanup() {
     });
   };
   run();
-  const timer4 = setInterval(run, CLEANUP_INTERVAL_MS);
-  timer4.unref();
+  const timer5 = setInterval(run, CLEANUP_INTERVAL_MS);
+  timer5.unref();
 }
 
 // src/routes/support.ts
@@ -78230,6 +78230,32 @@ init_logger();
 // src/lib/izipay.ts
 import crypto9 from "node:crypto";
 var CRYPTO_DEPOSIT_FEE_BPS = 150;
+var RETRIEVE_SPACING_MS = 1500;
+var retrieveQueue = Promise.resolve();
+var nextRetrieveAt = 0;
+var retrieveCooldownUntil = 0;
+async function paceIntentRetrieval() {
+  let release;
+  const previous = retrieveQueue;
+  retrieveQueue = new Promise((resolve) => {
+    release = resolve;
+  });
+  await previous;
+  try {
+    const delay = Math.max(nextRetrieveAt, retrieveCooldownUntil) - Date.now();
+    if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+    nextRetrieveAt = Date.now() + RETRIEVE_SPACING_MS;
+  } finally {
+    release();
+  }
+}
+function noteRateLimit(response) {
+  const retryAfter = response.headers.get("retry-after");
+  const seconds = retryAfter == null ? NaN : Number(retryAfter);
+  const milliseconds = Number.isFinite(seconds) ? seconds * 1e3 : retryAfter ? Date.parse(retryAfter) - Date.now() : NaN;
+  const delay = Number.isFinite(milliseconds) ? Math.min(Math.max(milliseconds, 0), 5 * 6e4) : 6e4;
+  retrieveCooldownUntil = Math.max(retrieveCooldownUntil, Date.now() + delay);
+}
 function quoteCryptoDeposit(amountMinor) {
   if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) throw new Error("Montant USD invalide");
   const feeMinor = Math.round(amountMinor * CRYPTO_DEPOSIT_FEE_BPS / 1e4);
@@ -78263,7 +78289,10 @@ async function api(path7, init) {
     body: init ? JSON.stringify(init.body) : void 0,
     signal: AbortSignal.timeout(1e4)
   });
-  if (!response.ok) throw new Error(`IziChange Pay a r\xE9pondu ${response.status}`);
+  if (!response.ok) {
+    if (response.status === 429 && !init) noteRateLimit(response);
+    throw new Error(`IziChange Pay a r\xE9pondu ${response.status}`);
+  }
   const value = await response.json();
   if (!value || typeof value !== "object" || typeof value.id !== "string") throw new Error("R\xE9ponse IziChange Pay invalide");
   return value;
@@ -78286,8 +78315,9 @@ function createIntent(amountMinor, reference, returnUrl, email) {
     }
   });
 }
-function retrieveIntent(id) {
+async function retrieveIntent(id) {
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) throw new Error("Identifiant d'intention invalide");
+  await paceIntentRetrieval();
   return api(`/${encodeURIComponent(id)}`);
 }
 function verifyIzipayWebhook(raw, header) {
@@ -78297,9 +78327,9 @@ function verifyIzipayWebhook(raw, header) {
   const actual = Buffer.from(header.slice(7), "hex");
   if (actual.length !== expected.length || !crypto9.timingSafeEqual(actual, expected)) throw new Error("Signature invalide");
   const body = JSON.parse(raw);
-  if (!Number.isInteger(body.timestamp) || Math.abs(Date.now() / 1e3 - body.timestamp) > 300) throw new Error("Webhook expir\xE9");
+  if (!Number.isInteger(body.timestamp)) throw new Error("Webhook sans horodatage");
   if (typeof body.event !== "string" || typeof body.data?.intentId !== "string") throw new Error("Webhook invalide");
-  return body;
+  return { event: body.event, data: { intentId: body.data.intentId }, stale: Math.abs(Date.now() / 1e3 - body.timestamp) > 300 };
 }
 async function reconcileCryptoPayment(paymentId) {
   const db = getMysqlPool();
@@ -78368,6 +78398,24 @@ async function reconcileCryptoPayment(paymentId) {
 
 // src/routes/izipay.ts
 var router6 = (0, import_express6.Router)();
+var webhookInFlight = /* @__PURE__ */ new Set();
+async function processCryptoWebhook(intentId) {
+  if (webhookInFlight.has(intentId)) return;
+  webhookInFlight.add(intentId);
+  try {
+    const [rows] = await getMysqlPool().execute("SELECT id FROM payments WHERE provider='izipay' AND provider_reference=?", [intentId]);
+    if (!rows[0]) {
+      logger.warn({ intentId }, "IziChange Pay webhook has no matching payment");
+      return;
+    }
+    const status = await reconcileCryptoPayment(String(rows[0].id));
+    logger.info({ paymentId: rows[0].id, status }, "IziChange Pay webhook processed");
+  } catch (err) {
+    logger.error({ err, intentId }, "IziChange Pay webhook processing failed; scanner will retry");
+  } finally {
+    webhookInFlight.delete(intentId);
+  }
+}
 router6.get("/payments/crypto/availability", requireUser, async (_req, res) => {
   const origin = process.env["PUBLIC_API_URL"]?.replace(/\/+$/, "");
   if (!origin || !/^https:\/\//.test(origin) || !process.env["IZIPAY_API_KEY"] || !process.env["IZIPAY_WEBHOOK_SECRET"])
@@ -78434,16 +78482,15 @@ router6.post("/payments/crypto/webhook", async (req, res) => {
     return res.status(401).json({ error: "Signature invalide" });
   }
   if (!event.event.startsWith("payment_intent.")) return res.json({ received: true });
-  try {
-    const [rows] = await getMysqlPool().execute("SELECT id FROM payments WHERE provider='izipay' AND provider_reference=?", [event.data.intentId]);
-    if (!rows[0]) return res.status(503).json({ error: "Intention non enregistr\xE9e" });
-    const status = await reconcileCryptoPayment(String(rows[0].id));
-    logger.info({ paymentId: rows[0].id, status }, "IziChange Pay webhook processed");
+  if (event.stale) {
+    logger.warn({ intentId: event.data.intentId }, "Old signed crypto webhook acknowledged; scanner will retrieve current state");
     return res.json({ received: true });
-  } catch (err) {
-    logger.error({ err, intentId: event.data.intentId }, "IziChange Pay webhook processing failed");
-    return res.status(503).json({ error: "V\xE9rification indisponible" });
   }
+  const response = res.json({ received: true });
+  setImmediate(() => {
+    void processCryptoWebhook(event.data.intentId);
+  });
+  return response;
 });
 var izipay_default = router6;
 
@@ -79502,6 +79549,7 @@ async function fetchPendingPayments() {
     const [rows] = await getMysqlPool().execute(
       `SELECT id,user_id,order_id,created_at,amount_minor FROM payments
        WHERE status='pending' AND credited_at IS NULL AND order_id IS NOT NULL
+       AND (provider IS NULL OR provider <> 'izipay')
        AND created_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE) ORDER BY created_at ASC LIMIT ?`,
       [PAGE_SIZE2]
     );
@@ -79603,6 +79651,80 @@ function startPendingPaymentScanner() {
   logger.info({ interval_ms: SCAN_INTERVAL_MS2 }, "pending-payment-scanner: started");
 }
 
+// src/lib/crypto-deposit-scanner.ts
+init_logger();
+var BATCH_SIZE = 20;
+var SCAN_INTERVAL_MS3 = 2 * 6e4;
+var timer4 = null;
+var initialTimer = null;
+var running = false;
+var cycle = 0;
+var pendingCursor = null;
+var terminalCursor = null;
+async function listCandidates(kind, afterId) {
+  const statuses = kind === "pending" ? "status='pending'" : "status IN ('irregular','failed','expired','canceled','cancelled','completed')";
+  const [rows] = await getMysqlPool().execute(
+    `SELECT id FROM payments
+     WHERE provider='izipay' AND provider_reference IS NOT NULL AND credited_at IS NULL
+       AND ${statuses} AND id > ?
+     ORDER BY id LIMIT ?`,
+    [afterId, BATCH_SIZE]
+  );
+  return rows.map((row) => ({ id: String(row.id) }));
+}
+async function warnAboutPendingBacklog() {
+  const [rows] = await getMysqlPool().execute(
+    "SELECT COUNT(*) AS total, MIN(created_at) AS oldest FROM payments WHERE provider='izipay' AND provider_reference IS NOT NULL AND credited_at IS NULL AND status='pending'"
+  );
+  const total = Number(rows[0]?.total ?? 0);
+  const oldest = rows[0]?.oldest == null ? null : new Date(rows[0].oldest).getTime();
+  if (total > BATCH_SIZE || oldest != null && oldest < Date.now() - 24 * 60 * 6e4) {
+    logger.warn({ total, oldest: rows[0]?.oldest }, "crypto-deposit-scanner: uncredited pending payment backlog");
+  }
+}
+async function scanCryptoDepositsOnce(kind, afterId, list = listCandidates, reconcile = reconcileCryptoPayment) {
+  let candidates = await list(kind, afterId ?? "");
+  if (candidates.length === 0 && afterId) candidates = await list(kind, "");
+  let errors = 0;
+  for (const candidate of candidates) {
+    try {
+      const status = await reconcile(candidate.id);
+      if (status === "completed") logger.info({ paymentId: candidate.id }, "crypto-deposit-scanner: credited payment");
+    } catch (err) {
+      errors++;
+      logger.error({ err, paymentId: candidate.id }, "crypto-deposit-scanner: will retry payment");
+    }
+  }
+  return { nextId: candidates.at(-1)?.id ?? null, checked: candidates.length, errors };
+}
+function startCryptoDepositScanner() {
+  if (timer4) return;
+  const scan = async () => {
+    if (running || !process.env["IZIPAY_API_KEY"]) return;
+    running = true;
+    try {
+      const pending = await scanCryptoDepositsOnce("pending", pendingCursor);
+      pendingCursor = pending.nextId;
+      if (++cycle % 15 === 0) {
+        const terminal = await scanCryptoDepositsOnce("terminal", terminalCursor);
+        terminalCursor = terminal.nextId;
+        await warnAboutPendingBacklog();
+      }
+    } catch (err) {
+      logger.error({ err }, "crypto-deposit-scanner: scan failed; will retry");
+    } finally {
+      running = false;
+    }
+  };
+  initialTimer = setTimeout(() => {
+    void scan();
+  }, 15e3);
+  timer4 = setInterval(() => {
+    void scan();
+  }, SCAN_INTERVAL_MS3);
+  logger.info({ interval_ms: SCAN_INTERVAL_MS3 }, "crypto-deposit-scanner: started");
+}
+
 // src/index.ts
 process.on("uncaughtException", (err) => {
   console.error("[FATAL] uncaughtException:", err);
@@ -79643,6 +79765,7 @@ app_default.listen(port, async (err) => {
   void warmServicesCache();
   startMissedRefundScanner();
   startPendingPaymentScanner();
+  startCryptoDepositScanner();
   startOrderStatusPoller(async (externalId, providerId) => {
     const r = await syncOrderInternal({ externalId, providerId });
     return r.ok ? { ok: true, status: r.status, refunded: r.refunded } : { ok: false };

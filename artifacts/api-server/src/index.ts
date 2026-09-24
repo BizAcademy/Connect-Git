@@ -21,6 +21,7 @@ import { purgeSensitiveSettingRows } from "./lib/settings-cleanup";
 import { startOrderStatusPoller } from "./lib/order-status-poller";
 import { startMissedRefundScanner } from "./lib/missed-refund-scanner";
 import { startPendingPaymentScanner } from "./lib/pending-payment-scanner";
+import { startCryptoDepositScanner } from "./lib/crypto-deposit-scanner";
 import { syncOrderInternal, warmServicesCache } from "./routes/smm";
 import { loadUsdRatesAtStartup } from "./routes/admin";
 
@@ -72,6 +73,7 @@ app.listen(port, async (err) => {
   // connected client instantly.
   startMissedRefundScanner();
   startPendingPaymentScanner();
+  startCryptoDepositScanner();
   startOrderStatusPoller(async (externalId, providerId) => {
     const r = await syncOrderInternal({ externalId, providerId });
     return r.ok
