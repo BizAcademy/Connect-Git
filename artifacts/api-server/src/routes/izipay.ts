@@ -8,6 +8,21 @@ import { createIntent, parseUsdMinor, reconcileCryptoPayment, verifyIzipayWebhoo
 
 const router: IRouter = Router();
 
+router.get("/payments/crypto/availability", requireUser, async (_req, res) => {
+  const origin = process.env["PUBLIC_API_URL"]?.replace(/\/+$/, "");
+  if (!origin || !/^https:\/\//.test(origin) || !process.env["IZIPAY_API_KEY"] || !process.env["IZIPAY_WEBHOOK_SECRET"])
+    return res.status(503).json({ available: false, error: "Le paiement crypto n'est pas configuré sur ce serveur." });
+  try {
+    await getMysqlPool().query("SELECT balance_usd_minor FROM profiles LIMIT 0");
+    await getMysqlPool().query("SELECT wallet_credited FROM payments LIMIT 0");
+    await getMysqlPool().query("SELECT wallet_charged FROM orders LIMIT 0");
+    return res.json({ available: true });
+  } catch (err) {
+    logger.error({ err }, "IziChange Pay database readiness failed");
+    return res.status(503).json({ available: false, error: "La base de données crypto n'est pas encore prête." });
+  }
+});
+
 router.post("/payments/crypto", requireUser, async (req: AuthedRequest, res) => {
   const amountMinor = parseUsdMinor(req.body?.amount);
   if (amountMinor == null || amountMinor < 100 || amountMinor > 1_000_000_00) return res.status(400).json({ error: "Montant USD invalide (1 à 1 000 000 USD)" });

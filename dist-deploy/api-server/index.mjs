@@ -18771,14 +18771,14 @@ var require_etag = __commonJS({
   "../../node_modules/.pnpm/etag@1.8.1/node_modules/etag/index.js"(exports, module) {
     "use strict";
     module.exports = etag;
-    var crypto12 = __require("crypto");
+    var crypto14 = __require("crypto");
     var Stats = __require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash2 = crypto12.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash2 = crypto14.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash2 + '"';
     }
@@ -20501,27 +20501,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router11;
+    module.exports = Router12;
     module.exports.Route = Route;
-    function Router11(options) {
-      if (!(this instanceof Router11)) {
-        return new Router11(options);
+    function Router12(options) {
+      if (!(this instanceof Router12)) {
+        return new Router12(options);
       }
       const opts = options || {};
-      function router11(req, res, next) {
-        router11.handle(req, res, next);
+      function router12(req, res, next) {
+        router12.handle(req, res, next);
       }
-      Object.setPrototypeOf(router11, this);
-      router11.caseSensitive = opts.caseSensitive;
-      router11.mergeParams = opts.mergeParams;
-      router11.params = {};
-      router11.strict = opts.strict;
-      router11.stack = [];
-      return router11;
+      Object.setPrototypeOf(router12, this);
+      router12.caseSensitive = opts.caseSensitive;
+      router12.mergeParams = opts.mergeParams;
+      router12.params = {};
+      router12.strict = opts.strict;
+      router12.stack = [];
+      return router12;
     }
-    Router11.prototype = function() {
+    Router12.prototype = function() {
     };
-    Router11.prototype.param = function param(name, fn) {
+    Router12.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20541,7 +20541,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router11.prototype.handle = function handle(req, res, callback) {
+    Router12.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20668,7 +20668,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router11.prototype.use = function use(handler) {
+    Router12.prototype.use = function use(handler) {
       let offset = 0;
       let path7 = "/";
       if (typeof handler !== "function") {
@@ -20701,7 +20701,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router11.prototype.route = function route(path7) {
+    Router12.prototype.route = function route(path7) {
       const route2 = new Route(path7);
       const layer = new Layer(path7, {
         sensitive: this.caseSensitive,
@@ -20716,7 +20716,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router11.prototype[method] = function(path7) {
+      Router12.prototype[method] = function(path7) {
         const route = this.route(path7);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -20899,13 +20899,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router11 = require_router();
+    var Router12 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router11 = null;
+      var router12 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -20914,13 +20914,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router11 === null) {
-            router11 = new Router11({
+          if (router12 === null) {
+            router12 = new Router12({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router11;
+          return router12;
         }
       });
     };
@@ -20991,15 +20991,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router11 = this.router;
+      var router12 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router11.use(path7, fn2);
+          return router12.use(path7, fn2);
         }
         debug(".use app under %s", path7);
         fn2.mountpath = path7;
         fn2.parent = this;
-        router11.use(path7, function mounted_app(req, res, next) {
+        router12.use(path7, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -22253,17 +22253,17 @@ var require_content_disposition = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.2.2/node_modules/cookie-signature/index.js"(exports) {
-    var crypto12 = __require("crypto");
+    var crypto14 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto12.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto14.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto12.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto14.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -23572,7 +23572,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router11 = require_router();
+    var Router12 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23594,8 +23594,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router11.Route;
-    exports.Router = Router11;
+    exports.Route = Router12.Route;
+    exports.Router = Router12;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -23893,11 +23893,11 @@ var require_lib3 = __commonJS({
 // ../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js
 var require_cookie_signature2 = __commonJS({
   "../../node_modules/.pnpm/cookie-signature@1.0.6/node_modules/cookie-signature/index.js"(exports) {
-    var crypto12 = __require("crypto");
+    var crypto14 = __require("crypto");
     exports.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      return val + "." + crypto12.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto14.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports.unsign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -23906,7 +23906,7 @@ var require_cookie_signature2 = __commonJS({
       return sha1(mac) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto12.createHash("sha1").update(str).digest("hex");
+      return crypto14.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -43143,9 +43143,9 @@ var require_client = __commonJS({
 var require_auth_41 = __commonJS({
   "../../node_modules/.pnpm/mysql2@3.24.3_@types+node@25.6.2/node_modules/mysql2/lib/auth_41.js"(exports) {
     "use strict";
-    var crypto12 = __require("crypto");
+    var crypto14 = __require("crypto");
     function sha1(msg2, msg1, msg22) {
-      const hash2 = crypto12.createHash("sha1");
+      const hash2 = crypto14.createHash("sha1");
       hash2.update(msg2);
       if (msg1) {
         hash2.update(msg1);
@@ -45571,7 +45571,7 @@ var require_sha256_password = __commonJS({
   "../../node_modules/.pnpm/mysql2@3.24.3_@types+node@25.6.2/node_modules/mysql2/lib/auth_plugins/sha256_password.js"(exports, module) {
     "use strict";
     var PLUGIN_NAME = "sha256_password";
-    var crypto12 = __require("crypto");
+    var crypto14 = __require("crypto");
     var { xorRotating } = require_auth_41();
     var Tls = __require("tls");
     var REQUEST_SERVER_KEY_PACKET = Buffer.from([1]);
@@ -45580,7 +45580,7 @@ var require_sha256_password = __commonJS({
     var STATE_FINAL = -1;
     function encrypt(password, scramble, key2) {
       const stage1 = xorRotating(Buffer.from(`${password}\0`, "utf8"), scramble);
-      return crypto12.publicEncrypt(
+      return crypto14.publicEncrypt(
         {
           key: key2,
           oaepHash: "sha1"
@@ -45632,7 +45632,7 @@ var require_caching_sha2_password = __commonJS({
   "../../node_modules/.pnpm/mysql2@3.24.3_@types+node@25.6.2/node_modules/mysql2/lib/auth_plugins/caching_sha2_password.js"(exports, module) {
     "use strict";
     var PLUGIN_NAME = "caching_sha2_password";
-    var crypto12 = __require("crypto");
+    var crypto14 = __require("crypto");
     var { xor, xorRotating } = require_auth_41();
     var REQUEST_SERVER_KEY_PACKET = Buffer.from([2]);
     var FAST_AUTH_SUCCESS_PACKET = Buffer.from([3]);
@@ -45642,7 +45642,7 @@ var require_caching_sha2_password = __commonJS({
     var STATE_WAIT_SERVER_KEY = 2;
     var STATE_FINAL = -1;
     function sha256(msg2) {
-      const hash2 = crypto12.createHash("sha256");
+      const hash2 = crypto14.createHash("sha256");
       hash2.update(msg2);
       return hash2.digest();
     }
@@ -45657,11 +45657,11 @@ var require_caching_sha2_password = __commonJS({
     }
     function encrypt(password, scramble, key2) {
       const stage1 = xorRotating(Buffer.from(`${password}\0`, "utf8"), scramble);
-      return crypto12.publicEncrypt(
+      return crypto14.publicEncrypt(
         {
           key: key2,
           oaepHash: "sha1",
-          padding: crypto12.constants.RSA_PKCS1_OAEP_PADDING
+          padding: crypto14.constants.RSA_PKCS1_OAEP_PADDING
         },
         stage1
       );
@@ -65202,9 +65202,9 @@ var require_disk = __commonJS({
     var fs7 = __require("fs");
     var os = __require("os");
     var path7 = __require("path");
-    var crypto12 = __require("crypto");
+    var crypto14 = __require("crypto");
     function getFilename(req, file, cb) {
-      crypto12.randomBytes(16, function(err, raw) {
+      crypto14.randomBytes(16, function(err, raw) {
         cb(err, err ? void 0 : raw.toString("hex"));
       });
     }
@@ -68708,7 +68708,7 @@ var require_multer = __commonJS({
 });
 
 // src/app.ts
-var import_express11 = __toESM(require_express2(), 1);
+var import_express12 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_compression = __toESM(require_compression(), 1);
@@ -69673,7 +69673,7 @@ import fs6 from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // src/routes/index.ts
-var import_express10 = __toESM(require_express2(), 1);
+var import_express11 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-20T09:48:57.101Z";
+var BUILD_TIME = "2026-09-24T01:25:14.635Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -74080,10 +74080,12 @@ async function refundOrderAtomic(orderId, requestedMinor) {
       await conn.rollback();
       return { refunded: false, amountMinor: 0 };
     }
-    const [profiles] = await conn.execute("SELECT balance_minor FROM profiles WHERE user_id = ? FOR UPDATE", [order.user_id]);
+    const wallet = order.wallet_charged === "usd" ? "usd" : "local";
+    const column = wallet === "usd" ? "balance_usd_minor" : "balance_minor";
+    const [profiles] = await conn.execute(`SELECT ${column} FROM profiles WHERE user_id = ? FOR UPDATE`, [order.user_id]);
     if (!profiles[0]) throw new Error("Profile introuvable");
-    const before = Number(profiles[0].balance_minor), after = before + amount, now = /* @__PURE__ */ new Date();
-    await conn.execute("UPDATE profiles SET balance_minor = ? WHERE user_id = ?", [after, order.user_id]);
+    const before = Number(profiles[0][column]), after = before + amount, now = /* @__PURE__ */ new Date();
+    await conn.execute(`UPDATE profiles SET ${column} = ? WHERE user_id = ?`, [after, order.user_id]);
     await conn.execute("UPDATE orders SET refunded_at = ?, refunded_amount_minor = ? WHERE id = ?", [now, amount, order.id]);
     await conn.execute("INSERT INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?,?,'refund','order',?)", [crypto3.randomUUID(), order.user_id, amount, after, order.currency, order.id]);
     await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason) VALUES (?,?,?,'smm_order_refund')", [order.user_id, before, after]);
@@ -74100,14 +74102,15 @@ async function debitAndCreate(input) {
   const conn = await getMysqlPool().getConnection(), id = crypto3.randomUUID();
   try {
     await conn.beginTransaction();
-    const [profiles] = await conn.execute("SELECT balance_minor FROM profiles WHERE user_id = ? FOR UPDATE", [input.userId]);
+    const column = input.wallet === "usd" ? "balance_usd_minor" : "balance_minor";
+    const [profiles] = await conn.execute(`SELECT ${column} FROM profiles WHERE user_id = ? FOR UPDATE`, [input.userId]);
     const p = profiles[0];
     if (!p) throw Object.assign(new Error("Profil introuvable"), { code: "PROFILE" });
-    const before = Number(p.balance_minor);
+    const before = Number(p[column]);
     if (before < input.chargeMinor) throw Object.assign(new Error("Solde insuffisant. Rechargez votre compte."), { code: "FUNDS" });
     const after = before - input.chargeMinor;
-    await conn.execute("UPDATE profiles SET balance_minor = ? WHERE user_id = ?", [after, input.userId]);
-    await conn.execute(`INSERT INTO orders (id,user_id,provider,service_id,service_name,service_category,link,quantity,charge_minor,currency,balance_before_minor,balance_after_minor,client_request_id,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 'pending')`, [id, input.userId, input.provider, String(input.service), input.name, input.category, input.link, input.quantity, input.chargeMinor, input.currency, before, after, input.clientRequestId]);
+    await conn.execute(`UPDATE profiles SET ${column} = ? WHERE user_id = ?`, [after, input.userId]);
+    await conn.execute(`INSERT INTO orders (id,user_id,provider,service_id,service_name,service_category,link,quantity,charge_minor,revenue_fcfa_minor,currency,balance_before_minor,balance_after_minor,client_request_id,wallet_charged,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'pending')`, [id, input.userId, input.provider, String(input.service), input.name, input.category, input.link, input.quantity, input.chargeMinor, input.revenueFcfaMinor, input.currency, before, after, input.clientRequestId, input.wallet]);
     await conn.execute("INSERT INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?,?,'order_debit','order',?)", [crypto3.randomUUID(), input.userId, -input.chargeMinor, after, input.currency, id]);
     await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason) VALUES (?,?,?,'smm_order_debit')", [input.userId, before, after]);
     await conn.commit();
@@ -74199,6 +74202,8 @@ router2.post("/smm/order", requireUser, rateLimitOrders, async (req, res) => {
   const { service, link, quantity, provider } = req.body || {}, providerId = parseProviderId(provider), serviceNum = Number(service), qty = Number(quantity), linkStr = typeof link === "string" ? link.trim() : "";
   const suppliedRequestId = typeof req.body?.client_request_id === "string" ? req.body.client_request_id.trim() : "";
   const clientRequestId = suppliedRequestId || crypto3.randomUUID();
+  const wallet = req.body?.wallet ?? "local";
+  if (wallet !== "local" && wallet !== "usd") return res.status(400).json({ error: "Solde de paiement invalide" });
   if (!/^[A-Za-z0-9_-]{16,128}$/.test(clientRequestId)) return res.status(400).json({ error: "client_request_id invalide" });
   if (!Number.isInteger(serviceNum) || serviceNum <= 0) return res.status(400).json({ error: "service invalide" });
   if (!Number.isInteger(qty) || qty < 1 || qty > 1e7) return res.status(400).json({ error: "quantity invalide (1 \u2014 10 000 000)" });
@@ -74220,10 +74225,15 @@ router2.post("/smm/order", requireUser, rateLimitOrders, async (req, res) => {
     const p = await profile(req.userId);
     if (!p) return res.status(500).json({ error: "Impossible de lire votre solde" });
     const priceFcfa = typeof override?.price_fcfa === "number" ? override.price_fcfa : defaultPriceFcfaForCurrency(svc.rate, providerId, currency(p.country, p.currency));
-    const totalFcfa = Math.ceil(qty / 1e3 * priceFcfa), chargeMinor = fcfaToMinor(totalFcfa);
+    const totalFcfa = Math.ceil(qty / 1e3 * priceFcfa);
+    const fcfaPerLocal = { XAF: 1, XOF: 0.9, GMD: 6.6667, CDF: 0.1111, GNF: 0.0625 };
+    const localCurrency = currency(p.country, p.currency);
+    const usdRateFcfa = usdToLocalRate(providerId, localCurrency) * (fcfaPerLocal[localCurrency] ?? 1);
+    const chargeMinor = wallet === "usd" ? Math.ceil(totalFcfa / usdRateFcfa * 100) : fcfaToMinor(totalFcfa);
+    if (!Number.isSafeInteger(chargeMinor) || chargeMinor <= 0) return res.status(400).json({ error: "Prix invalide" });
     let created;
     try {
-      created = await debitAndCreate({ userId: req.userId, provider: providerId, service: serviceNum, name: String(svc.name ?? serviceNum), category: String(svc.category ?? ""), link: linkStr, quantity: qty, chargeMinor, currency: currency(p.country, p.currency), clientRequestId });
+      created = await debitAndCreate({ userId: req.userId, provider: providerId, service: serviceNum, name: String(svc.name ?? serviceNum), category: String(svc.category ?? ""), link: linkStr, quantity: qty, chargeMinor, revenueFcfaMinor: fcfaToMinor(totalFcfa), currency: wallet === "usd" ? "USD" : localCurrency, wallet, clientRequestId });
     } catch (err) {
       if (err?.code === "ER_DUP_ENTRY") {
         const [duplicate] = await getMysqlPool().execute("SELECT * FROM orders WHERE user_id=? AND client_request_id=? LIMIT 1", [req.userId, clientRequestId]);
@@ -74317,7 +74327,10 @@ router2.get("/smm/quote", requireUser, async (req, res) => {
     const p = await profile(req.userId);
     const custom = typeof ov?.price_fcfa === "number";
     const per = custom ? ov.price_fcfa : defaultPriceFcfaForCurrency(svc.rate, provider, currency(p?.country ?? null, p?.currency ?? null));
-    return res.json({ service, provider, quantity, price_per_1000_fcfa: per, total_fcfa: Math.ceil(quantity / 1e3 * per), price_is_custom: custom });
+    const total = Math.ceil(quantity / 1e3 * per);
+    const cur = currency(p?.country ?? null, p?.currency ?? null);
+    const unit = { XAF: 1, XOF: 0.9, GMD: 6.6667, CDF: 0.1111, GNF: 0.0625 };
+    return res.json({ service, provider, quantity, price_per_1000_fcfa: per, total_fcfa: total, total_usd: Math.ceil(total / (usdToLocalRate(provider, cur) * (unit[cur] ?? 1)) * 100) / 100, price_is_custom: custom });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -74353,7 +74366,7 @@ async function syncOrderInternal(opts) {
     return { ok: false, status: 502, error: "Fournisseur SMM injoignable" };
   }
   if (status === "completed" && external) {
-    const revenueFcfa = minorToFcfa(order.charge_minor);
+    const revenueFcfa = minorToFcfa(order.revenue_fcfa_minor ?? order.charge_minor);
     const gain = estimateGainFromRevenue(revenueFcfa);
     await appendEarning({
       ts: (/* @__PURE__ */ new Date()).toISOString(),
@@ -76466,6 +76479,10 @@ async function creditDeposit(paymentId, opts) {
     }
     const row = payments[0];
     const payment = mapPayment(row);
+    if (row.provider === "izipay") {
+      await conn.rollback();
+      return { ok: false, error: "Le d\xE9p\xF4t crypto doit \xEAtre v\xE9rifi\xE9 aupr\xE8s d'IziChange Pay avant cr\xE9dit", status: 409 };
+    }
     const localAmount = fcfa(row.amount_minor);
     let amount = payment.currency ? toFcfaByCurrency(localAmount, payment.currency) : toFcfa(localAmount, payment.country ?? null);
     amount = Math.round(amount);
@@ -76511,7 +76528,7 @@ async function creditDeposit(paymentId, opts) {
   }
 }
 async function markPaymentStatus(paymentId, status, _userToken) {
-  const [result] = await getMysqlPool().execute("UPDATE payments SET status=? WHERE id=? AND credited_at IS NULL", [status, paymentId]);
+  const [result] = await getMysqlPool().execute("UPDATE payments SET status=? WHERE id=? AND credited_at IS NULL AND (provider IS NULL OR provider <> 'izipay')", [status, paymentId]);
   if (result.affectedRows) return { ok: true };
   const payment = await fetchPayment(paymentId);
   return payment ? { ok: false, error: "Ce d\xE9p\xF4t a d\xE9j\xE0 \xE9t\xE9 cr\xE9dit\xE9 \u2014 un changement de statut n\xE9cessite un remboursement manuel.", status: 409 } : { ok: false, error: "Paiement introuvable", status: 404 };
@@ -77190,7 +77207,7 @@ router3.get("/admin/earnings", requireUser, requireAdmin, async (req, res) => {
 router3.post("/admin/earnings/backfill", requireUser, requireAdmin, async (_req, res) => {
   try {
     const existing = new Set((await readEarnings()).map((r) => `${r.provider ?? 1}:${r.provider_order_id}`));
-    const [orders] = await getMysqlPool().query("SELECT id,user_id,COALESCE(provider_order_id,external_order_id) external_id,provider,charge_minor,quantity,service_name,created_at FROM orders WHERE status='completed' AND COALESCE(provider_order_id,external_order_id) IS NOT NULL");
+    const [orders] = await getMysqlPool().query("SELECT id,user_id,COALESCE(provider_order_id,external_order_id) external_id,provider,charge_minor,revenue_fcfa_minor,quantity,service_name,created_at FROM orders WHERE status='completed' AND COALESCE(provider_order_id,external_order_id) IS NOT NULL");
     let inserted = 0, skipped = 0;
     for (const o of orders) {
       const key2 = `${o.provider}:${o.external_id}`;
@@ -77198,7 +77215,7 @@ router3.post("/admin/earnings/backfill", requireUser, requireAdmin, async (_req,
         skipped++;
         continue;
       }
-      const revenueFcfa = Number(o.charge_minor) / 100;
+      const revenueFcfa = Number(o.revenue_fcfa_minor ?? o.charge_minor) / 100;
       const gain = estimateGainFromRevenue(revenueFcfa);
       await appendEarning({ ts: new Date(o.created_at).toISOString(), provider_order_id: String(o.external_id), user_id: o.user_id, service: 0, service_name: o.service_name || "", quantity: Number(o.quantity), rate_usd: 0, user_price_fcfa: revenueFcfa, provider_cost_usd: 0, ...gain, provider: Number(o.provider) });
       inserted++;
@@ -77362,7 +77379,8 @@ router3.get("/admin/deposits", requireUser, requireAdmin, async (req, res) => {
     }
     const [rows] = await getMysqlPool().execute(`SELECT p.id,p.user_id,p.amount_minor amount,p.status,p.method,p.provider_reference reference,p.created_at,p.bonus_amount_minor bonus_amount,p.bonus_status,p.bonus_credited_at,p.credited_at,p.country,p.currency,pr.username user_username,pr.email user_email FROM payments p LEFT JOIN profiles pr ON pr.user_id=p.user_id WHERE ${clauses.join(" AND ")} ORDER BY p.created_at DESC LIMIT ?`, [...args, limit]);
     const deposits = rows.map((r) => ({ ...r, amount: Number(r.amount) / 100, bonus_amount: Number(r.bonus_amount) / 100, bonus_status: String(r.bonus_status) }));
-    res.json({ deposits, counters: { total: deposits.length, total_amount_fcfa: deposits.reduce((a, r) => a + r.amount, 0), bonus_pending: deposits.filter((r) => r.bonus_status === "pending").length, bonus_credited: deposits.filter((r) => r.bonus_status === "credited").length, bonus_credited_fcfa: deposits.filter((r) => r.bonus_status === "credited").reduce((a, r) => a + r.bonus_amount, 0), bonus_eligible: deposits.filter((r) => r.amount >= BONUS_THRESHOLD_FCFA).length }, bonus_rule: { threshold_fcfa: BONUS_THRESHOLD_FCFA, bonus_fcfa: BONUS_AMOUNT_FCFA } });
+    const localDeposits = deposits.filter((r) => r.currency !== "USD");
+    res.json({ deposits, counters: { total: deposits.length, total_amount_fcfa: localDeposits.reduce((a, r) => a + r.amount, 0), total_amount_usd: deposits.filter((r) => r.currency === "USD").reduce((a, r) => a + r.amount, 0), bonus_pending: localDeposits.filter((r) => r.bonus_status === "pending").length, bonus_credited: localDeposits.filter((r) => r.bonus_status === "credited").length, bonus_credited_fcfa: localDeposits.filter((r) => r.bonus_status === "credited").reduce((a, r) => a + r.bonus_amount, 0), bonus_eligible: localDeposits.filter((r) => r.amount >= BONUS_THRESHOLD_FCFA).length }, bonus_rule: { threshold_fcfa: BONUS_THRESHOLD_FCFA, bonus_fcfa: BONUS_AMOUNT_FCFA } });
   } catch (err) {
     logger.error({ err }, "deposits");
     res.status(500).json({ error: "Erreur interne" });
@@ -78204,12 +78222,207 @@ router5.get("/payments/operator-logos/file/:filename", (req, res) => {
 });
 var payments_default = router5;
 
-// src/routes/tickets.ts
+// src/routes/izipay.ts
 var import_express6 = __toESM(require_express2(), 1);
+import crypto10 from "node:crypto";
+init_logger();
+
+// src/lib/izipay.ts
+import crypto9 from "node:crypto";
+function parseUsdMinor(value) {
+  if (typeof value !== "string" || !/^(?:0|[1-9]\d{0,6})(?:\.\d{1,2})?$/.test(value)) return null;
+  const [whole, cents = ""] = value.split(".");
+  const minor3 = Number(whole) * 100 + Number(cents.padEnd(2, "0"));
+  return minor3 > 0 && Number.isSafeInteger(minor3) ? minor3 : null;
+}
+function apiBase() {
+  const key2 = process.env["IZIPAY_API_KEY"];
+  if (!key2 || !/^sk_(test|live)_/.test(key2)) throw new Error("Cl\xE9 IziChange Pay non configur\xE9e");
+  return key2.startsWith("sk_test_") ? "https://api.sandbox-pay.izichange.com" : "https://api.pay.izichange.com";
+}
+async function api(path7, init) {
+  const base = apiBase();
+  const response = await fetch(`${base}/v1/payment-intents${path7}`, {
+    method: init?.method ?? "GET",
+    headers: {
+      Authorization: `Bearer ${process.env["IZIPAY_API_KEY"]}`,
+      ...init ? { "Content-Type": "application/json", "Idempotency-Key": init.idempotencyKey } : {}
+    },
+    body: init ? JSON.stringify(init.body) : void 0,
+    signal: AbortSignal.timeout(1e4)
+  });
+  if (!response.ok) throw new Error(`IziChange Pay a r\xE9pondu ${response.status}`);
+  const value = await response.json();
+  if (!value || typeof value !== "object" || typeof value.id !== "string") throw new Error("R\xE9ponse IziChange Pay invalide");
+  return value;
+}
+function createIntent(amountMinor, reference, returnUrl, email) {
+  return api("", {
+    method: "POST",
+    idempotencyKey: reference,
+    body: {
+      requestedCurrencyType: "fiat",
+      currencyRequested: "USD",
+      amountRequested: `${Math.floor(amountMinor / 100)}.${String(amountMinor % 100).padStart(2, "0")}`,
+      merchantReference: reference,
+      idempotencyKey: reference,
+      returnUrl,
+      customerEmail: email,
+      collectCustomerInformation: true,
+      expiresInMinutes: 30,
+      language: "fr"
+    }
+  });
+}
+function retrieveIntent(id) {
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) throw new Error("Identifiant d'intention invalide");
+  return api(`/${encodeURIComponent(id)}`);
+}
+function verifyIzipayWebhook(raw, header) {
+  const secret = process.env["IZIPAY_WEBHOOK_SECRET"];
+  if (!secret || !raw || !header || !/^sha256=[0-9a-f]{64}$/i.test(header)) throw new Error("Signature absente");
+  const expected = crypto9.createHmac("sha256", secret).update(raw).digest();
+  const actual = Buffer.from(header.slice(7), "hex");
+  if (actual.length !== expected.length || !crypto9.timingSafeEqual(actual, expected)) throw new Error("Signature invalide");
+  const body = JSON.parse(raw);
+  if (!Number.isInteger(body.timestamp) || Math.abs(Date.now() / 1e3 - body.timestamp) > 300) throw new Error("Webhook expir\xE9");
+  if (typeof body.event !== "string" || typeof body.data?.intentId !== "string") throw new Error("Webhook invalide");
+  return body;
+}
+async function reconcileCryptoPayment(paymentId) {
+  const db = getMysqlPool();
+  const [rows] = await db.execute("SELECT * FROM payments WHERE id=? AND provider='izipay'", [paymentId]);
+  const payment = rows[0];
+  if (!payment || !payment.provider_reference) throw new Error("Intention crypto introuvable");
+  const intent = await retrieveIntent(String(payment.provider_reference));
+  if (intent.id !== payment.provider_reference || intent.merchantReference !== payment.order_id || intent.currencyRequested !== "USD" || intent.requestedCurrencyType !== "fiat" || parseUsdMinor(intent.amountRequested) !== Number(payment.amount_minor)) {
+    throw new Error("Incoh\xE9rence entre le paiement et l'intention IziChange Pay");
+  }
+  const irregular = intent.status === "irregular" || intent.paymentResult != null && intent.paymentResult !== "exact" || intent.irregularStatus != null && !["none", ""].includes(intent.irregularStatus);
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [locked] = await conn.execute("SELECT * FROM payments WHERE id=? FOR UPDATE", [paymentId]);
+    const row = locked[0];
+    if (!row || row.provider !== "izipay" || row.provider_reference !== intent.id) throw new Error("Paiement modifi\xE9");
+    if (row.credited_at) {
+      await conn.commit();
+      return "completed";
+    }
+    if (irregular) {
+      await conn.execute("UPDATE payments SET status='irregular' WHERE id=?", [paymentId]);
+      await conn.commit();
+      return "irregular";
+    }
+    if (intent.status === "completed") {
+      const [profiles] = await conn.execute("SELECT balance_usd_minor FROM profiles WHERE user_id=? FOR UPDATE", [row.user_id]);
+      if (!profiles[0]) throw new Error("Profil introuvable");
+      const before = Number(profiles[0].balance_usd_minor), after = before + Number(row.amount_minor);
+      await conn.execute("UPDATE profiles SET balance_usd_minor=? WHERE user_id=?", [after, row.user_id]);
+      await conn.execute(
+        "INSERT INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?, 'USD','deposit','payment',?)",
+        [crypto9.randomUUID(), row.user_id, row.amount_minor, after, paymentId]
+      );
+      await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason) VALUES (?,?,?,'crypto_usd_deposit')", [row.user_id, before, after]);
+      await conn.execute(
+        "UPDATE payments SET status='completed',credited_at=NOW(),completed_at=NOW(),balance_before_minor=?,balance_after_minor=? WHERE id=?",
+        [before, after, paymentId]
+      );
+      await conn.commit();
+      return "completed";
+    }
+    const status = ["expired", "failed", "canceled", "cancelled"].includes(intent.status) ? intent.status : "pending";
+    await conn.execute("UPDATE payments SET status=? WHERE id=?", [status, paymentId]);
+    await conn.commit();
+    return status;
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+// src/routes/izipay.ts
+var router6 = (0, import_express6.Router)();
+router6.get("/payments/crypto/availability", requireUser, async (_req, res) => {
+  const origin = process.env["PUBLIC_API_URL"]?.replace(/\/+$/, "");
+  if (!origin || !/^https:\/\//.test(origin) || !process.env["IZIPAY_API_KEY"] || !process.env["IZIPAY_WEBHOOK_SECRET"])
+    return res.status(503).json({ available: false, error: "Le paiement crypto n'est pas configur\xE9 sur ce serveur." });
+  try {
+    await getMysqlPool().query("SELECT balance_usd_minor FROM profiles LIMIT 0");
+    await getMysqlPool().query("SELECT wallet_credited FROM payments LIMIT 0");
+    await getMysqlPool().query("SELECT wallet_charged FROM orders LIMIT 0");
+    return res.json({ available: true });
+  } catch (err) {
+    logger.error({ err }, "IziChange Pay database readiness failed");
+    return res.status(503).json({ available: false, error: "La base de donn\xE9es crypto n'est pas encore pr\xEAte." });
+  }
+});
+router6.post("/payments/crypto", requireUser, async (req, res) => {
+  const amountMinor = parseUsdMinor(req.body?.amount);
+  if (amountMinor == null || amountMinor < 100 || amountMinor > 1e8) return res.status(400).json({ error: "Montant USD invalide (1 \xE0 1 000 000 USD)" });
+  const origin = process.env["PUBLIC_API_URL"]?.replace(/\/+$/, "");
+  if (!origin || !/^https:\/\//.test(origin) || !process.env["IZIPAY_API_KEY"] || !process.env["IZIPAY_WEBHOOK_SECRET"])
+    return res.status(503).json({ error: "Paiement crypto non configur\xE9" });
+  const id = crypto10.randomUUID();
+  const reference = `BB-CR-${id}`;
+  try {
+    const [users] = await getMysqlPool().execute("SELECT email FROM users WHERE id=?", [req.userId]);
+    await getMysqlPool().execute(
+      "INSERT INTO payments (id,user_id,amount_minor,currency,status,provider,method,order_id,wallet_credited) VALUES (?,?,?,'USD','pending','izipay','crypto',?,'usd')",
+      [id, req.userId, amountMinor, reference]
+    );
+    const intent = await createIntent(amountMinor, reference, `${origin}/dashboard/deposit?crypto=${id}`, String(users[0]?.email ?? ""));
+    const url = intent.paymentLink ?? intent.paymentUrl;
+    if (!intent.id || !url || !/^https:\/\//.test(url)) throw new Error("Lien de paiement absent");
+    await getMysqlPool().execute("UPDATE payments SET provider_reference=? WHERE id=? AND provider_reference IS NULL", [intent.id, id]);
+    return res.json({ payment_id: id, payment_url: url });
+  } catch (err) {
+    logger.error({ err, paymentId: id }, "IziChange Pay intent creation failed");
+    return res.status(502).json({ error: "Impossible de cr\xE9er le paiement crypto. R\xE9essayez plus tard." });
+  }
+});
+router6.get("/payments/crypto/:id", requireUser, async (req, res) => {
+  const id = String(req.params.id);
+  const [rows] = await getMysqlPool().execute("SELECT id,status,provider_reference,credited_at FROM payments WHERE id=? AND user_id=? AND provider='izipay'", [id, req.userId]);
+  if (!rows[0]) return res.status(404).json({ error: "Paiement introuvable" });
+  try {
+    const status = rows[0].credited_at ? "completed" : rows[0].provider_reference ? await reconcileCryptoPayment(id) : String(rows[0].status);
+    return res.json({ status, credited: status === "completed" });
+  } catch (err) {
+    logger.error({ err, paymentId: id }, "IziChange Pay status failed");
+    return res.status(502).json({ error: "V\xE9rification du paiement indisponible" });
+  }
+});
+router6.post("/payments/crypto/webhook", async (req, res) => {
+  let event;
+  try {
+    event = verifyIzipayWebhook(req.rawBody, req.headers["x-izipay-signature"]);
+  } catch (err) {
+    logger.warn({ err }, "IziChange Pay webhook rejected");
+    return res.status(401).json({ error: "Signature invalide" });
+  }
+  if (!event.event.startsWith("payment_intent.")) return res.json({ received: true });
+  try {
+    const [rows] = await getMysqlPool().execute("SELECT id FROM payments WHERE provider='izipay' AND provider_reference=?", [event.data.intentId]);
+    if (!rows[0]) return res.status(503).json({ error: "Intention non enregistr\xE9e" });
+    const status = await reconcileCryptoPayment(String(rows[0].id));
+    logger.info({ paymentId: rows[0].id, status }, "IziChange Pay webhook processed");
+    return res.json({ received: true });
+  } catch (err) {
+    logger.error({ err, intentId: event.data.intentId }, "IziChange Pay webhook processing failed");
+    return res.status(503).json({ error: "V\xE9rification indisponible" });
+  }
+});
+var izipay_default = router6;
+
+// src/routes/tickets.ts
+var import_express7 = __toESM(require_express2(), 1);
 init_logger();
 
 // src/lib/tickets.ts
-import crypto9 from "node:crypto";
+import crypto11 from "node:crypto";
 var TicketError = class extends Error {
   constructor(message, statusCode) {
     super(message);
@@ -78244,8 +78457,8 @@ async function createTicket(input) {
   const message = String(input.message || "").slice(0, 2e3).trim();
   if (!message) throw new TicketError("Message requis", 400);
   if (!["cancel", "refund", "speed_up", "other"].includes(input.action_type)) throw new TicketError("Type d'action requis", 400);
-  const id = crypto9.randomUUID();
-  const short = `T-${crypto9.randomBytes(3).toString("hex").toUpperCase()}`;
+  const id = crypto11.randomUUID();
+  const short = `T-${crypto11.randomBytes(3).toString("hex").toUpperCase()}`;
   await getMysqlPool().execute(
     `INSERT INTO tickets (id, short_code, user_id, order_external_id, order_local_id, provider_id, service_name, action_type, message)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -78291,7 +78504,7 @@ init_logger();
 var TERMINAL_ORDER_STATUSES = /* @__PURE__ */ new Set(["completed", "cancelled", "partial", "refunded"]);
 
 // src/routes/tickets.ts
-var router6 = (0, import_express6.Router)();
+var router7 = (0, import_express7.Router)();
 async function resolveOrderForUser(orderLocalId, userId) {
   const [rows] = await getMysqlPool().execute(
     `SELECT id, user_id, COALESCE(external_order_id, provider_order_id) AS external_order_id,
@@ -78320,7 +78533,7 @@ function checkRate(userId) {
   e.count += 1;
   return true;
 }
-router6.post("/tickets", requireUser, async (req, res) => {
+router7.post("/tickets", requireUser, async (req, res) => {
   try {
     if (!checkRate(req.userId)) {
       return res.status(429).json({ error: "Trop de tickets envoy\xE9s. R\xE9essayez dans une heure." });
@@ -78384,14 +78597,14 @@ router6.post("/tickets", requireUser, async (req, res) => {
     return res.status(status).json({ error: err.message });
   }
 });
-router6.get("/tickets/mine", requireUser, async (req, res) => {
+router7.get("/tickets/mine", requireUser, async (req, res) => {
   try {
     res.json({ tickets: await listUserTickets(req.userId) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-router6.get("/admin/tickets", requireUser, requireAdmin, async (_req, res) => {
+router7.get("/admin/tickets", requireUser, requireAdmin, async (_req, res) => {
   try {
     res.json({ tickets: await listAllTickets() });
   } catch (err) {
@@ -78399,14 +78612,14 @@ router6.get("/admin/tickets", requireUser, requireAdmin, async (_req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-router6.get("/admin/tickets/unread", requireUser, requireAdmin, async (_req, res) => {
+router7.get("/admin/tickets/unread", requireUser, requireAdmin, async (_req, res) => {
   try {
     res.json({ count: await countOpenTickets() });
   } catch {
     res.json({ count: 0 });
   }
 });
-router6.post(
+router7.post(
   "/admin/tickets/:id/respond",
   requireUser,
   requireAdmin,
@@ -78437,7 +78650,7 @@ router6.post(
     }
   }
 );
-router6.post(
+router7.post(
   "/admin/tickets/:id/close",
   requireUser,
   requireAdmin,
@@ -78456,15 +78669,15 @@ router6.post(
     }
   }
 );
-var tickets_default = router6;
+var tickets_default = router7;
 
 // src/routes/profile.ts
-var import_express7 = __toESM(require_express2(), 1);
+var import_express8 = __toESM(require_express2(), 1);
 init_logger();
-import crypto10 from "node:crypto";
+import crypto12 from "node:crypto";
 import { promises as fs5 } from "node:fs";
 import path5 from "node:path";
-var router7 = (0, import_express7.Router)();
+var router8 = (0, import_express8.Router)();
 var MAX_BYTES = 2 * 1024 * 1024;
 var ALLOWED = /* @__PURE__ */ new Set(["jpg", "jpeg", "png", "webp"]);
 var AVATAR_DIR = path5.resolve(process.cwd(), "data", "avatars");
@@ -78476,25 +78689,25 @@ async function ensureProfile(userId) {
     [userId]
   );
 }
-router7.get("/profile", requireUser, async (req, res) => {
+router8.get("/profile", requireUser, async (req, res) => {
   try {
     const userId = String(req.userId);
     await ensureProfile(userId);
     const [rows] = await getMysqlPool().execute(
-      `SELECT user_id, email, username, country, currency, balance_minor,
+      `SELECT user_id, email, username, country, currency, balance_minor, balance_usd_minor,
               affiliate_earnings_minor, avatar_url, referral_code
        FROM profiles WHERE user_id = ? LIMIT 1`,
       [userId]
     );
     const p = rows[0];
     if (!p) return res.status(404).json({ error: "Profil introuvable" });
-    return res.json({ ...p, balance: Number(p.balance_minor) / 100, affiliate_earnings: Number(p.affiliate_earnings_minor) / 100 });
+    return res.json({ ...p, balance: Number(p.balance_minor) / 100, balance_usd: Number(p.balance_usd_minor) / 100, affiliate_earnings: Number(p.affiliate_earnings_minor) / 100 });
   } catch (err) {
     logger.error({ err }, "profile read error");
     return res.status(503).json({ error: "Profil temporairement indisponible" });
   }
 });
-router7.post("/profile/ensure", requireUser, async (req, res) => {
+router8.post("/profile/ensure", requireUser, async (req, res) => {
   try {
     await ensureProfile(String(req.userId));
     return res.json({ ok: true });
@@ -78503,7 +78716,7 @@ router7.post("/profile/ensure", requireUser, async (req, res) => {
     return res.status(503).json({ error: "Profil non disponible" });
   }
 });
-router7.post("/profile/country", requireUser, async (req, res) => {
+router8.post("/profile/country", requireUser, async (req, res) => {
   const country = String(req.body?.country || "").toUpperCase().trim();
   if (!/^[A-Z]{2}$/.test(country)) return res.status(400).json({ error: "Code pays invalide (ISO2 attendu)" });
   const info = COUNTRY_CURRENCY[country];
@@ -78518,7 +78731,7 @@ router7.post("/profile/country", requireUser, async (req, res) => {
     return res.status(503).json({ error: "Impossible de mettre \xE0 jour le pays" });
   }
 });
-router7.post("/profile/avatar", requireUser, async (req, res) => {
+router8.post("/profile/avatar", requireUser, async (req, res) => {
   const dataUrl = typeof req.body?.image === "string" ? req.body.image : "";
   const match = /^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=\s]+)$/i.exec(dataUrl);
   if (!match) return res.status(400).json({ error: "Format d'image invalide" });
@@ -78530,7 +78743,7 @@ router7.post("/profile/avatar", requireUser, async (req, res) => {
   try {
     await fs5.mkdir(AVATAR_DIR, { recursive: true });
     const userId = String(req.userId);
-    const filename = `${userId}-${crypto10.randomBytes(8).toString("hex")}.${ext}`;
+    const filename = `${userId}-${crypto12.randomBytes(8).toString("hex")}.${ext}`;
     await fs5.writeFile(path5.join(AVATAR_DIR, filename), buffer, { flag: "wx" });
     const avatarUrl = `/api/profile/avatar/${encodeURIComponent(filename)}`;
     await ensureProfile(userId);
@@ -78541,7 +78754,7 @@ router7.post("/profile/avatar", requireUser, async (req, res) => {
     return res.status(500).json({ error: "\xC9chec de l'upload" });
   }
 });
-router7.get("/profile/avatar/:filename", async (req, res) => {
+router8.get("/profile/avatar/:filename", async (req, res) => {
   const name = String(req.params.filename || "");
   if (!/^[0-9a-f-]{36}-[0-9a-f]{16}\.(jpg|png|webp)$/i.test(name)) return res.status(404).end();
   try {
@@ -78553,7 +78766,7 @@ router7.get("/profile/avatar/:filename", async (req, res) => {
     return res.status(404).end();
   }
 });
-router7.delete("/profile/avatar", requireUser, async (req, res) => {
+router8.delete("/profile/avatar", requireUser, async (req, res) => {
   try {
     const userId = String(req.userId);
     const [rows] = await getMysqlPool().execute("SELECT avatar_url FROM profiles WHERE user_id = ?", [userId]);
@@ -78566,14 +78779,14 @@ router7.delete("/profile/avatar", requireUser, async (req, res) => {
     return res.status(500).json({ error: "Impossible de supprimer la photo" });
   }
 });
-var profile_default = router7;
+var profile_default = router8;
 
 // src/routes/referrals.ts
-var import_express8 = __toESM(require_express2(), 1);
+var import_express9 = __toESM(require_express2(), 1);
 init_logger();
-var router8 = (0, import_express8.Router)();
+var router9 = (0, import_express9.Router)();
 var asIso = (value) => new Date(String(value)).toISOString();
-router8.get("/referrals/config", async (_req, res) => {
+router9.get("/referrals/config", async (_req, res) => {
   const cfg = await getReferralConfig();
   res.json({
     referrer_pct: cfg.referrerPct,
@@ -78581,7 +78794,7 @@ router8.get("/referrals/config", async (_req, res) => {
     min_deposit_fcfa: cfg.minDepositFcfa
   });
 });
-router8.get("/referrals/check/:code", async (req, res) => {
+router9.get("/referrals/check/:code", async (req, res) => {
   const code = normalizeCode(req.params["code"]);
   if (!code) return res.json({ valid: false });
   try {
@@ -78591,7 +78804,7 @@ router8.get("/referrals/check/:code", async (req, res) => {
     return res.status(503).json({ valid: false, error: "V\xE9rification indisponible" });
   }
 });
-router8.post("/referrals/visit", async (req, res) => {
+router9.post("/referrals/visit", async (req, res) => {
   res.status(204).end();
   try {
     const code = normalizeCode(req.body?.["code"]);
@@ -78606,7 +78819,7 @@ router8.post("/referrals/visit", async (req, res) => {
     logger.warn({ err }, "referral visit processing failed");
   }
 });
-router8.get("/referrals/me", requireUser, async (req, res) => {
+router9.get("/referrals/me", requireUser, async (req, res) => {
   const userId = req.userId;
   try {
     const [profiles] = await getMysqlPool().execute(
@@ -78667,7 +78880,7 @@ router8.get("/referrals/me", requireUser, async (req, res) => {
     return res.status(500).json({ error: "Erreur interne" });
   }
 });
-router8.get("/referrals/transactions", requireUser, async (req, res) => {
+router9.get("/referrals/transactions", requireUser, async (req, res) => {
   const userId = req.userId;
   try {
     const [[asReferrerRows], [asReferredRows]] = await Promise.all([
@@ -78723,12 +78936,12 @@ router8.get("/referrals/transactions", requireUser, async (req, res) => {
     return res.json([]);
   }
 });
-var referrals_default = router8;
+var referrals_default = router9;
 
 // src/routes/auth.ts
-var import_express9 = __toESM(require_express2(), 1);
-import crypto11 from "node:crypto";
-var router9 = (0, import_express9.Router)();
+var import_express10 = __toESM(require_express2(), 1);
+import crypto13 from "node:crypto";
+var router10 = (0, import_express10.Router)();
 var COOKIE = "bb_session";
 var SESSION_DAYS = 30;
 var BCRYPT_COST = 12;
@@ -78741,7 +78954,7 @@ var authLimiter = rate_limit_default({
   message: { error: "Trop de tentatives. R\xE9essayez plus tard." }
 });
 function tokenHash(token) {
-  return crypto11.createHash("sha256").update(token).digest("hex");
+  return crypto13.createHash("sha256").update(token).digest("hex");
 }
 function setSessionCookie(res, token) {
   res.cookie(COOKIE, token, {
@@ -78753,11 +78966,11 @@ function setSessionCookie(res, token) {
   });
 }
 async function createSessionToken(userId, req, executor = getMysqlPool()) {
-  const token = crypto11.randomBytes(32).toString("base64url");
+  const token = crypto13.randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1e3);
   await executor.execute(
     "INSERT INTO auth_sessions (id, user_id, token_hash, expires_at, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?)",
-    [crypto11.randomUUID(), userId, tokenHash(token), expiresAt, (req.ip || "").slice(0, 64), (req.get("user-agent") || "").slice(0, 512)]
+    [crypto13.randomUUID(), userId, tokenHash(token), expiresAt, (req.ip || "").slice(0, 64), (req.get("user-agent") || "").slice(0, 512)]
   );
   return token;
 }
@@ -78772,6 +78985,7 @@ function publicUser(row) {
       country: row["country"],
       currency: row["currency"],
       balance: Number(row["balance_minor"] || 0) / 100,
+      balance_usd: Number(row["balance_usd_minor"] || 0) / 100,
       affiliate_earnings: Number(row["affiliate_earnings_minor"] || 0) / 100,
       avatar_url: row["avatar_url"],
       referral_code: row["referral_code"]
@@ -78779,7 +78993,7 @@ function publicUser(row) {
     isAdmin: Boolean(row["is_admin"])
   };
 }
-router9.post("/auth/register", authLimiter, async (req, res) => {
+router10.post("/auth/register", authLimiter, async (req, res) => {
   const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const password = typeof req.body?.password === "string" ? req.body.password : "";
   const username = typeof req.body?.username === "string" ? req.body.username.trim() : "";
@@ -78789,7 +79003,7 @@ router9.post("/auth/register", authLimiter, async (req, res) => {
   if (!emailPattern.test(email) || password.length < 8 || !username || username.length > 64 || country.length > 8 || referralCodeRaw != null && !referralCode) {
     return res.status(400).json({ error: "Informations d'inscription invalides" });
   }
-  const id = crypto11.randomUUID();
+  const id = crypto13.randomUUID();
   const pool2 = getMysqlPool();
   let connection;
   try {
@@ -78814,7 +79028,7 @@ router9.post("/auth/register", authLimiter, async (req, res) => {
       }
       await connection.execute(
         "INSERT INTO referrals (id,referrer_user_id,referred_user_id,code_used,status) VALUES (?,?,?,?, 'pending')",
-        [crypto11.randomUUID(), referrerId, id, referralCode]
+        [crypto13.randomUUID(), referrerId, id, referralCode]
       );
     }
     const sessionToken = await createSessionToken(id, req, connection);
@@ -78832,14 +79046,14 @@ router9.post("/auth/register", authLimiter, async (req, res) => {
     connection?.release();
   }
 });
-router9.post("/auth/login", authLimiter, async (req, res) => {
+router10.post("/auth/login", authLimiter, async (req, res) => {
   const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const password = typeof req.body?.password === "string" ? req.body.password : "";
   const invalid = () => res.status(401).json({ error: "Email ou mot de passe incorrect" });
   if (!email || !password) return invalid();
   try {
     const [rows] = await getMysqlPool().execute(
-      `SELECT u.id, u.email, u.password_hash, p.username, p.country, p.currency, p.balance_minor,
+      `SELECT u.id, u.email, u.password_hash, p.username, p.country, p.currency, p.balance_minor, p.balance_usd_minor,
         p.affiliate_earnings_minor, p.avatar_url, p.referral_code,
         EXISTS(SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role = 'admin') AS is_admin
        FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.email = ? AND u.disabled_at IS NULL LIMIT 1`,
@@ -78859,7 +79073,7 @@ router9.post("/auth/login", authLimiter, async (req, res) => {
     return res.status(503).json({ error: "Connexion temporairement indisponible" });
   }
 });
-router9.post("/auth/logout", async (req, res) => {
+router10.post("/auth/logout", async (req, res) => {
   const token = req.cookies?.[COOKIE];
   if (typeof token === "string") {
     try {
@@ -78871,11 +79085,11 @@ router9.post("/auth/logout", async (req, res) => {
   res.clearCookie(COOKIE, { httpOnly: true, secure: process.env["NODE_ENV"] === "production", sameSite: "lax", path: "/" });
   res.status(204).end();
 });
-router9.get("/auth/me", requireUser, async (req, res) => {
+router10.get("/auth/me", requireUser, async (req, res) => {
   if (!req.userId) return res.status(401).json({ error: "Authentification requise" });
   try {
     const [rows] = await getMysqlPool().execute(
-      `SELECT u.id, u.email, p.username, p.country, p.currency, p.balance_minor,
+      `SELECT u.id, u.email, p.username, p.country, p.currency, p.balance_minor, p.balance_usd_minor,
         p.affiliate_earnings_minor, p.avatar_url, p.referral_code,
         EXISTS(SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role = 'admin') AS is_admin
        FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.id = ? LIMIT 1`,
@@ -78888,24 +79102,88 @@ router9.get("/auth/me", requireUser, async (req, res) => {
     return res.status(503).json({ error: "Service d'authentification indisponible" });
   }
 });
-var auth_default = router9;
+var auth_default = router10;
 
 // src/routes/index.ts
-var router10 = (0, import_express10.Router)();
-router10.use(health_default);
-router10.use(auth_default);
-router10.use(smm_default);
-router10.use(admin_default);
-router10.use(support_default);
-router10.use(payments_default);
-router10.use(tickets_default);
-router10.use(profile_default);
-router10.use(referrals_default);
-var routes_default = router10;
+var router11 = (0, import_express11.Router)();
+router11.use(health_default);
+router11.use(auth_default);
+router11.use(smm_default);
+router11.use(admin_default);
+router11.use(support_default);
+router11.use(payments_default);
+router11.use(izipay_default);
+router11.use(tickets_default);
+router11.use(profile_default);
+router11.use(referrals_default);
+var routes_default = router11;
 
 // src/app.ts
 init_logger();
-var app = (0, import_express11.default)();
+
+// src/lib/development-api-proxy.ts
+init_logger();
+import https from "node:https";
+var upstreamValue = process.env["NODE_ENV"] !== "production" ? process.env["DEV_PLESK_API_ORIGIN"] : void 0;
+var upstream;
+if (upstreamValue) {
+  upstream = new URL(upstreamValue);
+  if (upstream.protocol !== "https:" || upstream.pathname !== "/" || upstream.search || upstream.hash || upstream.username || upstream.password) {
+    throw new Error("DEV_PLESK_API_ORIGIN must be an HTTPS origin without credentials or a path");
+  }
+}
+var livePreviewProxyEnabled = Boolean(upstream);
+var hopByHop = /* @__PURE__ */ new Set([
+  "connection",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade"
+]);
+var developmentApiProxy = (req, res) => {
+  if (!upstream) {
+    res.status(503).json({ error: "API Plesk non configur\xE9e" });
+    return;
+  }
+  const headers = { ...req.headers };
+  for (const name of hopByHop) delete headers[name];
+  delete headers.host;
+  const target = upstream;
+  const remote = https.request({
+    hostname: target.hostname,
+    port: target.port || 443,
+    method: req.method,
+    path: req.originalUrl,
+    headers: { ...headers, host: target.host },
+    timeout: 2e4
+  }, (response) => {
+    res.status(response.statusCode ?? 502);
+    for (const [name, value] of Object.entries(response.headers)) {
+      if (value === void 0 || hopByHop.has(name)) continue;
+      if (name === "set-cookie") {
+        const cookies = Array.isArray(value) ? value : [value];
+        res.setHeader(name, cookies.map((cookie) => cookie.replace(/;\s*Domain=[^;]*/gi, "")));
+      } else {
+        res.setHeader(name, value);
+      }
+    }
+    response.pipe(res);
+  });
+  remote.on("timeout", () => remote.destroy(new Error("Plesk API timed out")));
+  remote.on("error", (err) => {
+    logger.error({ err, path: req.path }, "development Plesk API proxy failed");
+    if (!res.headersSent) res.status(502).json({ error: "API Plesk indisponible" });
+    else res.destroy(err);
+  });
+  req.on("aborted", () => remote.destroy());
+  req.pipe(remote);
+};
+
+// src/app.ts
+var app = (0, import_express12.default)();
 app.set("trust proxy", ["loopback", "linklocal", "uniquelocal"]);
 app.use(
   (0, import_pino_http.default)({
@@ -78926,6 +79204,7 @@ app.use(
     }
   })
 );
+if (livePreviewProxyEnabled) app.use("/api", developmentApiProxy);
 app.use((0, import_compression.default)());
 app.use((0, import_cors.default)({ origin: true, credentials: true }));
 var apiLimiter = rate_limit_default({
@@ -78936,18 +79215,18 @@ var apiLimiter = rate_limit_default({
   // NB : le limiteur est monté sur "/api", donc req.path ne contient PAS le
   // préfixe /api (req.path = "/payments/webhook"). On utilise req.originalUrl
   // qui contient toujours l'URL complète, sinon l'exemption ne matche jamais.
-  skip: (req) => req.originalUrl.startsWith("/api/payments/webhook"),
+  skip: (req) => req.originalUrl.startsWith("/api/payments/webhook") || req.originalUrl.startsWith("/api/payments/crypto/webhook"),
   handler: (_req, res) => {
     res.status(429).json({ error: "Trop de requ\xEAtes \u2014 r\xE9essayez dans 1 minute." });
   }
 });
 function captureRawBody(req, _res, buf) {
-  if (req.url && req.url.startsWith("/api/payments/webhook")) {
+  if (req.url && (req.url.startsWith("/api/payments/webhook") || req.url.startsWith("/api/payments/crypto/webhook"))) {
     req.rawBody = buf.toString("utf8");
   }
 }
-app.use(import_express11.default.json({ limit: "8mb", verify: captureRawBody }));
-app.use(import_express11.default.urlencoded({ extended: true, limit: "8mb" }));
+app.use(import_express12.default.json({ limit: "8mb", verify: captureRawBody }));
+app.use(import_express12.default.urlencoded({ extended: true, limit: "8mb" }));
 app.use((0, import_cookie_parser.default)());
 app.get("/api/health/mysql", async (_req, res) => {
   try {
@@ -78985,7 +79264,7 @@ if (process.env["NODE_ENV"] === "production") {
   if (frontendDist) {
     logger.info({ frontendDist }, "serving frontend static files");
     app.use(
-      import_express11.default.static(frontendDist, {
+      import_express12.default.static(frontendDist, {
         index: false,
         maxAge: "1y",
         setHeaders: (res, filePath) => {
@@ -79314,6 +79593,10 @@ app_default.listen(port, async (err) => {
     process.exit(1);
   }
   logger.info({ port }, "Server listening");
+  if (livePreviewProxyEnabled) {
+    logger.warn("Development preview proxies API requests to live Plesk; skipping local database jobs");
+    return;
+  }
   startSupportCleanup();
   void purgeSensitiveSettingRows();
   await loadUsdRatesAtStartup();
