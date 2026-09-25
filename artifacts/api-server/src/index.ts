@@ -24,6 +24,7 @@ import { startPendingPaymentScanner } from "./lib/pending-payment-scanner";
 import { startCryptoDepositScanner } from "./lib/crypto-deposit-scanner";
 import { syncOrderInternal, warmServicesCache } from "./routes/smm";
 import { loadUsdRatesAtStartup } from "./routes/admin";
+import { validateBizConnectNotificationConfig } from "./lib/bizconnect-notification-client";
 
 // PORT detection :
 // - Replit/dev : PORT est toujours fourni par l'env -> on l'utilise.
@@ -31,6 +32,11 @@ import { loadUsdRatesAtStartup } from "./routes/admin";
 //   classique. Passenger gère le routage via socket et accepte qu'on
 //   passe 0 (le système alloue un port libre, Passenger l'intercepte).
 // - VPS classique (PM2) : on prend la valeur fournie ou 8080 par défaut.
+// Fail before opening a port if the optional integration was configured
+// incompletely. A completely absent integration does not prevent BizPanel
+// from serving its unrelated payment and account flows.
+validateBizConnectNotificationConfig();
+
 const rawPort = process.env["PORT"];
 let port: number;
 if (rawPort && rawPort.trim() !== "") {

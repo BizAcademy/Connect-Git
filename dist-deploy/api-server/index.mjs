@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-24T03:11:19.293Z";
+var BUILD_TIME = "2026-09-25T17:58:11.236Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -79727,6 +79727,18 @@ function startCryptoDepositScanner() {
   logger.info({ interval_ms: SCAN_INTERVAL_MS3 }, "crypto-deposit-scanner: started");
 }
 
+// src/lib/bizconnect-notification-client.ts
+function validateBizConnectNotificationConfig(env = process.env) {
+  const clientId = env["BIZCONNECT_CLIENT_ID"]?.trim();
+  const clientSecret = env["BIZCONNECT_CLIENT_SECRET"]?.trim();
+  const enabled = env["BIZCONNECT_NOTIFICATIONS_ENABLED"] === "true";
+  if (!clientId && !clientSecret && !enabled) return null;
+  if (!clientId || !clientSecret) {
+    throw new Error("BizConnect notifications: BIZCONNECT_CLIENT_ID and BIZCONNECT_CLIENT_SECRET are required");
+  }
+  return { clientId, clientSecret };
+}
+
 // src/index.ts
 process.on("uncaughtException", (err) => {
   console.error("[FATAL] uncaughtException:", err);
@@ -79736,6 +79748,7 @@ process.on("unhandledRejection", (reason) => {
   console.error("[FATAL] unhandledRejection:", reason);
   process.exit(1);
 });
+validateBizConnectNotificationConfig();
 var rawPort = process.env["PORT"];
 var port;
 if (rawPort && rawPort.trim() !== "") {
