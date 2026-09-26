@@ -1,0 +1,86 @@
+Implement a lightweight server-to-server integration with the BizConnect external notification API.
+
+IMPORTANT SECURITY RULES
+
+- The Client ID and Client Secret must only exist on the application backend.
+- Never expose the Client Secret in a mobile app, frontend JavaScript, or public repository.
+- The notification recipient does not need to have a BizConnect account.
+- Read the recipient email and name directly from this application's own database.
+- Do not search for or send a BizConnect user ID.
+
+ENDPOINT
+
+POST https://api.bizconnectacademy.com/api/v2/external/notifications/email
+
+Required headers:
+
+Content-Type: application/json
+Accept: application/json
+X-BCA-Client-ID: <CLIENT_ID>
+X-BCA-Client-Secret: <CLIENT_SECRET>
+Idempotency-Key: <unique notification identifier>
+
+Store credentials in environment variables:
+
+BCA_NOTIFICATION_CLIENT_ID=
+BCA_NOTIFICATION_CLIENT_SECRET=
+BCA_NOTIFICATION_ENDPOINT=https://api.bizconnectacademy.com/api/v2/external/notifications/email
+
+REQUEST BODY
+
+{
+  "recipient_email": "customer@external-platform.com",
+  "recipient_name": "Customer Name",
+  "subject": "Confirmation de paiement",
+  "title": "Paiement confirmé",
+  "category": "Notification",
+  "message": "Votre paiement a été confirmé.",
+  "details": {
+    "Montant": "10 000 FCFA",
+    "Référence": "PAY-2026-001"
+  },
+  "action_url": "https://external-platform.com/transactions/PAY-2026-001",
+  "action_label": "Voir la transaction"
+}
+
+Required fields:
+
+- recipient_email
+- subject
+- title
+- message
+
+Optional fields:
+
+- recipient_name
+- preheader
+- category
+- subtitle
+- details
+- otp_code
+- expires_at
+- action_url and action_label
+- note
+
+Do not send platform_name or support_email in the request. BizConnect obtains them securely from the API client configured by the administrator.
+
+IDEMPOTENCY
+
+Generate one stable Idempotency-Key for each notification, for example:
+
+payment-confirmed-<payment-id>
+
+Use the same key when retrying the same notification. Never reuse it for different content.
+
+RESPONSE HANDLING
+
+- 202: notification accepted and queued
+- 200 with duplicate=true: already accepted, consider successful
+- 401: invalid or inactive API credentials
+- 409: Idempotency-Key reused with different content
+- 422: invalid request data
+- 503: temporary queue failure
+
+Retry network errors and 5xx responses using the same Idempotency-Key. Do not retry validation, authentication, or conflict errors automatically.
+
+Keep the integration small: create one reusable backend notification service, use short timeouts, log the delivery ID, and never block the user interface while the email is being queued.
