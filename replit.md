@@ -214,5 +214,11 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 
 ## User Preferences
 
-- **Préférence utilisateur** : après chaque modification de code validée pour BUZZ BOOSTER, pousser automatiquement les changements vers GitHub avec `push-to-github.sh`, sans attendre une demande séparée.
-- **Préférence utilisateur** : à chaque création ou modification d'une migration SQL, coller systématiquement le contenu complet du fichier directement dans la conversation (bloc ```sql) sans attendre que l'utilisateur le demande.
+- **Préférence utilisateur** : après chaque modification, fournir les commandes Shell pour le build et le push GitHub, sans jamais pousser soi-même. L'utilisateur effectue lui-même Pull, Deploy et Restart dans Cybrancy. Ne pas proposer de push forcé.
+- **Préférence utilisateur** : la base active est MySQL/MariaDB, pas Supabase. Fournir systématiquement le SQL MySQL complet de toute nouvelle migration dans la conversation ; l'utilisateur l'exécute lui-même.
+
+## Notifications BizConnect
+
+- Voir `BIZCONNECT-MAIL.md` pour l'activation et les migrations MySQL 008/009.
+- Les notifications d'inscription et de dépôt sont inscrites dans une file MySQL au sein de la transaction métier ; les appels au fournisseur sont effectués hors requête par un worker.
+- La preview conserve son proxy vers l'API en ligne : elle ne valide pas les nouvelles routes backend tant que celles-ci ne sont pas déployées.

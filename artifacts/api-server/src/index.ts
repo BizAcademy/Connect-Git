@@ -25,6 +25,7 @@ import { startCryptoDepositScanner } from "./lib/crypto-deposit-scanner";
 import { syncOrderInternal, warmServicesCache } from "./routes/smm";
 import { loadUsdRatesAtStartup } from "./routes/admin";
 import { validateBizConnectNotificationConfig } from "./lib/bizconnect-notification-client";
+import { startNotificationWorker } from "./lib/notification-outbox";
 
 // PORT detection :
 // - Replit/dev : PORT est toujours fourni par l'env -> on l'utilise.
@@ -66,6 +67,7 @@ app.listen(port, async (err) => {
     return;
   }
   startSupportCleanup();
+  startNotificationWorker();
   void purgeSensitiveSettingRows();
   // Load admin-configured USD→local pricing from the DB BEFORE warming the
   // services cache, so the warmed prices reflect the saved rates instead of

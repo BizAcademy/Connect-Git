@@ -76,6 +76,7 @@ const Auth = () => {
 
   const [forgotEmail, setForgotEmail] = useState("");
   const [showForgot, setShowForgot] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +97,9 @@ const Auth = () => {
     e.preventDefault();
     if (!acceptPrivacy) { toast.error("Vous devez accepter la politique de confidentialité."); return; }
     if (signupPassword !== confirmPassword) { toast.error("Les mots de passe ne correspondent pas"); return; }
-    if (signupPassword.length < 6) { toast.error("Le mot de passe doit contenir au moins 6 caractères"); return; }
+    if (signupPassword.length < 8 || new TextEncoder().encode(signupPassword).length > 72) {
+      toast.error("Le mot de passe doit contenir au moins 8 caractères et 72 octets maximum"); return;
+    }
     if (!username.trim()) { toast.error("Le nom d'utilisateur est requis"); return; }
     if (!signupCountry) { toast.error("Veuillez sélectionner votre pays"); return; }
     const refCode = referralCode.trim().toUpperCase();
@@ -137,7 +140,20 @@ const Auth = () => {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.error("La récupération de mot de passe n'est pas encore disponible pendant la migration.");
+    setLoading(true);
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) { toast.error(data.error || "Service temporairement indisponible"); return; }
+      setForgotSent(true);
+    } catch {
+      toast.error("Service temporairement indisponible");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ─── FORGOT PASSWORD ────────────────────────────────────────────────────────
@@ -149,6 +165,7 @@ const Auth = () => {
             <img src={logoImg} alt="BUZZ BOOSTER" className="h-12 w-auto mx-auto rounded-md" />
             <p className="text-gray-500 text-sm mt-3">Récupération du mot de passe</p>
           </div>
+          {forgotSent && <p role="status" className="text-sm text-green-700 mb-4">Si un compte existe pour cet email, vous recevrez un lien de réinitialisation.</p>}
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
@@ -170,7 +187,7 @@ const Auth = () => {
             </button>
             <button
               type="button"
-              onClick={() => setShowForgot(false)}
+              onClick={() => { setShowForgot(false); setForgotSent(false); }}
               className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 transition"
             >
               ← Retour à la connexion
@@ -501,7 +518,7 @@ const Auth = () => {
                     value={signupPassword}
                     onChange={e => setSignupPassword(e.target.value)}
                     required
-                    minLength={6}
+                     minLength={8}
                     placeholder="Mot de passe"
                     className="w-full pl-9 pr-10 py-3 rounded-xl border border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm shadow-sm"
                   />

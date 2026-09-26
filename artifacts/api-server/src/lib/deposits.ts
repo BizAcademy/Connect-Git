@@ -4,6 +4,7 @@ import { logger } from "./logger";
 import { toFcfa, toFcfaByCurrency, setRateOverrides, isRateCacheValid } from "./currency";
 import { getMysqlPool } from "./mysql";
 import { maybeAwardReferralBonus } from "./referrals";
+import { enqueueUserNotification } from "./notification-outbox";
 
 export const BONUS_THRESHOLD_FCFA = 5000;
 export const BONUS_AMOUNT_FCFA = 200;
@@ -96,6 +97,17 @@ export async function creditDeposit(paymentId: string, opts?: { userToken?: stri
     if (onlyBonus) await conn.execute("UPDATE payments SET bonus_amount_minor=?, bonus_status='credited', bonus_credited_at=NOW(), balance_after_minor=? WHERE id=?", [minor(bonus), after, paymentId]);
     else await conn.execute("UPDATE payments SET status='completed', credited_at=NOW(), completed_at=NOW(), bonus_amount_minor=?, bonus_status=?, bonus_credited_at=?, balance_before_minor=?, balance_after_minor=? WHERE id=?",
       [minor(bonus), eligible ? "credited" : "not_eligible", eligible ? new Date() : null, before, after, paymentId]);
+    if (!onlyBonus) await enqueueUserNotification(conn, row.user_id, `payment-confirmed-${paymentId}`, {
+      subject: "Confirmation de dépôt — BUZZ BOOSTER",
+      title: "Votre dépôt est confirmé",
+      category: "Paiement",
+      message: "Votre dépôt a été confirmé et votre portefeuille a été crédité.",
+      details: {
+        "Montant crédité": `${amount.toLocaleString("fr-FR")} FCFA`,
+        "Bonus": `${bonus.toLocaleString("fr-FR")} FCFA`,
+        "Référence": payment.reference || paymentId,
+      },
+    });
     await conn.commit();
     outcome = { ok: true, alreadyCredited: false, amountCredited: onlyBonus ? 0 : amount, bonusCredited: bonus, newBalance: fcfa(after), payment: (await fetchPayment(paymentId))! };
     if (!onlyBonus) await maybeAwardReferralBonus(payment.user_id, paymentId, amount);

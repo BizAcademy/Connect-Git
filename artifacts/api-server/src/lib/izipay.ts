@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { enqueueUserNotification } from "./notification-outbox";
 import type { RowDataPacket } from "mysql2/promise";
 import { getMysqlPool } from "./mysql";
 
@@ -163,6 +164,16 @@ export async function reconcileCryptoPayment(paymentId: string) {
       await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason) VALUES (?,?,?,'crypto_usd_deposit')", [row.user_id, before, after]);
       await conn.execute("UPDATE payments SET status='completed',credited_at=NOW(),completed_at=NOW(),balance_before_minor=?,balance_after_minor=? WHERE id=?",
         [before, after, paymentId]);
+      await enqueueUserNotification(conn, row.user_id, `payment-confirmed-${paymentId}`, {
+        subject: "Confirmation de dépôt — BUZZ BOOSTER",
+        title: "Votre dépôt est confirmé",
+        category: "Paiement",
+        message: "Votre dépôt a été confirmé et votre portefeuille USD a été crédité.",
+        details: {
+          "Montant crédité": `${(Number(row.amount_minor) / 100).toFixed(2)} USD`,
+          "Référence": row.reference || paymentId,
+        },
+      });
       await conn.commit(); return "completed";
     }
     const status = ["expired", "failed", "canceled", "cancelled"].includes(intent.status) ? intent.status : "pending";

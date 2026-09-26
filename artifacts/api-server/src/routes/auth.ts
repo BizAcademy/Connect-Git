@@ -6,6 +6,8 @@ import crypto from "node:crypto";
 import { getMysqlPool } from "../lib/mysql";
 import { requireUser, type AuthedRequest } from "../lib/auth";
 import { normalizeCode } from "../lib/referrals";
+import { enqueueUserNotification, notificationAction, notificationsEnabled } from "../lib/notification-outbox";
+import { consumeResetToken, queuePasswordReset, reserveResetRequest } from "../lib/password-reset";
 
 const router = Router();
 const COOKIE = "bb_session";
@@ -71,7 +73,7 @@ router.post("/auth/register", authLimiter, async (req: AuthedRequest, res) => {
   const country = typeof req.body?.country === "string" ? req.body.country.trim().toUpperCase() : "";
   const referralCodeRaw = req.body?.referralCode ?? req.body?.referral_code;
   const referralCode = referralCodeRaw == null || referralCodeRaw === "" ? null : normalizeCode(referralCodeRaw);
-  if (!emailPattern.test(email) || password.length < 8 || !username || username.length > 64 || country.length > 8 || (referralCodeRaw != null && !referralCode)) {
+  if (!emailPattern.test(email) || password.length < 8 || Buffer.byteLength(password, "utf8") > 72 || !username || username.length > 64 || country.length > 8 || (referralCodeRaw != null && !referralCode)) {
     return res.status(400).json({ error: "Informations d'inscription invalides" });
   }
   const id = crypto.randomUUID();
@@ -102,6 +104,14 @@ router.post("/auth/register", authLimiter, async (req: AuthedRequest, res) => {
       );
     }
     const sessionToken = await createSessionToken(id, req, connection);
+    if (notificationsEnabled()) {
+      await enqueueUserNotification(connection, id, `signup-${id}`, {
+        subject: "Bienvenue sur BUZZ BOOSTER",
+        title: "Bienvenue sur BUZZ BOOSTER !",
+        message: "Votre compte a bien été créé. Merci de nous rejoindre et bienvenue dans la communauté BUZZ BOOSTER !",
+        category: "welcome",
+      });
+    }
     await connection.commit();
     setSessionCookie(res, sessionToken);
     return res.status(201).json({ user: publicUser({ id, email, username, country, balance_minor: 0, is_admin: false }) });
@@ -112,6 +122,75 @@ router.post("/auth/register", authLimiter, async (req: AuthedRequest, res) => {
     }
     req.log.error({ err }, "registration failed");
     return res.status(503).json({ error: "Inscription temporairement indisponible" });
+  } finally {
+    connection?.release();
+  }
+});
+
+const forgotResponse = { message: "Si un compte existe pour cet email, vous recevrez un lien de réinitialisation." };
+const forgotUnavailable = { error: "Service de récupération temporairement indisponible" };
+
+router.post("/auth/forgot-password", async (req: AuthedRequest, res): Promise<void> => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  if (!emailPattern.test(email) || email.length > 254) {
+    res.status(400).json({ error: "Adresse email invalide" });
+    return;
+  }
+  // Check before looking up the user: misconfiguration must never reveal account existence.
+  try {
+    if (!notificationsEnabled()) throw new Error("Notifications unavailable");
+    notificationAction("/reset-password");
+  } catch {
+    res.status(503).json(forgotUnavailable);
+    return;
+  }
+  let connection: mysql.PoolConnection | undefined;
+  try {
+    connection = await getMysqlPool().getConnection();
+    await connection.beginTransaction();
+    const allowed = await reserveResetRequest(connection, email, req.ip || "unknown");
+    if (allowed) {
+      const [users] = await connection.execute<mysql.RowDataPacket[]>(
+        "SELECT id FROM users WHERE email = ? AND disabled_at IS NULL LIMIT 1", [email],
+      );
+      if (users[0]) await queuePasswordReset(connection, String(users[0].id));
+    }
+    await connection.commit();
+    res.json(forgotResponse);
+  } catch {
+    if (connection) await connection.rollback();
+    // No error objects here: mail payloads may contain reset secrets or recipients.
+    req.log.error("password recovery request failed");
+    res.status(503).json(forgotUnavailable);
+  } finally {
+    connection?.release();
+  }
+});
+
+router.post("/auth/reset-password", authLimiter, async (req: AuthedRequest, res): Promise<void> => {
+  const token = req.body?.token;
+  const password = req.body?.password;
+  if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token) ||
+      typeof password !== "string" || password.length < 8 || Buffer.byteLength(password, "utf8") > 72) {
+    res.status(400).json({ error: "Lien ou mot de passe invalide (8 caractères minimum)" });
+    return;
+  }
+  let connection: mysql.PoolConnection | undefined;
+  try {
+    connection = await getMysqlPool().getConnection();
+    await connection.beginTransaction();
+    const valid = await consumeResetToken(connection, token, password);
+    if (!valid) {
+      await connection.rollback();
+      res.status(400).json({ error: "Ce lien est invalide ou a expiré. Demandez-en un nouveau." });
+      return;
+    }
+    await connection.commit();
+    res.json({ message: "Mot de passe mis à jour. Connectez-vous avec votre nouveau mot de passe." });
+  } catch {
+    if (connection) await connection.rollback();
+    req.log.error("password reset failed");
+    res.status(503).json({ error: "Réinitialisation temporairement indisponible" });
   } finally {
     connection?.release();
   }
