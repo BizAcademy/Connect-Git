@@ -25,7 +25,7 @@ domain is also the database host.
 Previously the preview proxied all API calls to live Plesk so existing users
 could sign in, but that could not test undeployed backend changes and any signup
 created a real production account. The preview was switched to an isolated
-local MariaDB schema for testing signup and BizConnect mail.
+ local MariaDB schema for testing signup and transactional mail.
 
 **Why:** Testing the undeployed transactional signup mail requires local routes
 and local tables, without writing to production accounts or orders.
