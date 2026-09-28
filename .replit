@@ -11,6 +11,26 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "BizPanel: local test MySQL"
+
+[[workflows.workflow]]
+name = "BizPanel: local test MySQL"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "mariadbd --no-defaults --datadir=\"$PWD/.local/bizpanel-test-mysql\" --socket=/tmp/bizpanel-test-mysql.sock --pid-file=/tmp/bizpanel-test-mysql.pid --bind-address=127.0.0.1 --port=33307 --skip-name-resolve --skip-log-bin"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
@@ -26,8 +46,12 @@ SMM_PANEL_5_API_URL = "https://exosupplier.com/api/v2"
 AFRIBAPAY_API_BASE = "https://api.afribapay.com"
 
 [userenv.development]
-DEV_PLESK_API_ORIGIN = "https://buzzbooster.site"
-VITE_PLESK_LIVE_PREVIEW = "true"
+# Isolated account/email test preview; local-only MariaDB, not production.
+MYSQL_HOST = "127.0.0.1"
+MYSQL_PORT = "33307"
+MYSQL_DATABASE = "bizpanel_test"
+MYSQL_USER = "bbtest"
+MYSQL_PASSWORD = ""
 
 [nix]
 channel = "stable-25_05"
