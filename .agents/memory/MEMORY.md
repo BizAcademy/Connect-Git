@@ -11,3 +11,4 @@
 - [Crypto webhook recovery](izipay-webhook-recovery.md) — five consecutive failed deliveries disable the provider endpoint; acknowledge signed events quickly only with durable intent records and independent reconciliation.
 - [Notification delivery policy](notification-delivery-policy.md) — transactional frozen mail payloads; encrypted reset links require draining the queue before planned credential rotation.
 - [Local MariaDB CLI environment precedence](local-mariadb-cli-env.md) — development MYSQL_* env can override socket CLI flags; clear them only for manual test-db commands.
+- [BizConnect 401 diagnosis](bizconnect-401-diagnosis.md) — an IP echo service does not prove the source IP seen by BizConnect; use provider rejection logs or an isolated unrestricted test client to separate causes.
