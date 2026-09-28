@@ -219,6 +219,6 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 
 ## Notifications BizConnect
 
-- Voir `BIZCONNECT-MAIL.md` pour l'activation et les migrations MySQL 008/009.
-- Les notifications d'inscription et de dépôt sont inscrites dans une file MySQL au sein de la transaction métier ; les appels au fournisseur sont effectués hors requête par un worker.
+- Voir `BIZCONNECT-MAIL.md` pour l'activation et les migrations MySQL 008/009/010.
+- L'inscription nécessite un OTP par e-mail avant la connexion ; les codes et notifications de dépôt sont inscrits dans une file MySQL au sein de la transaction métier. Les appels au fournisseur sont effectués hors requête par un worker.
 - Pour tester l'inscription et l'e-mail sans écrire en production, la preview utilise maintenant l'API locale et une base MariaDB de test isolée. Le workflow « BizPanel: local test MySQL » doit être actif ; les fichiers de données locaux sous `.local/` ne sont pas versionnés. Ne pas réactiver le proxy Plesk sans avertir que toute inscription effectuée dans la preview créerait alors un vrai compte en production.

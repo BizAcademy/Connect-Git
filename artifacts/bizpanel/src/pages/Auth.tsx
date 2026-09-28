@@ -77,20 +77,35 @@ const Auth = () => {
   const [forgotEmail, setForgotEmail] = useState("");
   const [showForgot, setShowForgot] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [showVerification, setShowVerification] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const response = await fetch("/api/auth/login", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: loginEmail, password: loginPassword }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) { setLoading(false); toast.error(data.error || "Connexion impossible"); return; }
-    await refreshProfile();
-    setLoading(false);
-    toast.success("Connexion réussie !");
-    navigate(data.user?.isAdmin ? "/admin" : "/dashboard");
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 403 && data.code === "EMAIL_VERIFICATION_REQUIRED") {
+        setVerifyEmail(loginEmail.trim().toLowerCase());
+        setVerificationCode("");
+        setShowVerification(true);
+        return;
+      }
+      if (!response.ok) { toast.error(data.error || "Connexion impossible"); return; }
+      await refreshProfile();
+      toast.success("Connexion réussie !");
+      navigate(data.user?.isAdmin ? "/admin" : "/dashboard");
+    } catch {
+      toast.error("Connexion temporairement indisponible");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -118,24 +133,70 @@ const Auth = () => {
         return;
       }
     }
-    const response = await fetch("/api/auth/register", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: signupEmail, password: signupPassword, username, country: signupCountry, referralCode: refCode || undefined }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) { setLoading(false); toast.error(data.error || "Inscription impossible"); return; }
-    await refreshProfile();
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: signupEmail, password: signupPassword, username, country: signupCountry, referralCode: refCode || undefined }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) { toast.error(data.error || "Inscription impossible"); return; }
+      if (!data.verificationRequired) {
+        toast.error("Confirmation indisponible. Réessayez plus tard.");
+        return;
+      }
+      setVerifyEmail(signupEmail.trim().toLowerCase());
+      setVerificationCode("");
+      setShowVerification(true);
+      toast.success("Compte créé. Vérifiez votre boîte mail pour le code de confirmation.");
+    } catch {
+      toast.error("Inscription temporairement indisponible");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Always store country in localStorage as a guaranteed fallback.
-    // This covers the email-confirmation flow where data.session is null
-    // (the user must confirm before logging in). DashboardLayout reads
-    // this key on first authenticated load and saves it via API if the
-    // profile still has no country set.
-    localStorage.setItem("bb_pending_country", signupCountry);
+  const handleVerifyEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!/^\d{6}$/.test(verificationCode)) {
+      toast.error("Saisissez le code à 6 chiffres reçu par e-mail.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch("/api/auth/verify-email", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: verifyEmail, code: verificationCode }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) { toast.error(data.error || "Code invalide ou expiré"); return; }
+      setShowVerification(false);
+      setTab("login");
+      setLoginEmail(verifyEmail);
+      setLoginPassword("");
+      setVerificationCode("");
+      toast.success("Adresse e-mail confirmée. Vous pouvez vous connecter.");
+    } catch {
+      toast.error("Vérification temporairement indisponible");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    setLoading(false);
-    toast.success("Compte créé ! Bienvenue sur BUZZ BOOSTER 🎉");
-    navigate("/dashboard");
+  const handleResendVerification = async () => {
+    setResending(true);
+    try {
+      const response = await fetch("/api/auth/resend-verification", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: verifyEmail }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) { toast.error(data.error || "Renvoi temporairement indisponible"); return; }
+      toast.success(data.message || "Si le compte est en attente, un nouveau code sera envoyé.");
+    } catch {
+      toast.error("Renvoi temporairement indisponible");
+    } finally {
+      setResending(false);
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -193,6 +254,47 @@ const Auth = () => {
               ← Retour à la connexion
             </button>
           </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (showVerification) {
+    return (
+      <div className="min-h-screen bg-[#f0f0f0] flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+          <div className="text-center mb-6">
+            <img src={logoImg} alt="BUZZ BOOSTER" className="h-12 w-auto mx-auto rounded-md" />
+            <h1 className="text-xl font-bold text-gray-900 mt-5">Confirmez votre e-mail</h1>
+            <p className="text-gray-600 text-sm mt-2">Saisissez le code à 6 chiffres envoyé à <strong className="break-all">{verifyEmail}</strong>. Le code expire après 10 minutes.</p>
+          </div>
+          <form onSubmit={handleVerifyEmail} className="space-y-4">
+            <div>
+              <label htmlFor="email-otp" className="block text-sm font-medium text-gray-700 mb-2">Code de confirmation</label>
+              <input
+                id="email-otp"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={verificationCode}
+                onChange={e => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="000000"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 text-center text-2xl tracking-[0.4em] focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+            </div>
+            <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-gray-900 text-white font-semibold text-sm disabled:opacity-60">
+              {loading ? "Vérification…" : "Confirmer mon adresse e-mail"}
+            </button>
+          </form>
+          <button type="button" onClick={handleResendVerification} disabled={resending} className="w-full mt-4 py-2 text-sm font-medium text-orange-600 hover:underline disabled:opacity-60">
+            {resending ? "Envoi en cours…" : "Je n'ai pas reçu le code — Renvoyer"}
+          </button>
+          <button type="button" onClick={() => { setShowVerification(false); setTab("login"); setLoginEmail(verifyEmail); }} className="w-full mt-2 py-2 text-sm text-gray-500 hover:text-gray-700">
+            Retour à la connexion
+          </button>
         </div>
       </div>
     );

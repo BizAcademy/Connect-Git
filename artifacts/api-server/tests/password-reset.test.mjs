@@ -14,22 +14,35 @@ let enabled = true;
 let appUrl = true;
 let clock = new Date("2026-01-01T00:00:00Z");
 let users = new Map();
+let profiles = new Map();
 let tokens = new Map();
 let limits = new Map();
 let sessions = new Set();
 let queued = [];
 let queries = [];
+let verificationCodes = new Map();
 const userId = crypto.randomUUID();
 
 function reset() {
   clock = new Date("2026-01-01T00:00:00Z");
-  users = new Map([["someone@example.com", { id: userId, password_hash: "old" }]]);
+  users = new Map([["someone@example.com", { id: userId, email: "someone@example.com", password_hash: "old", email_verified_at: new Date() }]]);
+  profiles = new Map();
   tokens = new Map(); limits = new Map(); sessions = new Set([userId]); queued = []; queries = [];
+  verificationCodes = new Map();
+  if (globalThis.__resetTest) {
+    globalThis.__resetTest.users = users;
+    globalThis.__resetTest.verificationCodes = verificationCodes;
+    globalThis.__resetTest.queued = queued;
+  }
   enabled = true; appUrl = true;
 }
 reset();
 globalThis.__resetTest = {
   pool: {
+    execute: async (sql, args = []) => {
+      const connection = await globalThis.__resetTest.pool.getConnection();
+      return connection.execute(sql, args);
+    },
     getConnection: async () => ({
       beginTransaction: async () => {},
       commit: async () => {},
@@ -48,9 +61,21 @@ globalThis.__resetTest = {
           limits.set(args[1], clock.getTime() + args[0] / 1000);
           return [{ affectedRows: 1 }];
         }
+        if (sql.includes("INSERT INTO users")) {
+          users.set(args[1], { id: args[0], email: args[1], password_hash: args[2], email_verified_at: null });
+          return [{ affectedRows: 1 }];
+        }
+        if (sql.includes("INSERT INTO profiles")) {
+          profiles.set(args[0], { user_id: args[0], email: args[1], username: args[2], country: args[3] });
+          return [{ affectedRows: 1 }];
+        }
+        if (sql.includes("FROM users u LEFT JOIN profiles p")) {
+          const user = users.get(args[0]);
+          return [user ? [{ ...profiles.get(user.id), ...user, is_admin: 0 }] : []];
+        }
         if (sql.includes("FROM users WHERE email")) {
           const user = users.get(args[0]);
-          return [user ? [{ id: user.id }] : []];
+          return [user ? [{ id: user.id, email_verified_at: user.email_verified_at }] : []];
         }
         if (sql.includes("INSERT INTO password_reset_tokens")) {
           tokens.set(args[2], { id: args[0], user_id: args[1], expires_at: args[3], used_at: null });
@@ -72,13 +97,15 @@ globalThis.__resetTest = {
         if (sql.includes("UPDATE auth_sessions SET revoked_at")) {
           sessions.delete(args[0]); return [{ affectedRows: 1 }];
         }
-        if (sql.includes("INSERT INTO users")) return [{ affectedRows: 1 }];
-        if (sql.includes("INSERT INTO profiles") || sql.includes("INSERT INTO user_roles") || sql.includes("INSERT INTO auth_sessions")) return [{ affectedRows: 1 }];
+        if (sql.includes("INSERT INTO user_roles") || sql.includes("INSERT INTO auth_sessions")) return [{ affectedRows: 1 }];
         throw new Error(`Unexpected SQL: ${sql}`);
       },
     }),
   },
   enabled: () => enabled,
+  users,
+  verificationCodes,
+  queued,
   action: (p) => { if (!appUrl) throw new Error("No trusted app URL"); return `https://app.example${p}`; },
   enqueue: async (_conn, id, key, content) => { queued.push({ id, key, content }); },
 };
@@ -89,12 +116,35 @@ await build({
   plugins: [{
     name: "mock-auth-dependencies",
     setup(build) {
-      build.onResolve({ filter: /^\.\.\/lib\/(mysql|auth|referrals|notification-outbox)$/ }, ({ path }) => ({ path, namespace: "mock" }));
+      build.onResolve({ filter: /^\.\.\/lib\/(mysql|auth|referrals|notification-outbox|signup-verification)$/ }, ({ path }) => ({ path, namespace: "mock" }));
       build.onResolve({ filter: /^\.\/notification-outbox$/ }, ({ path }) => ({ path, namespace: "mock" }));
       build.onLoad({ filter: /.*/, namespace: "mock" }, ({ path }) => ({
         contents: path.endsWith("/mysql") ? "export const getMysqlPool = () => globalThis.__resetTest.pool;" :
           path.endsWith("/auth") ? "export const requireUser = (_req,_res,next) => next();" :
           path.endsWith("/referrals") ? "export const normalizeCode = x => x;" :
+          path.endsWith("/signup-verification") ? `
+            export async function queueSignupVerification(_conn, id) {
+              globalThis.__resetTest.verificationCodes.set(id, { code: "123456", attempts: 0, expires: Date.now() + 600000, sentAt: Date.now(), sends: 1 });
+              globalThis.__resetTest.queued.push({ id, key: "signup-verification-" + id + "-initial", content: { otp_code: "123456", message: "Saisissez le code 123456 pour vérifier votre adresse.", category: "security" } });
+            }
+            export async function verifySignupEmail(_conn, id, code) {
+              const state = globalThis.__resetTest.verificationCodes.get(id);
+              if (!state || Date.now() >= state.expires || state.attempts >= 5 || state.code !== code) {
+                if (state && state.attempts < 5) state.attempts++;
+                return false;
+              }
+              const user = [...globalThis.__resetTest.users.values()].find(u => u.id === id);
+              user.email_verified_at = new Date();
+              globalThis.__resetTest.verificationCodes.delete(id);
+              return true;
+            }
+            export async function resendSignupVerification(_conn, id) {
+              const state = globalThis.__resetTest.verificationCodes.get(id);
+              const now = Date.now();
+              if (!state || (state.sentAt && now - state.sentAt < 60000) || (state.sentAt && state.sends >= 5)) return;
+              globalThis.__resetTest.verificationCodes.set(id, { code: "654321", attempts: 0, expires: now + 600000, sentAt: now, sends: (state.sends || 1) + 1 });
+              globalThis.__resetTest.queued.push({ id, key: "signup-verification-" + id + "-resend-" + now, content: { otp_code: "654321", message: "Saisissez le code 654321 pour vérifier votre adresse.", category: "security" } });
+            }` :
           `export const notificationsEnabled = () => globalThis.__resetTest.enabled();
            export const notificationAction = p => globalThis.__resetTest.action(p);
            export const enqueueUserNotification = (...a) => globalThis.__resetTest.enqueue(...a);`,
@@ -115,12 +165,13 @@ app.use("/api", router);
 const server = app.listen(0, "127.0.0.1");
 await new Promise(resolve => server.once("listening", resolve));
 after(() => new Promise(resolve => server.close(resolve)));
+let requestIp = 1;
 async function post(endpoint, body, ip) {
   const response = await fetch(`http://127.0.0.1:${server.address().port}/api/auth/${endpoint}`, {
-    method: "POST", headers: { "content-type": "application/json", ...(ip ? { "x-test-ip": ip } : {}) },
+    method: "POST", headers: { "content-type": "application/json", "x-test-ip": ip || `198.51.100.${requestIp++}`, ...(ip ? { "x-test-ip": ip } : {}) },
     body: JSON.stringify(body),
   });
-  return { status: response.status, body: await response.json() };
+  return { status: response.status, body: await response.json(), setCookie: response.headers.get("set-cookie") };
 }
 
 test("unknown and known requests have identical public responses; only known account queues a hashed token", async () => {
@@ -168,22 +219,78 @@ test("missing delivery config or trusted URL fails closed for both account state
   }
 });
 
-test("registration enqueues one stable welcome event inside its transaction", async () => {
+test("registration creates an unverified account and queues one OTP event without a session", async () => {
   reset();
   const result = await post("register", {
     email: "fresh@example.com", password: "signup-password", username: "newmember", country: "CI",
   });
   assert.equal(result.status, 201);
+  assert.deepEqual(result.body, { verificationRequired: true, email: "fresh@example.com" });
+  assert.equal(result.body.user, undefined);
+  assert.equal(result.setCookie, null);
   assert.equal(queued.length, 1);
-  assert.equal(queued[0].key, `signup-${result.body.user.id}`);
-  assert.match(queued[0].content.title, /Bienvenue/);
-  assert.equal(queued[0].content.action_url, undefined);
+  assert.match(queued[0].key, /^signup-verification-/);
+  assert.match(queued[0].content.otp_code, /^\d{6}$/);
+  assert.ok(queued[0].content.message.includes(queued[0].content.otp_code));
+  assert.equal(queued[0].content.category, "security");
+  assert.equal([...users.values()].find(user => user.email === "fresh@example.com").email_verified_at, null);
   reset();
   enabled = false;
-  assert.equal((await post("register", {
+  const unavailable = await post("register", {
     email: "fresh@example.com", password: "signup-password", username: "newmember", country: "CI",
-  })).status, 201);
+  });
+  assert.equal(unavailable.status, 503);
   assert.equal(queued.length, 0);
+});
+
+test("register -> denied login -> verify -> login; verification code cannot replay", async () => {
+  reset();
+  await post("register", {
+    email: "fresh@example.com", password: "signup-password", username: "newmember", country: "CI",
+  });
+  const denied = await post("login", { email: "fresh@example.com", password: "signup-password" });
+  assert.equal(denied.status, 403);
+  assert.equal(denied.body.code, "EMAIL_VERIFICATION_REQUIRED");
+  assert.equal(denied.body.error.length > 0, true);
+  assert.equal(queries.some(([sql]) => sql.includes("INSERT INTO auth_sessions")), false);
+
+  const verified = await post("verify-email", { email: "fresh@example.com", code: "123456" });
+  assert.equal(verified.status, 200);
+  assert.match(verified.body.message, /vérifiée/i);
+  assert.equal((await post("verify-email", { email: "fresh@example.com", code: "123456" })).status, 400);
+  const login = await post("login", { email: "fresh@example.com", password: "signup-password" });
+  assert.equal(login.status, 200);
+  assert.equal(login.body.user.email, "fresh@example.com");
+  assert.equal(queries.some(([sql]) => sql.includes("INSERT INTO auth_sessions")), true);
+});
+
+test("wrong, expired, and resent verification codes are rejected or rotated", async () => {
+  reset();
+  await post("register", {
+    email: "fresh@example.com", password: "signup-password", username: "newmember", country: "CI",
+  });
+  assert.equal((await post("verify-email", { email: "fresh@example.com", code: "999999" })).status, 400);
+  const user = [...users.values()].find(item => item.email === "fresh@example.com");
+  verificationCodes.get(user.id).expires = Date.now() - 1;
+  assert.equal((await post("verify-email", { email: "fresh@example.com", code: "123456" })).status, 400);
+
+  reset();
+  await post("register", {
+    email: "fresh@example.com", password: "signup-password", username: "newmember", country: "CI",
+  });
+  const resend1 = await post("resend-verification", { email: "fresh@example.com" });
+  const resend2 = await post("resend-verification", { email: "fresh@example.com" });
+  assert.deepEqual(resend1, resend2);
+  assert.deepEqual(resend1, await post("resend-verification", { email: "missing@example.com" }));
+  assert.equal(queued.length, 1, "cooldown blocks immediate resend");
+  const resendState = verificationCodes.get([...users.values()].find(item => item.email === "fresh@example.com").id);
+  resendState.sentAt = 0;
+  await post("resend-verification", { email: "fresh@example.com" });
+  assert.equal(queued.length, 2);
+  assert.equal(queued[1].content.otp_code, "654321");
+  assert.ok(queued[1].content.message.includes("654321"));
+  assert.equal((await post("verify-email", { email: "fresh@example.com", code: "123456" })).status, 400);
+  assert.equal((await post("verify-email", { email: "fresh@example.com", code: "654321" })).status, 200);
 });
 
 test("valid reset rotates password, consumes all tokens, revokes sessions; replay/expiry fails", async () => {

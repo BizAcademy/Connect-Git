@@ -17,7 +17,9 @@ export async function requireUser(req: AuthedRequest, res: Response, next: NextF
   try {
     const hash = crypto.createHash("sha256").update(token).digest("hex");
     const [rows] = await getMysqlPool().execute<(RowDataPacket & { user_id: string })[]>(
-      "SELECT user_id FROM auth_sessions WHERE token_hash = ? AND revoked_at IS NULL AND expires_at > NOW() LIMIT 1",
+      `SELECT s.user_id FROM auth_sessions s
+       INNER JOIN users u ON u.id=s.user_id AND u.email_verified_at IS NOT NULL
+       WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > NOW() LIMIT 1`,
       [hash],
     );
     if (!rows[0]?.user_id) { res.status(401).json({ error: "Session invalide" }); return; }

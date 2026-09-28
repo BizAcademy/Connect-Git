@@ -2,7 +2,10 @@
 
 ## Événements
 
-- Inscription réussie : e-mail de bienvenue (pas une vérification obligatoire de l'adresse).
+- Inscription : code OTP à 6 chiffres envoyé par e-mail. L'adresse doit être
+  confirmée dans les 10 minutes avant la première connexion. Le compte est
+  créé sans session ; une nouvelle demande de code est possible sous limite
+  de fréquence. Les comptes existants avant la migration restent utilisables.
 - Mot de passe oublié : lien à usage unique, valable 30 minutes.
 - Dépôt effectivement crédité : confirmation du montant et de la référence.
   Les crédits FCFA et USD sont couverts. Pas d'e-mail pour un paiement
@@ -14,6 +17,7 @@
 1. Exécuter dans la base MySQL/MariaDB existante, dans cet ordre :
    - `migrations/mysql/008_notification_outbox.sql`
    - `migrations/mysql/009_password_reset.sql`
+   - `migrations/mysql/010_signup_email_verification.sql`
    Ces migrations sont additives et peuvent être réexécutées.
 2. Construire et pousser le code depuis Replit, puis Pull et Deploy dans Cybrancy.
 3. Renseigner dans les variables serveur de l'application Node.js :
@@ -37,9 +41,10 @@ Une panne HTTP du fournisseur ne bloque pas le crédit ; une table de file
 manquante ferait échouer la transaction plutôt que perdre silencieusement
 la notification.
 
-Sans identifiants, inscription et paiements continuent normalement sans e-mail.
-La récupération annonce un service indisponible. Une configuration partielle
-est refusée au démarrage.
+Sans identifiants, les dépôts continuent normalement sans e-mail, mais
+l'inscription et la récupération sont indisponibles : il est interdit de
+créer un nouveau compte sans possibilité de confirmer son adresse. Une
+configuration partielle est refusée au démarrage.
 
 ## Fonctionnement et sécurité
 
@@ -77,6 +82,18 @@ Les réponses aux demandes pour un compte connu ou inconnu sont identiques.
 Un délai persistant de 5 minutes par adresse et d'une minute par IP limite
 les abus. Les limites de l'API s'appliquent également.
 
+Les OTP d'inscription sont à usage unique, expirent après 10 minutes et sont
+limités à 5 essais. Seule leur empreinte HMAC est enregistrée en base. Le
+renvoi respecte un délai d'une minute et un plafond de 5 codes par heure et
+par compte. Les codes eux-mêmes restent chiffrés dans la file avant l'envoi.
+Un utilisateur non confirmé ne reçoit pas de cookie de session et ne peut
+pas se connecter, même avec le bon mot de passe.
+
+Une réponse HTTP **401 de BizConnect** signifie que ses identifiants sont
+invalides ou inactifs. Corriger la configuration côté fournisseur puis
+demander un nouveau code ; un message définitivement refusé n'est pas
+réexpédié automatiquement.
+
 ## Surveillance et tests
 
 ```sql
@@ -102,7 +119,7 @@ node --test artifacts/api-server/tests/*.test.mjs
 ```
 
 Les tests automatisés utilisent des doubles MySQL/fournisseur et n'envoient
-aucun véritable e-mail. La preview Replit conserve son proxy vers l'API en
-ligne : elle ne permet pas de tester les nouvelles routes avant déploiement.
-La livraison réelle et les migrations doivent être vérifiées dans un
-environnement MySQL de test avec la configuration BizConnect.
+aucun véritable e-mail. La preview Replit utilise une base MariaDB locale
+isolée et permet de tester les nouvelles routes sans écrire en production.
+La livraison réelle reste à vérifier avec des identifiants BizConnect actifs
+et une nouvelle adresse de test.

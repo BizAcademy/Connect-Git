@@ -6,8 +6,9 @@ import crypto from "node:crypto";
 import { getMysqlPool } from "../lib/mysql";
 import { requireUser, type AuthedRequest } from "../lib/auth";
 import { normalizeCode } from "../lib/referrals";
-import { enqueueUserNotification, notificationAction, notificationsEnabled } from "../lib/notification-outbox";
+import { notificationAction, notificationsEnabled } from "../lib/notification-outbox";
 import { consumeResetToken, queuePasswordReset, reserveResetRequest } from "../lib/password-reset";
+import { queueSignupVerification, resendSignupVerification, verifySignupEmail } from "../lib/signup-verification";
 
 const router = Router();
 const COOKIE = "bb_session";
@@ -76,6 +77,15 @@ router.post("/auth/register", authLimiter, async (req: AuthedRequest, res) => {
   if (!emailPattern.test(email) || password.length < 8 || Buffer.byteLength(password, "utf8") > 72 || !username || username.length > 64 || country.length > 8 || (referralCodeRaw != null && !referralCode)) {
     return res.status(400).json({ error: "Informations d'inscription invalides" });
   }
+  try {
+    if (!notificationsEnabled()) {
+      res.status(503).json({ error: "Inscription temporairement indisponible" });
+      return;
+    }
+  } catch {
+    res.status(503).json({ error: "Inscription temporairement indisponible" });
+    return;
+  }
   const id = crypto.randomUUID();
   const pool = getMysqlPool();
   let connection: mysql.PoolConnection | undefined;
@@ -103,18 +113,9 @@ router.post("/auth/register", authLimiter, async (req: AuthedRequest, res) => {
         [crypto.randomUUID(), referrerId, id, referralCode],
       );
     }
-    const sessionToken = await createSessionToken(id, req, connection);
-    if (notificationsEnabled()) {
-      await enqueueUserNotification(connection, id, `signup-${id}`, {
-        subject: "Bienvenue sur BUZZ BOOSTER",
-        title: "Bienvenue sur BUZZ BOOSTER !",
-        message: "Votre compte a bien été créé. Merci de nous rejoindre et bienvenue dans la communauté BUZZ BOOSTER !",
-        category: "welcome",
-      });
-    }
+    await queueSignupVerification(connection, id);
     await connection.commit();
-    setSessionCookie(res, sessionToken);
-    return res.status(201).json({ user: publicUser({ id, email, username, country, balance_minor: 0, is_admin: false }) });
+    return res.status(201).json({ verificationRequired: true, email });
   } catch (err: unknown) {
     if (connection) await connection.rollback();
     if ((err as { code?: string }).code === "ER_DUP_ENTRY") {
@@ -122,6 +123,66 @@ router.post("/auth/register", authLimiter, async (req: AuthedRequest, res) => {
     }
     req.log.error({ err }, "registration failed");
     return res.status(503).json({ error: "Inscription temporairement indisponible" });
+  } finally {
+    connection?.release();
+  }
+});
+
+router.post("/auth/verify-email", authLimiter, async (req: AuthedRequest, res): Promise<void> => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const code = typeof req.body?.code === "string" ? req.body.code : "";
+  if (!emailPattern.test(email) || email.length > 254 || !/^\d{6}$/.test(code)) {
+    res.status(400).json({ error: "Adresse email ou code invalide" });
+    return;
+  }
+  let connection: mysql.PoolConnection | undefined;
+  try {
+    connection = await getMysqlPool().getConnection();
+    await connection.beginTransaction();
+    const [users] = await connection.execute<mysql.RowDataPacket[]>(
+      "SELECT id FROM users WHERE email=? AND disabled_at IS NULL FOR UPDATE", [email],
+    );
+    const verified = users[0] ? await verifySignupEmail(connection, String(users[0].id), code) : false;
+    if (!verified) {
+      await connection.commit();
+      res.status(400).json({ error: "Code invalide ou expiré. Demandez-en un nouveau." });
+      return;
+    }
+    await connection.commit();
+    res.json({ message: "Adresse email vérifiée. Vous pouvez maintenant vous connecter." });
+  } catch {
+    if (connection) await connection.rollback();
+    req.log.error("email verification failed");
+    res.status(503).json({ error: "Vérification temporairement indisponible" });
+  } finally {
+    connection?.release();
+  }
+});
+
+router.post("/auth/resend-verification", authLimiter, async (req: AuthedRequest, res): Promise<void> => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  if (!emailPattern.test(email) || email.length > 254) {
+    res.status(400).json({ error: "Adresse email invalide" });
+    return;
+  }
+  const response = { message: "Si un compte non vérifié existe pour cet email, un code sera envoyé." };
+  let connection: mysql.PoolConnection | undefined;
+  try {
+    if (!notificationsEnabled()) throw new Error("Notifications unavailable");
+    connection = await getMysqlPool().getConnection();
+    await connection.beginTransaction();
+    const [users] = await connection.execute<mysql.RowDataPacket[]>(
+      "SELECT id, email_verified_at FROM users WHERE email=? AND disabled_at IS NULL FOR UPDATE", [email],
+    );
+    if (users[0] && !users[0].email_verified_at) {
+      await resendSignupVerification(connection, String(users[0].id));
+    }
+    await connection.commit();
+    res.json(response);
+  } catch {
+    if (connection) await connection.rollback();
+    req.log.error("email verification resend failed");
+    res.status(503).json({ error: "Vérification temporairement indisponible" });
   } finally {
     connection?.release();
   }
@@ -203,12 +264,18 @@ router.post("/auth/login", authLimiter, async (req: AuthedRequest, res) => {
   if (!email || !password) return invalid();
   try {
     const [rows] = await getMysqlPool().execute<mysql.RowDataPacket[]>(
-      `SELECT p.*, u.id, u.email, u.password_hash,
+      `SELECT p.*, u.id, u.email, u.password_hash, u.email_verified_at,
         EXISTS(SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role = 'admin') AS is_admin
        FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.email = ? AND u.disabled_at IS NULL LIMIT 1`, [email],
     );
     const user = rows[0];
     if (!user || !(await bcrypt.compare(password, user.password_hash))) return invalid();
+    if (!user.email_verified_at) {
+      return res.status(403).json({
+        code: "EMAIL_VERIFICATION_REQUIRED",
+        error: "Veuillez vérifier votre adresse email avant de vous connecter.",
+      });
+    }
     if (bcrypt.getRounds(user.password_hash) < BCRYPT_COST) {
       const replacement = await bcrypt.hash(password, BCRYPT_COST);
       await getMysqlPool().execute("UPDATE users SET password_hash = ? WHERE id = ?", [replacement, user.id]);

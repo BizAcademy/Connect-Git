@@ -10,3 +10,4 @@
 - [IziChange Pay credit policy](izichange-credit-policy.md) — USD wallet credits require signed webhook plus live intent retrieval; irregular amounts stay uncredited.
 - [Crypto webhook recovery](izipay-webhook-recovery.md) — five consecutive failed deliveries disable the provider endpoint; acknowledge signed events quickly only with durable intent records and independent reconciliation.
 - [Notification delivery policy](notification-delivery-policy.md) — transactional frozen mail payloads; encrypted reset links require draining the queue before planned credential rotation.
+- [Local MariaDB CLI environment precedence](local-mariadb-cli-env.md) — development MYSQL_* env can override socket CLI flags; clear them only for manual test-db commands.
