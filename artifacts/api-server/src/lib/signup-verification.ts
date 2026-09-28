@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import type mysql from "mysql2/promise";
-import { validateBizConnectNotificationConfig } from "./bizconnect-notification-client";
+import { validateMailtrapConfig } from "./mailtrap-notification-client";
 import { enqueueUserNotification } from "./notification-outbox";
 
 const CODE_LIFETIME_MS = 10 * 60_000;
@@ -10,10 +10,10 @@ const MAX_SENDS_PER_HOUR = 5;
 const MAX_ATTEMPTS = 5;
 
 function codeHash(userId: string, code: string): string {
-  const config = validateBizConnectNotificationConfig();
+  const config = validateMailtrapConfig();
   if (!config) throw new Error("Notification configuration is required for signup verification");
-  return crypto.createHmac("sha256", config.clientSecret)
-    .update("bizconnect-signup-email-otp-v1\0").update(userId).update("\0").update(code).digest("hex");
+  return crypto.createHmac("sha256", config.apiToken)
+    .update("bizpanel-signup-email-otp-v2\0").update(userId).update("\0").update(code).digest("hex");
 }
 
 function generateCode(): string {

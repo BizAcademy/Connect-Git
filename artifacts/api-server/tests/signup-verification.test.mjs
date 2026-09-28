@@ -11,8 +11,8 @@ after(() => rm(dir, { recursive: true, force: true }));
 const state = { row: null, queued: [], outboxRows: [], verified: false, sessionsRevoked: false };
 globalThis.__signupVerificationTest = state;
 delete process.env.SESSION_SECRET;
-process.env.BCA_NOTIFICATION_CLIENT_ID = "test-client";
-process.env.BCA_NOTIFICATION_CLIENT_SECRET = "test-provider-secret";
+process.env.MAILTRAP_API_TOKEN = "test-provider-secret";
+process.env.MAILTRAP_FROM_EMAIL = "sender@verified.example";
 const outfile = path.join(dir, "signup-verification.mjs");
 await build({
   entryPoints: [fileURLToPath(new URL("../src/lib/signup-verification.ts", import.meta.url))],

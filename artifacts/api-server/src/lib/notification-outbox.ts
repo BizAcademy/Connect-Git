@@ -3,45 +3,45 @@ import type { PoolConnection, ResultSetHeader, RowDataPacket } from "mysql2/prom
 import { getMysqlPool } from "./mysql";
 import { logger } from "./logger";
 import {
-  BizConnectNotificationClient, BizConnectNotificationError,
-  validateBizConnectNotificationConfig, type BizConnectEmailNotification, type BizConnectDelivery,
-} from "./bizconnect-notification-client";
+  MailtrapNotificationClient, MailtrapNotificationError,
+  validateMailtrapConfig, type NotificationEmail, type MailtrapDelivery,
+} from "./mailtrap-notification-client";
 
-type Content = Omit<BizConnectEmailNotification, "recipient_email" | "recipient_name">;
+type Content = Omit<NotificationEmail, "recipient_email" | "recipient_name">;
 const MAX_ATTEMPTS = 8;
 const LEASE_SECONDS = 90;
 
 export function notificationsEnabled(): boolean {
-  return validateBizConnectNotificationConfig() !== null;
+  return validateMailtrapConfig() !== null;
 }
 
 /** Never derive password-reset destinations from an untrusted Host header. */
 export function notificationAction(path: string): string {
-  const raw = process.env["BCA_NOTIFICATION_APP_URL"]?.trim();
-  if (!raw) throw new Error("BCA_NOTIFICATION_APP_URL is required for account emails");
+  const raw = (process.env["NOTIFICATION_APP_URL"] ?? process.env["BCA_NOTIFICATION_APP_URL"])?.trim();
+  if (!raw) throw new Error("NOTIFICATION_APP_URL is required for account emails");
   const base = new URL(raw);
   if (base.protocol !== "https:" || base.username || base.password || base.search || base.hash) {
-    throw new Error("BCA_NOTIFICATION_APP_URL must be a trusted HTTPS application URL");
+    throw new Error("NOTIFICATION_APP_URL must be a trusted HTTPS application URL");
   }
   return new URL(path.replace(/^\/+/, ""), `${base.href.replace(/\/+$/, "")}/`).href;
 }
 
 // The queue contains recovery links and personal data. Encrypt it at rest;
-// only the backend holding the provider secret can decrypt queued messages.
+// only the backend holding the configured token can decrypt queued messages.
 function encryptionKey(): Buffer {
-  const config = validateBizConnectNotificationConfig();
+  const config = validateMailtrapConfig();
   if (!config) throw new Error("Notifications are not configured");
-  return createHash("sha256").update("bizpanel-notification-outbox-v1\0").update(config.clientSecret).digest();
+  return createHash("sha256").update("bizpanel-notification-outbox-v1\0").update(config.apiToken).digest();
 }
 
-export function encryptNotification(payload: BizConnectEmailNotification): string {
+export function encryptNotification(payload: NotificationEmail): string {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", encryptionKey(), iv);
   const bytes = Buffer.concat([cipher.update(JSON.stringify(payload), "utf8"), cipher.final()]);
   return [iv, cipher.getAuthTag(), bytes].map(part => part.toString("base64")).join(".");
 }
 
-export function decryptNotification(value: string): BizConnectEmailNotification {
+export function decryptNotification(value: string): NotificationEmail {
   const parts = value.split(".");
   if (parts.length !== 3) throw new Error("Invalid encrypted notification");
   const [iv, tag, body] = parts.map(part => Buffer.from(part, "base64"));
@@ -62,7 +62,7 @@ export async function enqueueUserNotification(
   );
   const recipient = rows[0];
   if (!recipient || typeof recipient.email !== "string") throw new Error("Notification recipient unavailable");
-  const payload: BizConnectEmailNotification = {
+  const payload: NotificationEmail = {
     ...content, recipient_email: recipient.email,
     ...(recipient.username ? { recipient_name: String(recipient.username) } : {}),
   };
@@ -81,7 +81,7 @@ export function retryDelaySeconds(attempt: number): number {
 }
 
 export function isRetryableNotificationError(error: unknown): boolean {
-  return error instanceof BizConnectNotificationError && error.retryable;
+  return error instanceof MailtrapNotificationError && error.retryable;
 }
 
 /** CAS leases also work on MariaDB versions without SKIP LOCKED. */
@@ -94,7 +94,7 @@ export async function dispatchNotifications(): Promise<void> {
      WHERE status IN ('pending','sending') AND expires_at<=NOW(3)
      AND (locked_until IS NULL OR locked_until<NOW(3))`,
   );
-  const client = new BizConnectNotificationClient();
+  const client = new MailtrapNotificationClient();
   for (let i = 0; i < 10; i++) {
     const [rows] = await db.execute<RowDataPacket[]>(
       `SELECT event_key FROM notification_outbox
@@ -121,14 +121,14 @@ export async function dispatchNotifications(): Promise<void> {
     );
     const row = claimed[0];
     if (!row) continue;
-    let delivery: BizConnectDelivery;
+    let delivery: MailtrapDelivery;
     try {
       const payload = decryptNotification(row.payload_encrypted);
-      delivery = await client.sendEmail(payload, key);
+      delivery = await client.sendEmail(payload);
     } catch (error) {
       // Never log provider errors, recipient data, URLs, or encrypted payloads.
       const retry = isRetryableNotificationError(error) && Number(row.attempts) < MAX_ATTEMPTS;
-      const httpStatus = error instanceof BizConnectNotificationError ? error.httpStatus : null;
+      const httpStatus = error instanceof MailtrapNotificationError ? error.httpStatus : null;
       const delay = retryDelaySeconds(Number(row.attempts));
       await db.execute(
         `UPDATE notification_outbox SET status=?,available_at=DATE_ADD(NOW(3),INTERVAL ? SECOND),
@@ -139,15 +139,15 @@ export async function dispatchNotifications(): Promise<void> {
       logger.warn({ eventKey: key, httpStatus, retry, attempt: row.attempts }, "Notification delivery deferred or failed");
       continue;
     }
-    // A database outage AFTER acceptance must leave the lease recoverable;
-    // retrying the same frozen payload/key will return duplicate=true.
+    // A database outage after acceptance leaves a recoverable lease; Mailtrap
+    // has no documented idempotency key, so a retry may deliver twice.
     await db.execute(
       `UPDATE notification_outbox SET status='sent',payload_encrypted=NULL,delivery_id=?,
        lock_token=NULL,locked_until=NULL,finished_at=NOW(3),last_http_status=NULL
        WHERE event_key=? AND lock_token=?`,
-      [delivery.deliveryId || null, key, lease],
+      [delivery.deliveryId, key, lease],
     );
-    logger.info({ eventKey: key, deliveryId: delivery.deliveryId, duplicate: delivery.duplicate }, "Notification accepted");
+    logger.info({ eventKey: key, deliveryId: delivery.deliveryId }, "Notification accepted");
   }
 }
 

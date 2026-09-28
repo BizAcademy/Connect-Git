@@ -23,9 +23,8 @@ await build({
   }],
 });
 const outbox = await import(pathToFileURL(outfile).href);
-process.env.BCA_NOTIFICATION_CLIENT_ID = "test-client";
-process.env.BCA_NOTIFICATION_CLIENT_SECRET = "local-test-secret";
-process.env.BCA_NOTIFICATION_ENDPOINT = "https://example.test/notify";
+process.env.MAILTRAP_API_TOKEN = "local-test-token";
+process.env.MAILTRAP_FROM_EMAIL = "sender@verified.example";
 
 function database() {
   const rows = new Map();
@@ -127,26 +126,28 @@ test("enqueue derives encrypted recipients from own user/profile and freezes fir
   await assert.rejects(outbox.enqueueUserNotification(db, "user-1", "bad key", content), /Invalid notification event key/);
 });
 
-test("202 dispatch sends frozen body and key, erases ciphertext, stores delivery ID", async () => {
+test("dispatch sends frozen content to Mailtrap, erases ciphertext and stores message ID", async () => {
   const db = database();
   await outbox.enqueueUserNotification(db, "user-1", "payment-confirmed-2", content);
   const expected = outbox.decryptNotification(db.rows.get("payment-confirmed-2").payload_encrypted);
   const sent = [];
   globalThis.fetch = async (_url, init) => {
     sent.push(init);
-    return json(202, { data: { delivery_id: "delivery-2", status: "queued" } });
+    return json(200, { success: true, message_ids: ["delivery-2"] });
   };
   await outbox.dispatchNotifications();
   assert.equal(sent.length, 1);
-  assert.equal(sent[0].headers["Idempotency-Key"], "payment-confirmed-2");
-  assert.deepEqual(JSON.parse(sent[0].body), expected);
+  assert.equal(sent[0].headers["Idempotency-Key"], undefined);
+  assert.equal(sent[0].headers["Api-Token"], "local-test-token");
+  assert.deepEqual(JSON.parse(sent[0].body).to, [{ email: expected.recipient_email, name: expected.recipient_name }]);
+  assert.match(JSON.parse(sent[0].body).text, /Credited/);
   assert.equal(db.rows.get("payment-confirmed-2").status, "sent");
   assert.equal(db.rows.get("payment-confirmed-2").payload_encrypted, null);
   assert.equal(db.rows.get("payment-confirmed-2").delivery_id, "delivery-2");
   assert.equal(db.rows.get("payment-confirmed-2").attempts, 1);
 });
 
-test("database failure after provider ACK keeps lease recoverable; duplicate ACK finishes same frozen event", async () => {
+test("database failure after provider ACK keeps lease recoverable; retry may deliver twice", async () => {
   const db = database();
   const key = "payment-confirmed-db-outage";
   await outbox.enqueueUserNotification(db, "user-1", key, content);
@@ -154,10 +155,8 @@ test("database failure after provider ACK keeps lease recoverable; duplicate ACK
   const encrypted = row.payload_encrypted;
   const sent = [];
   globalThis.fetch = async (_url, init) => {
-    sent.push({ key: init.headers["Idempotency-Key"], body: init.body });
-    return sent.length === 1
-      ? json(202, { data: { delivery_id: "first-ack" } })
-      : json(200, { data: { duplicate: true, delivery_id: "duplicate-ack" } });
+    sent.push({ body: init.body });
+    return json(200, { success: true, message_ids: [sent.length === 1 ? "first-ack" : "second-ack"] });
   };
   const execute = db.execute.bind(db);
   let outage = true;
@@ -180,10 +179,9 @@ test("database failure after provider ACK keeps lease recoverable; duplicate ACK
   db.advance(90_001);
   await outbox.dispatchNotifications();
   assert.deepEqual(sent, [sent[0], sent[0]]);
-  assert.equal(sent[0].key, key);
   assert.equal(row.attempts, 2);
   assert.equal(row.status, "sent");
-  assert.equal(row.delivery_id, "duplicate-ack");
+  assert.equal(row.delivery_id, "second-ack");
   assert.equal(row.payload_encrypted, null);
   assert.equal(row.lock_token, null);
 });
@@ -193,9 +191,10 @@ test("network error and 503 retry across dispatches with identical bytes/key and
   await outbox.enqueueUserNotification(db, "user-1", "payment-confirmed-3", content);
   const sent = [];
   globalThis.fetch = async (_url, init) => {
-    sent.push({ body: init.body, key: init.headers["Idempotency-Key"] });
+    sent.push({ body: init.body });
     if (sent.length === 1) throw new Error("network down");
-    return sent.length === 2 ? json(503, { error: "unavailable" }) : json(202, {});
+    return sent.length === 2 ? json(503, { error: "unavailable" }) :
+      json(200, { success: true, message_ids: ["accepted"] });
   };
   await outbox.dispatchNotifications();
   const row = db.rows.get("payment-confirmed-3");
@@ -243,7 +242,8 @@ test("CAS lease prevents concurrent claims; expired lease is recoverable and sta
   let release;
   const first = new Promise(resolve => { release = resolve; });
   let calls = 0;
-  globalThis.fetch = async () => ++calls === 1 ? first : json(202, { delivery_id: "recovered" });
+  globalThis.fetch = async () => ++calls === 1 ? first :
+    json(200, { success: true, message_ids: ["recovered"] });
   const firstRun = outbox.dispatchNotifications();
   // Wait for the first HTTP call without waiting for its unresolved response.
   while (!calls) await new Promise(resolve => setImmediate(resolve));
@@ -254,7 +254,7 @@ test("CAS lease prevents concurrent claims; expired lease is recoverable and sta
   assert.equal(calls, 2);
   assert.equal(db.rows.get("lease-1").delivery_id, "recovered");
   assert.equal(db.rows.get("lease-1").attempts, 2);
-  release(json(202, { delivery_id: "stale" }));
+  release(json(200, { success: true, message_ids: ["stale"] }));
   await firstRun;
   assert.equal(db.rows.get("lease-1").delivery_id, "recovered");
   assert.ok(db.calls.some(c => c.sql.includes("SET status='sent'") && c.args[0] === "stale"));
@@ -267,7 +267,7 @@ test("expired pending and expired abandoned leases are erased without sending", 
   });
   db.advance(2000);
   let calls = 0;
-  globalThis.fetch = async () => { calls++; return json(202, {}); };
+  globalThis.fetch = async () => { calls++; return json(200, { success: true, message_ids: ["unexpected"] }); };
   await outbox.dispatchNotifications();
   const row = db.rows.get("expiry-1");
   assert.equal(row.status, "expired");

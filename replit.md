@@ -217,8 +217,8 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - **Préférence utilisateur** : après chaque modification, fournir les commandes Shell pour le build et le push GitHub, sans jamais pousser soi-même. L'utilisateur effectue lui-même Pull, Deploy et Restart dans Cybrancy. Ne pas proposer de push forcé.
 - **Préférence utilisateur** : la base active est MySQL/MariaDB, pas Supabase. Fournir systématiquement le SQL MySQL complet de toute nouvelle migration dans la conversation ; l'utilisateur l'exécute lui-même.
 
-## Notifications BizConnect
+## Notifications Mailtrap
 
-- Voir `BIZCONNECT-MAIL.md` pour l'activation et les migrations MySQL 008/009/010.
+- Voir `MAILTRAP-MAIL.md` pour l'activation et les migrations MySQL 008/009/010.
 - L'inscription nécessite un OTP par e-mail avant la connexion ; les codes et notifications de dépôt sont inscrits dans une file MySQL au sein de la transaction métier. Les appels au fournisseur sont effectués hors requête par un worker.
 - Pour tester l'inscription et l'e-mail sans écrire en production, la preview utilise maintenant l'API locale et une base MariaDB de test isolée. Le workflow « BizPanel: local test MySQL » doit être actif ; les fichiers de données locaux sous `.local/` ne sont pas versionnés. Ne pas réactiver le proxy Plesk sans avertir que toute inscription effectuée dans la preview créerait alors un vrai compte en production.

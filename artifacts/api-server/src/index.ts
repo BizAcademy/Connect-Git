@@ -24,7 +24,7 @@ import { startPendingPaymentScanner } from "./lib/pending-payment-scanner";
 import { startCryptoDepositScanner } from "./lib/crypto-deposit-scanner";
 import { syncOrderInternal, warmServicesCache } from "./routes/smm";
 import { loadUsdRatesAtStartup } from "./routes/admin";
-import { validateBizConnectNotificationConfig } from "./lib/bizconnect-notification-client";
+import { validateMailtrapConfig } from "./lib/mailtrap-notification-client";
 import { startNotificationWorker } from "./lib/notification-outbox";
 
 // PORT detection :
@@ -36,7 +36,7 @@ import { startNotificationWorker } from "./lib/notification-outbox";
 // Fail before opening a port if the optional integration was configured
 // incompletely. A completely absent integration does not prevent BizPanel
 // from serving its unrelated payment and account flows.
-validateBizConnectNotificationConfig();
+validateMailtrapConfig();
 
 const rawPort = process.env["PORT"];
 let port: number;
