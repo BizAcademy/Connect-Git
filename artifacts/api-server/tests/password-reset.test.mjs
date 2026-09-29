@@ -130,7 +130,9 @@ await build({
               globalThis.__resetTest.queued.push({ id, key: "signup-verification-" + id + "-initial", content: { otp_code: "123456", message: "Saisissez le code 123456 pour vérifier votre adresse.", category: "security" } });
             }
             export async function ensureSignupVerification(conn, id) {
-              if (!globalThis.__resetTest.verificationCodes.has(id)) await queueSignupVerification(conn, id);
+              const state = globalThis.__resetTest.verificationCodes.get(id);
+              if (!state) return queueSignupVerification(conn, id);
+              if (state.expires <= Date.now() || state.attempts >= 5) return resendSignupVerification(conn, id);
             }
             export async function verifySignupEmail(_conn, id, code) {
               const state = globalThis.__resetTest.verificationCodes.get(id);
@@ -287,8 +289,9 @@ test("a legacy unverified account receives its first OTP on login, without dupli
   await post("resend-verification", { email: "legacy@example.com" });
   assert.equal(queued.length, 1, "existing code is not resent before cooldown");
   verificationCodes.get(legacyId).sentAt = 0;
-  await post("resend-verification", { email: "legacy@example.com" });
-  assert.equal(queued.length, 2);
+  verificationCodes.get(legacyId).expires = Date.now() - 1;
+  await post("login", { email: "legacy@example.com", password: "legacy-password" });
+  assert.equal(queued.length, 2, "expired code is replaced on login");
   assert.equal((await post("verify-email", { email: "legacy@example.com", code: "654321" })).status, 200);
   assert.equal((await post("login", { email: "legacy@example.com", password: "legacy-password" })).status, 200);
 });

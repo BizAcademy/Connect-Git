@@ -44,6 +44,12 @@ function reset() {
 
 const conn = {
   async execute(sql, args = []) {
+    if (sql.includes("SELECT expires_at <= NOW(3)")) {
+      return [state.row && state.row.user_id === args[0] ? [{
+        expired: Number(new Date(state.row.expires_at).getTime() <= Date.now()),
+        consumed: Number(Boolean(state.row.consumed_at)), attempts: state.row.attempts,
+      }] : []];
+    }
     if (sql.includes("SELECT user_id FROM signup_email_verifications")) {
       return [state.row && state.row.user_id === args[0] ? [{ user_id: state.row.user_id }] : []];
     }
@@ -128,9 +134,10 @@ test("legacy unverified account gets its first code on login or resend, but no d
   await ensureSignupVerification(conn, "legacy-user");
   await resendSignupVerification(conn, "legacy-user");
   assert.equal(state.queued.length, 1, "existing code is kept during cooldown");
+  state.row.expires_at = new Date(0);
   state.row.sent_at = Date.now() - 61_000;
-  await resendSignupVerification(conn, "legacy-user");
-  assert.equal(state.queued.length, 2);
+  await ensureSignupVerification(conn, "legacy-user");
+  assert.equal(state.queued.length, 2, "expired code is replaced on login");
   assert.equal(await verifySignupEmail(conn, "legacy-user", state.queued.at(-1).content.otp_code), true);
 
   reset();
