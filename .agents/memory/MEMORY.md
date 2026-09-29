@@ -11,3 +11,4 @@
 - [Crypto webhook recovery](izipay-webhook-recovery.md) — five consecutive failed deliveries disable the provider endpoint; acknowledge signed events quickly only with durable intent records and independent reconciliation.
 - [Notification delivery policy](notification-delivery-policy.md) — transactional frozen mail payloads; encrypted reset links require draining the queue before planned credential rotation.
 - [Local MariaDB CLI environment precedence](local-mariadb-cli-env.md) — development MYSQL_* env can override socket CLI flags; clear them only for manual test-db commands.
+- [OTP sign-in boundary](otp-sign-in-boundary.md) — verification unlocks auto-login, but an OTP alone must not create an authenticated session.

@@ -79,6 +79,8 @@ const Auth = () => {
   const [forgotSent, setForgotSent] = useState(false);
   const [verifyEmail, setVerifyEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
+  // Retained in memory only until verification; never stored in browser storage.
+  const [verificationPassword, setVerificationPassword] = useState("");
   const [showVerification, setShowVerification] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendAvailableAt, setResendAvailableAt] = useState(0);
@@ -103,6 +105,8 @@ const Auth = () => {
       const data = await response.json().catch(() => ({}));
       if (response.status === 403 && data.code === "EMAIL_VERIFICATION_REQUIRED") {
         setVerifyEmail(loginEmail.trim().toLowerCase());
+        setVerificationPassword(loginPassword);
+        setLoginPassword("");
         setVerificationCode("");
         setShowVerification(true);
         return;
@@ -155,6 +159,9 @@ const Auth = () => {
         return;
       }
       setVerifyEmail(signupEmail.trim().toLowerCase());
+      setVerificationPassword(signupPassword);
+      setSignupPassword("");
+      setConfirmPassword("");
       setVerificationCode("");
       setShowVerification(true);
       setResendAvailableAt(Date.now() + 60_000);
@@ -173,6 +180,7 @@ const Auth = () => {
       return;
     }
     setLoading(true);
+    let emailConfirmed = false;
     try {
       const response = await fetch("/api/auth/verify-email", {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
@@ -180,14 +188,32 @@ const Auth = () => {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) { toast.error(data.error || "Code incorrect ou expiré. Vérifiez le dernier e-mail reçu."); return; }
-      setShowVerification(false);
-      setTab("login");
-      setLoginEmail(verifyEmail);
-      setLoginPassword("");
+      emailConfirmed = true;
       setVerificationCode("");
-      toast.success("Adresse e-mail confirmée. Vous pouvez vous connecter.");
+      const password = verificationPassword;
+      setVerificationPassword("");
+      if (!password) throw new Error("No password available for automatic sign-in");
+      const loginResponse = await fetch("/api/auth/login", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: verifyEmail, password }),
+      });
+      if (!loginResponse.ok) throw new Error("Automatic sign-in failed");
+      const loginData = await loginResponse.json();
+      await refreshProfile();
+      setShowVerification(false);
+      toast.success("Adresse e-mail confirmée. Connexion réussie !");
+      navigate(loginData.user?.isAdmin ? "/admin" : "/dashboard");
     } catch {
-      toast.error("Vérification temporairement indisponible");
+      if (emailConfirmed) {
+        setShowVerification(false);
+        setTab("login");
+        setLoginEmail(verifyEmail);
+        setLoginPassword("");
+        setVerificationPassword("");
+        toast.error("Adresse confirmée, mais connexion automatique indisponible. Connectez-vous avec votre mot de passe.");
+      } else {
+        toast.error("Vérification temporairement indisponible");
+      }
     } finally {
       setLoading(false);
     }
@@ -306,7 +332,7 @@ const Auth = () => {
               {resending ? "Demande en cours…" : resendSeconds > 0 ? `Renvoyer dans ${resendSeconds} s` : "Je n'ai pas reçu le code — Renvoyer"}
           </button>
             <p className="text-xs text-center text-gray-500 mt-1" role="status" data-testid="status-resend-cooldown">Un nouveau code peut être demandé une minute après le précédent.</p>
-          <button type="button" onClick={() => { setShowVerification(false); setTab("login"); setLoginEmail(verifyEmail); }} className="w-full mt-2 py-2 text-sm text-gray-500 hover:text-gray-700">
+          <button type="button" onClick={() => { setShowVerification(false); setVerificationPassword(""); setTab("login"); setLoginEmail(verifyEmail); }} className="w-full mt-2 py-2 text-sm text-gray-500 hover:text-gray-700">
             Retour à la connexion
           </button>
         </div>
