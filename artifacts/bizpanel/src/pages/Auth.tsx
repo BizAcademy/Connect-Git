@@ -81,6 +81,16 @@ const Auth = () => {
   const [verificationCode, setVerificationCode] = useState("");
   const [showVerification, setShowVerification] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resendAvailableAt, setResendAvailableAt] = useState(0);
+  const [resendSeconds, setResendSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!resendAvailableAt) return;
+    const update = () => setResendSeconds(Math.max(0, Math.ceil((resendAvailableAt - Date.now()) / 1000)));
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendAvailableAt]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,6 +157,7 @@ const Auth = () => {
       setVerifyEmail(signupEmail.trim().toLowerCase());
       setVerificationCode("");
       setShowVerification(true);
+      setResendAvailableAt(Date.now() + 60_000);
       toast.success("Compte créé. Vérifiez votre boîte mail pour le code de confirmation.");
     } catch {
       toast.error("Inscription temporairement indisponible");
@@ -168,7 +179,7 @@ const Auth = () => {
         body: JSON.stringify({ email: verifyEmail, code: verificationCode }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) { toast.error(data.error || "Code invalide ou expiré"); return; }
+      if (!response.ok) { toast.error(data.error || "Code incorrect ou expiré. Vérifiez le dernier e-mail reçu."); return; }
       setShowVerification(false);
       setTab("login");
       setLoginEmail(verifyEmail);
@@ -183,6 +194,7 @@ const Auth = () => {
   };
 
   const handleResendVerification = async () => {
+    if (resendSeconds > 0) return;
     setResending(true);
     try {
       const response = await fetch("/api/auth/resend-verification", {
@@ -191,7 +203,8 @@ const Auth = () => {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) { toast.error(data.error || "Renvoi temporairement indisponible"); return; }
-      toast.success(data.message || "Si le compte est en attente, un nouveau code sera envoyé.");
+      setResendAvailableAt(Date.now() + 60_000);
+      toast.success(data.message || "Si le compte est en attente et que le délai d'une minute est écoulé, un code sera envoyé.");
     } catch {
       toast.error("Renvoi temporairement indisponible");
     } finally {
@@ -289,9 +302,10 @@ const Auth = () => {
               {loading ? "Vérification…" : "Confirmer mon adresse e-mail"}
             </button>
           </form>
-          <button type="button" onClick={handleResendVerification} disabled={resending} className="w-full mt-4 py-2 text-sm font-medium text-orange-600 hover:underline disabled:opacity-60">
-            {resending ? "Envoi en cours…" : "Je n'ai pas reçu le code — Renvoyer"}
+            <button type="button" onClick={handleResendVerification} disabled={resending || resendSeconds > 0} className="w-full mt-4 py-2 text-sm font-medium text-orange-600 hover:underline disabled:opacity-60" data-testid="button-resend-verification">
+              {resending ? "Demande en cours…" : resendSeconds > 0 ? `Renvoyer dans ${resendSeconds} s` : "Je n'ai pas reçu le code — Renvoyer"}
           </button>
+            <p className="text-xs text-center text-gray-500 mt-1" role="status" data-testid="status-resend-cooldown">Un nouveau code peut être demandé une minute après le précédent.</p>
           <button type="button" onClick={() => { setShowVerification(false); setTab("login"); setLoginEmail(verifyEmail); }} className="w-full mt-2 py-2 text-sm text-gray-500 hover:text-gray-700">
             Retour à la connexion
           </button>

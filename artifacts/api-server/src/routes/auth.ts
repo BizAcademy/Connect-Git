@@ -145,7 +145,7 @@ router.post("/auth/verify-email", authLimiter, async (req: AuthedRequest, res): 
     const verified = users[0] ? await verifySignupEmail(connection, String(users[0].id), code) : false;
     if (!verified) {
       await connection.commit();
-      res.status(400).json({ error: "Code invalide ou expiré. Demandez-en un nouveau." });
+      res.status(400).json({ error: "Code non reconnu ou expiré. Vérifiez les 6 chiffres du dernier e-mail reçu." });
       return;
     }
     await connection.commit();
@@ -165,7 +165,8 @@ router.post("/auth/resend-verification", authLimiter, async (req: AuthedRequest,
     res.status(400).json({ error: "Adresse email invalide" });
     return;
   }
-  const response = { message: "Si un compte non vérifié existe pour cet email, un code sera envoyé." };
+  // Keep the response identical for unknown, verified and rate-limited accounts.
+  const response = { message: "Si un compte non vérifié existe et que le délai d'une minute depuis le dernier code est écoulé, un nouveau code sera envoyé." };
   let connection: mysql.PoolConnection | undefined;
   try {
     if (!notificationsEnabled()) throw new Error("Notifications unavailable");
