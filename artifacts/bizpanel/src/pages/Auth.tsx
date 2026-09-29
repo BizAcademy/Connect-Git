@@ -228,11 +228,14 @@ const Auth = () => {
         body: JSON.stringify({ email: verifyEmail }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) { toast.error(data.error || "Renvoi temporairement indisponible"); return; }
+      if (!response.ok) {
+        toast.error(data.error || `Renvoi indisponible (erreur serveur ${response.status}).`);
+        return;
+      }
       setResendAvailableAt(Date.now() + 60_000);
       toast.success(data.message || "Si le compte est en attente et que le délai d'une minute est écoulé, un code sera envoyé.");
     } catch {
-      toast.error("Renvoi temporairement indisponible");
+      toast.error("Impossible de joindre le serveur pour renvoyer le code. Réessayez dans un instant.");
     } finally {
       setResending(false);
     }

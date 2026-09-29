@@ -32,7 +32,7 @@ await build({
     },
   }],
 });
-const { queueSignupVerification, resendSignupVerification, verifySignupEmail } = await import(pathToFileURL(outfile).href);
+const { ensureSignupVerification, queueSignupVerification, resendSignupVerification, verifySignupEmail } = await import(pathToFileURL(outfile).href);
 
 function reset() {
   state.row = null;
@@ -44,6 +44,9 @@ function reset() {
 
 const conn = {
   async execute(sql, args = []) {
+    if (sql.includes("SELECT user_id FROM signup_email_verifications")) {
+      return [state.row && state.row.user_id === args[0] ? [{ user_id: state.row.user_id }] : []];
+    }
     if (sql.includes("UPDATE notification_outbox SET status='expired'")) {
       const prefix = args[0].slice(0, -1);
       for (const message of state.outboxRows) {
@@ -116,6 +119,23 @@ test("OTP is six digits; database stores provider-secret HMAC without requiring 
   assert.equal(state.queued.length, 1);
   assert.ok(state.queued[0].key.startsWith("signup-verification-user-1-"));
   assert.ok(state.queued[0].key.length < 192);
+});
+
+test("legacy unverified account gets its first code on login or resend, but no duplicate on login", async () => {
+  reset();
+  await ensureSignupVerification(conn, "legacy-user");
+  assert.equal(state.queued.length, 1);
+  await ensureSignupVerification(conn, "legacy-user");
+  await resendSignupVerification(conn, "legacy-user");
+  assert.equal(state.queued.length, 1, "existing code is kept during cooldown");
+  state.row.sent_at = Date.now() - 61_000;
+  await resendSignupVerification(conn, "legacy-user");
+  assert.equal(state.queued.length, 2);
+  assert.equal(await verifySignupEmail(conn, "legacy-user", state.queued.at(-1).content.otp_code), true);
+
+  reset();
+  await resendSignupVerification(conn, "legacy-user");
+  assert.equal(state.queued.length, 1, "resend initializes a legacy user without an OTP record");
 });
 
 test("wrong attempts, expiry, one-use consumption, verification and session revocation", async () => {

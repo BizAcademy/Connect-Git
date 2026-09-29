@@ -75,9 +75,20 @@ export async function queueSignupVerification(conn: mysql.PoolConnection, userId
   await queueCode(conn, userId, true);
 }
 
+/** Legacy unverified accounts may predate the verification table. Create their first code once. */
+export async function ensureSignupVerification(conn: mysql.PoolConnection, userId: string): Promise<void> {
+  const [rows] = await conn.execute<mysql.RowDataPacket[]>(
+    "SELECT user_id FROM signup_email_verifications WHERE user_id=? FOR UPDATE", [userId],
+  );
+  if (!rows[0]) await queueCode(conn, userId, true);
+}
+
 /** Resends are serialized per user and obey persistent DB-backed rate limits. */
 export async function resendSignupVerification(conn: mysql.PoolConnection, userId: string): Promise<void> {
-  await queueCode(conn, userId, false);
+  const [rows] = await conn.execute<mysql.RowDataPacket[]>(
+    "SELECT user_id FROM signup_email_verifications WHERE user_id=? FOR UPDATE", [userId],
+  );
+  await queueCode(conn, userId, !rows[0]);
 }
 
 /** A valid code is consumed once, and verification/session revocation commit together. */

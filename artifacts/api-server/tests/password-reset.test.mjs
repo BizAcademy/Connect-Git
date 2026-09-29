@@ -85,7 +85,9 @@ globalThis.__resetTest = {
           const token = tokens.get(args[0]);
           return [token ? [token] : []];
         }
-        if (sql.includes("FROM users WHERE id")) return [[...users.values()].filter(user => user.id === args[0]).map(user => ({ id: user.id }))];
+        if (sql.includes("FROM users WHERE id")) return [[...users.values()]
+          .filter(user => user.id === args[0] && (!sql.includes("email_verified_at IS NULL") || !user.email_verified_at))
+          .map(user => ({ id: user.id }))];
         if (sql.includes("UPDATE users SET password_hash")) {
           [...users.values()].find(user => user.id === args[1]).password_hash = args[0];
           return [{ affectedRows: 1 }];
@@ -127,6 +129,9 @@ await build({
               globalThis.__resetTest.verificationCodes.set(id, { code: "123456", attempts: 0, expires: Date.now() + 600000, sentAt: Date.now(), sends: 1 });
               globalThis.__resetTest.queued.push({ id, key: "signup-verification-" + id + "-initial", content: { otp_code: "123456", message: "Saisissez le code 123456 pour vérifier votre adresse.", category: "security" } });
             }
+            export async function ensureSignupVerification(conn, id) {
+              if (!globalThis.__resetTest.verificationCodes.has(id)) await queueSignupVerification(conn, id);
+            }
             export async function verifySignupEmail(_conn, id, code) {
               const state = globalThis.__resetTest.verificationCodes.get(id);
               if (!state || Date.now() >= state.expires || state.attempts >= 5 || state.code !== code) {
@@ -141,7 +146,8 @@ await build({
             export async function resendSignupVerification(_conn, id) {
               const state = globalThis.__resetTest.verificationCodes.get(id);
               const now = Date.now();
-              if (!state || (state.sentAt && now - state.sentAt < 60000) || (state.sentAt && state.sends >= 5)) return;
+              if (!state) return queueSignupVerification(_conn, id);
+              if ((state.sentAt && now - state.sentAt < 60000) || (state.sentAt && state.sends >= 5)) return;
               globalThis.__resetTest.verificationCodes.set(id, { code: "654321", attempts: 0, expires: now + 600000, sentAt: now, sends: (state.sends || 1) + 1 });
               globalThis.__resetTest.queued.push({ id, key: "signup-verification-" + id + "-resend-" + now, content: { otp_code: "654321", message: "Saisissez le code 654321 pour vérifier votre adresse.", category: "security" } });
             }` :
@@ -262,6 +268,38 @@ test("register -> denied login -> verify -> login; verification code cannot repl
   assert.equal(login.status, 200);
   assert.equal(login.body.user.email, "fresh@example.com");
   assert.equal(queries.some(([sql]) => sql.includes("INSERT INTO auth_sessions")), true);
+});
+
+test("a legacy unverified account receives its first OTP on login, without duplicate sends", async () => {
+  reset();
+  const legacyId = crypto.randomUUID();
+  users.set("legacy@example.com", {
+    id: legacyId, email: "legacy@example.com",
+    password_hash: await bcrypt.hash("legacy-password", 10), email_verified_at: null,
+  });
+  const denied = await post("login", { email: "legacy@example.com", password: "legacy-password" });
+  assert.equal(denied.status, 403);
+  assert.equal(denied.body.code, "EMAIL_VERIFICATION_REQUIRED");
+  assert.equal(queued.length, 1);
+  assert.equal(verificationCodes.has(legacyId), true);
+  assert.equal(queries.some(([sql]) => sql.includes("INSERT INTO auth_sessions")), false);
+  await post("login", { email: "legacy@example.com", password: "legacy-password" });
+  await post("resend-verification", { email: "legacy@example.com" });
+  assert.equal(queued.length, 1, "existing code is not resent before cooldown");
+  verificationCodes.get(legacyId).sentAt = 0;
+  await post("resend-verification", { email: "legacy@example.com" });
+  assert.equal(queued.length, 2);
+  assert.equal((await post("verify-email", { email: "legacy@example.com", code: "654321" })).status, 200);
+  assert.equal((await post("login", { email: "legacy@example.com", password: "legacy-password" })).status, 200);
+});
+
+test("resend creates the first OTP for a legacy account even before a fresh login", async () => {
+  reset();
+  users.set("legacy@example.com", { id: crypto.randomUUID(), email: "legacy@example.com", email_verified_at: null });
+  const response = await post("resend-verification", { email: "legacy@example.com" });
+  assert.equal(response.status, 200);
+  assert.deepEqual(response, await post("resend-verification", { email: "missing@example.com" }));
+  assert.equal(queued.length, 1);
 });
 
 test("wrong, expired, and resent verification codes are rejected or rotated", async () => {

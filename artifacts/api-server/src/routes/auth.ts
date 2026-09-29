@@ -8,7 +8,7 @@ import { requireUser, type AuthedRequest } from "../lib/auth";
 import { normalizeCode } from "../lib/referrals";
 import { notificationAction, notificationsEnabled } from "../lib/notification-outbox";
 import { consumeResetToken, queuePasswordReset, reserveResetRequest } from "../lib/password-reset";
-import { queueSignupVerification, resendSignupVerification, verifySignupEmail } from "../lib/signup-verification";
+import { ensureSignupVerification, queueSignupVerification, resendSignupVerification, verifySignupEmail } from "../lib/signup-verification";
 
 const router = Router();
 const COOKIE = "bb_session";
@@ -272,10 +272,29 @@ router.post("/auth/login", authLimiter, async (req: AuthedRequest, res) => {
     const user = rows[0];
     if (!user || !(await bcrypt.compare(password, user.password_hash))) return invalid();
     if (!user.email_verified_at) {
-      return res.status(403).json({
-        code: "EMAIL_VERIFICATION_REQUIRED",
-        error: "Veuillez vérifier votre adresse email avant de vous connecter.",
-      });
+      if (!notificationsEnabled()) {
+        return res.status(503).json({ error: "Envoi du code de vérification indisponible. Réessayez plus tard." });
+      }
+      const connection = await getMysqlPool().getConnection();
+      try {
+        await connection.beginTransaction();
+        const [unverified] = await connection.execute<mysql.RowDataPacket[]>(
+          "SELECT id FROM users WHERE id=? AND email_verified_at IS NULL FOR UPDATE", [user.id],
+        );
+        if (unverified[0]) await ensureSignupVerification(connection, String(user.id));
+        await connection.commit();
+        if (unverified[0]) {
+          return res.status(403).json({
+            code: "EMAIL_VERIFICATION_REQUIRED",
+            error: "Veuillez vérifier votre adresse email avant de vous connecter.",
+          });
+        }
+      } catch (err) {
+        await connection.rollback();
+        throw err;
+      } finally {
+        connection.release();
+      }
     }
     if (bcrypt.getRounds(user.password_hash) < BCRYPT_COST) {
       const replacement = await bcrypt.hash(password, BCRYPT_COST);
