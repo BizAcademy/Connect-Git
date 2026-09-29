@@ -1,3 +1,5 @@
+import { logoAttachment, renderNotificationHtml } from "./notification-email-template";
+
 const ENDPOINT = "https://send.api.mailtrap.io/api/send";
 const DEFAULT_TIMEOUT_MS = 10_000;
 
@@ -137,6 +139,8 @@ export class MailtrapNotificationClient {
           ...(input.recipient_name ? { name: input.recipient_name } : {}) }],
         subject: input.subject,
         text: plainText(input),
+        html: renderNotificationHtml(input),
+        attachments: [logoAttachment],
         ...(input.category ? { category: input.category } : {}),
       }),
       signal,

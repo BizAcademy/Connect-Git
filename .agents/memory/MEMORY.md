@@ -12,3 +12,4 @@
 - [Notification delivery policy](notification-delivery-policy.md) — transactional frozen mail payloads; encrypted reset links require draining the queue before planned credential rotation.
 - [Local MariaDB CLI environment precedence](local-mariadb-cli-env.md) — development MYSQL_* env can override socket CLI flags; clear them only for manual test-db commands.
 - [OTP sign-in boundary](otp-sign-in-boundary.md) — verification unlocks auto-login, but an OTP alone must not create an authenticated session.
+- [Referral recovery after mail failure](referral-mail-recovery.md) — a failed transactional notification can roll back bonus credit after deposit commit; recovery must revisit pending referrals too.

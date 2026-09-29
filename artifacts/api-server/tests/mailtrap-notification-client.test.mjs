@@ -7,6 +7,7 @@ const outfile = fileURLToPath(new URL("../dist/mailtrap-notification-client-test
 await build({
   entryPoints: [fileURLToPath(new URL("../src/lib/mailtrap-notification-client.ts", import.meta.url))],
   outfile, bundle: true, platform: "node", format: "esm", logLevel: "silent",
+  loader: { ".png": "dataurl" },
 });
 const { MailtrapNotificationClient, MailtrapNotificationError, validateMailtrapConfig } =
   await import(pathToFileURL(outfile).href);
@@ -35,7 +36,7 @@ test("disabled integration is optional but incomplete or invalid configuration f
   }), config);
 });
 
-test("sends one real transactional message with text, correct sender and no unsupported fields", async () => {
+test("sends branded HTML and plain text with the actual logo inline", async () => {
   const calls = [];
   const client = new MailtrapNotificationClient({
     config, http: async (url, init) => {
@@ -50,14 +51,46 @@ test("sends one real transactional message with text, correct sender and no unsu
   assert.equal(calls[0].init.headers["Api-Token"], config.apiToken);
   assert.equal(calls[0].init.headers["Idempotency-Key"], undefined);
   const sent = JSON.parse(calls[0].init.body);
-  assert.deepEqual(sent, {
+  assert.deepEqual({
+    ...sent, html: undefined, attachments: undefined,
+  }, {
     from: { email: config.fromEmail, name: config.fromName },
     to: [{ email: notification.recipient_email, name: notification.recipient_name }],
     subject: notification.subject,
     text: "Vérification de votre adresse\n\nSaisissez le code 548392. Il expire dans 10 minutes.\n\nType: Inscription\n\nOuvrir : https://example.com/verify\n\nNe partagez pas ce code.",
     category: "security",
+    html: undefined, attachments: undefined,
   });
+  assert.match(sent.html, /cid:buzz-booster-logo/);
+  assert.match(sent.html, /548392/);
+  assert.match(sent.html, /Sécurité/);
+  assert.equal(sent.attachments.length, 1);
+  assert.equal(sent.attachments[0].disposition, "inline");
+  assert.equal(sent.attachments[0].content_id, "buzz-booster-logo");
+  assert.equal(sent.attachments[0].type, "image/png");
+  assert.ok(Buffer.from(sent.attachments[0].content, "base64").length > 1000);
   assert.equal(sent.otp_code, undefined);
+});
+
+test("escapes user content in both layouts while keeping the logo", async () => {
+  const sent = [];
+  const client = new MailtrapNotificationClient({
+    config, http: async (_url, init) => {
+      sent.push(JSON.parse(init.body));
+      return json(200, { success: true, message_ids: ["mail-123"] });
+    },
+  });
+  await client.sendEmail({ ...notification, message: "<script>alert('x')</script>", otp_code: "548392" });
+  await client.sendEmail({
+    recipient_email: "user@example.com", subject: "Dépôt",
+    title: "Dépôt confirmé", message: "Vous avez reçu <b>100</b> FCFA",
+    details: { "Montant crédité": "100 <script> FCFA" }, category: "Paiement",
+  });
+  for (const request of sent) {
+    assert.match(request.html, /cid:buzz-booster-logo/);
+    assert.doesNotMatch(request.html, /<script>|<b>100<\/b>/);
+  }
+  assert.match(sent[1].html, /100 &lt;script&gt; FCFA/);
 });
 
 test("rejects missing success or invalid message IDs instead of treating HTTP 200 as delivery", async () => {

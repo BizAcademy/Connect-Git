@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 import type { RowDataPacket } from "mysql2/promise";
 import { logger } from "./logger";
 import { getMysqlPool } from "./mysql";
+import { enqueueUserNotification } from "./notification-outbox";
+import { isRateCacheValid, setRateOverrides, toFcfa, toFcfaByCurrency } from "./currency";
 
 export interface ReferralConfig { referrerPct: number; referredPct: number; minDepositFcfa: number; }
 const DEFAULT_CONFIG: ReferralConfig = { referrerPct: 5, referredPct: 2, minDepositFcfa: 2000 };
@@ -21,6 +23,19 @@ export async function getReferralConfig(): Promise<ReferralConfig> {
   configCache = { cfg, at: Date.now() }; return cfg;
 }
 const minor = (n: number) => Math.round(n * 100);
+async function ensureReferralRatesLoaded(): Promise<void> {
+  if (isRateCacheValid()) return;
+  const [rows] = await getMysqlPool().execute<RowDataPacket[]>(
+    "SELECT `key`,`value` FROM settings WHERE `key` LIKE 'currency_rate_%'",
+  );
+  const overrides: Record<string, number> = {};
+  for (const row of rows) {
+    const match = /^currency_rate_([A-Z]{2})$/i.exec(String(row.key));
+    const value = Number(row.value);
+    if (match?.[1] && Number.isFinite(value) && value > 0) overrides[match[1].toUpperCase()] = value;
+  }
+  setRateOverrides(overrides);
+}
 
 /** Claims a qualifying referral and credits both legs in one InnoDB transaction. */
 export async function maybeAwardReferralBonus(referredUserId: string, paymentId: string, amountFcfa: number): Promise<void> {
@@ -51,6 +66,7 @@ export async function maybeAwardReferralBonus(referredUserId: string, paymentId:
       ["referrer", String(r.referrer_user_id), Number(r.referrer_bonus_minor), "referral_referrer_bonus"],
       ["referred", String(r.referred_user_id), Number(r.referred_bonus_minor), "referral_referred_bonus"],
     ];
+    let referrerCredited = false;
     for (const [leg, userId, amount, type] of legs) {
       const flag = `${leg}_credited_at`;
       if (r[flag]) continue;
@@ -63,17 +79,75 @@ export async function maybeAwardReferralBonus(referredUserId: string, paymentId:
         await conn.execute("UPDATE profiles SET balance_minor=?, affiliate_earnings_minor=affiliate_earnings_minor + ? WHERE user_id=?", [after, leg === "referrer" ? amount : 0, userId]);
         await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason,actor_user_id) VALUES (?,?,?,?,NULL)", [userId, before, after, type]);
         balances.set(userId, after);
+        if (leg === "referrer") referrerCredited = true;
       }
       await conn.execute(`UPDATE referrals SET ${flag}=COALESCE(${flag},NOW()) WHERE id=?`, [r.id]);
     }
     await conn.execute("UPDATE referrals SET status='paid',paid_at=COALESCE(paid_at,NOW()) WHERE id=? AND referrer_credited_at IS NOT NULL AND referred_credited_at IS NOT NULL", [r.id]);
+    if (referrerCredited) {
+      const creditedFcfa = Number(r.referrer_bonus_minor) / 100;
+      await enqueueUserNotification(conn, String(r.referrer_user_id), `referral-commission-${r.id}`, {
+        subject: "Commission de parrainage créditée — BUZZ BOOSTER",
+        title: "Votre commission de parrainage est créditée",
+        category: "Transaction",
+        message: "Votre portefeuille a été crédité de votre commission de parrainage.",
+        details: {
+          "Montant crédité": `${creditedFcfa.toLocaleString("fr-FR")} FCFA`,
+          "Référence": String(r.id),
+        },
+      });
+    }
     await conn.commit();
   } catch (err) { await conn.rollback(); logger.error({ err, referredUserId, paymentId }, "referral bonus failed"); }
   finally { conn.release(); }
 }
 export async function recoverStuckReferrals(limit = 10): Promise<void> {
-  const [rows] = await getMysqlPool().execute<RowDataPacket[]>("SELECT referred_user_id,qualifying_payment_id,qualifying_amount_minor FROM referrals WHERE status='processing' ORDER BY created_at ASC LIMIT ?", [limit]);
-  for (const row of rows) await maybeAwardReferralBonus(String(row.referred_user_id), String(row.qualifying_payment_id), Number(row.qualifying_amount_minor) / 100);
+  const db = getMysqlPool();
+  const [processingRows] = await db.execute<RowDataPacket[]>(
+    "SELECT referred_user_id,qualifying_payment_id,qualifying_amount_minor FROM referrals WHERE status='processing' ORDER BY created_at ASC LIMIT ?",
+    [limit],
+  );
+  for (const row of processingRows) {
+    await maybeAwardReferralBonus(String(row.referred_user_id), String(row.qualifying_payment_id), Number(row.qualifying_amount_minor) / 100);
+  }
+
+  const remaining = Math.max(0, limit - processingRows.length);
+  if (!remaining) return;
+  const [pendingRows] = await db.execute<RowDataPacket[]>(
+    `SELECT r.id,r.referred_user_id FROM referrals r
+     WHERE r.status='pending' AND EXISTS (
+       SELECT 1 FROM payments p WHERE p.user_id=r.referred_user_id
+       AND p.status='completed' AND p.credited_at IS NOT NULL
+       AND p.provider='afribapay'
+     ) ORDER BY r.created_at ASC`,
+  );
+  if (!pendingRows.length) return;
+
+  const cfg = await getReferralConfig();
+  await ensureReferralRatesLoaded();
+  let recovered = 0;
+  for (const referral of pendingRows) {
+    if (recovered >= remaining) break;
+    const [payments] = await db.execute<RowDataPacket[]>(
+      `SELECT id,amount_minor,currency,country FROM payments
+       WHERE user_id=? AND status='completed' AND credited_at IS NOT NULL
+       AND provider='afribapay' ORDER BY credited_at ASC`,
+      [referral.referred_user_id],
+    );
+    for (const payment of payments) {
+      const localAmount = Number(payment.amount_minor) / 100;
+      if (!Number.isFinite(localAmount) || localAmount <= 0) continue;
+      const amountFcfa = payment.currency
+        ? toFcfaByCurrency(localAmount, String(payment.currency))
+        : toFcfa(localAmount, payment.country == null ? null : String(payment.country));
+      if (amountFcfa < cfg.minDepositFcfa) continue;
+      await maybeAwardReferralBonus(
+        String(referral.referred_user_id), String(payment.id), amountFcfa,
+      );
+      recovered++;
+      break;
+    }
+  }
 }
 const CODE_RE = /^[A-Z0-9]{4,20}$/;
 export function normalizeCode(raw: unknown): string | null { const code = typeof raw === "string" ? raw.trim().toUpperCase() : ""; return CODE_RE.test(code) ? code : null; }

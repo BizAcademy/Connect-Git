@@ -26,6 +26,7 @@ async function buildAll() {
     platform: "node",
     bundle: true,
     format: "esm",
+    loader: { ".png": "dataurl" },
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",

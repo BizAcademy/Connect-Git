@@ -8,6 +8,7 @@ import { enrichServices, defaultPriceFcfaForCurrency, loadPricing, getUsdRates, 
 import { callProvider, getProvider, parseProviderId, ALL_PROVIDER_IDS, loadProviderConfig, type ProviderId } from "../lib/smm-providers";
 import { FINAL_REFUND_STATUSES, mapProviderStatus, isSupportedServiceType } from "../lib/smm-status";
 import { appendEarning, estimateGainFromRevenue } from "../lib/earnings";
+import { enqueueUserNotification } from "../lib/notification-outbox";
 
 const router: IRouter = Router();
 const CACHE_TTL_MS = 30 * 60_000;
@@ -57,7 +58,17 @@ export async function refundOrderAtomic(orderId: string, requestedMinor?: number
   try {
     await conn.beginTransaction();
     const [orders] = await conn.execute<RowDataPacket[]>("SELECT * FROM orders WHERE id = ? FOR UPDATE", [orderId]);
-    const order = orders[0]; if (!order || order.refunded_at) { await conn.rollback(); return { refunded: false, amountMinor: 0 }; }
+    const order = orders[0];
+    if (!order) { await conn.rollback(); return { refunded: false, amountMinor: 0 }; }
+    if (order.refunded_at) {
+      await conn.execute(
+        `UPDATE notification_outbox SET status='expired',payload_encrypted=NULL,
+         lock_token=NULL,locked_until=NULL,finished_at=NOW(3)
+         WHERE event_key=? AND status='pending'`,
+        [`smm-order-completed-${order.id}`],
+      );
+      await conn.commit(); return { refunded: false, amountMinor: 0 };
+    }
     const amount = Math.max(0, Math.min(Math.round(requestedMinor ?? Number(order.charge_minor)), Number(order.charge_minor)));
     if (!amount) { await conn.rollback(); return { refunded: false, amountMinor: 0 }; }
     const wallet = order.wallet_charged === "usd" ? "usd" : "local";
@@ -67,6 +78,12 @@ export async function refundOrderAtomic(orderId: string, requestedMinor?: number
     const before = Number(profiles[0][column]), after = before + amount, now = new Date();
     await conn.execute(`UPDATE profiles SET ${column} = ? WHERE user_id = ?`, [after, order.user_id]);
     await conn.execute("UPDATE orders SET refunded_at = ?, refunded_amount_minor = ? WHERE id = ?", [now, amount, order.id]);
+    await conn.execute(
+      `UPDATE notification_outbox SET status='expired',payload_encrypted=NULL,
+       lock_token=NULL,locked_until=NULL,finished_at=NOW(3)
+       WHERE event_key=? AND status='pending'`,
+      [`smm-order-completed-${order.id}`],
+    );
     await conn.execute("INSERT INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?,?,'refund','order',?)", [crypto.randomUUID(), order.user_id, amount, after, order.currency, order.id]);
     await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason) VALUES (?,?,?,'smm_order_refund')", [order.user_id, before, after]);
     await conn.commit(); return { refunded: true, amountMinor: amount, newBalanceMinor: after, userId: String(order.user_id) };
@@ -247,10 +264,39 @@ export async function syncOrderInternal(opts:{localOrderId?:string;externalId?:s
     if(status==="partial"&&!opts.forceRefund)amount=remains&&Number(order.quantity)>0?Math.round(remains/Number(order.quantity)*amount):0;
     if(amount>0)refund=await refundOrderAtomic(String(order.id),amount);
   }
-  // Persist completed status only after its durable earning has been accepted,
-  // and refund statuses only after the wallet credit has succeeded.
-  if(status!==order.status)await getMysqlPool().execute("UPDATE orders SET status=? WHERE id=?",[status,order.id]);
-  return{ok:true,status,previous_status:String(order.status),refunded:refund.refunded,refunded_amount:refund.refunded?minorToFcfa(refund.amountMinor):undefined,user_id:String(order.user_id),provider};
+  // Serialize status transitions and queue the completion email in the same
+  // transaction. The order lock makes the transition test race-safe, while
+  // the stable outbox key also protects against a later status regression and
+  // another completion sync.
+  const conn=await getMysqlPool().getConnection();
+  let previousStatus=String(order.status);
+  try{
+    await conn.beginTransaction();
+    const [currentRows]=await conn.execute<RowDataPacket[]>("SELECT * FROM orders WHERE id=? FOR UPDATE",[order.id]);
+    const current=currentRows[0];
+    if(!current)throw new Error("Commande introuvable pendant la synchronisation");
+    previousStatus=String(current.status);
+    // A concurrent refund wins over a stale provider completion response.
+    if(current.refunded_at&&status==="completed")status=previousStatus;
+    if(previousStatus!==status){
+      await conn.execute("UPDATE orders SET status=? WHERE id=?",[status,order.id]);
+      if(status==="completed"&&previousStatus!=="completed"&&!current.refunded_at){
+        const orderReference=String(current.external_order_id??current.provider_order_id??current.id);
+        await enqueueUserNotification(conn,String(current.user_id),`smm-order-completed-${current.id}`,{
+          subject:"Votre commande SMM est terminée",
+          title:"Commande terminée",
+          message:"Votre commande a été réalisée avec succès.",
+          category:"transactionnel",
+          details:{
+            Service:String(current.service_name??current.service_id??"Service SMM"),
+            "Référence de commande":orderReference,
+          },
+        });
+      }
+    }
+    await conn.commit();
+  }catch(err){await conn.rollback();throw err;}finally{conn.release();}
+  return{ok:true,status,previous_status:previousStatus,refunded:refund.refunded,refunded_amount:refund.refunded?minorToFcfa(refund.amountMinor):undefined,user_id:String(order.user_id),provider};
 }
 function pquery(q:unknown):ProviderId|null{const n=Number(q);return n===1||n===3||n===4||n===5?n as ProviderId:null;}
 async function syncRoute(req:AuthedRequest,res:Response, admin:boolean, refund=false){const external=String(req.params["externalId"]||""),provider=pquery(req.query["provider"]);if(!external||!provider)return res.status(400).json({error:!external?"externalId requis":"provider requis (1, 3, 4 ou 5)"});const r=await syncOrderInternal({externalId:external,providerId:provider,expectedUserId:admin?undefined:req.userId,forceRefund:refund});return r.ok?res.json(r):res.status(r.status).json({error:r.error});}

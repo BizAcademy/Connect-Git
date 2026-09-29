@@ -7,6 +7,7 @@ const outfile = fileURLToPath(new URL("../dist/notification-outbox-test.mjs", im
 await build({
   entryPoints: [fileURLToPath(new URL("../src/lib/notification-outbox.ts", import.meta.url))],
   outfile, bundle: true, platform: "node", format: "esm", logLevel: "silent",
+  loader: { ".png": "dataurl" },
   plugins: [{
     name: "no-live-db-or-logger",
     setup(b) {

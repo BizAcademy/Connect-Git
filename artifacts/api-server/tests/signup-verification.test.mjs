@@ -17,6 +17,7 @@ const outfile = path.join(dir, "signup-verification.mjs");
 await build({
   entryPoints: [fileURLToPath(new URL("../src/lib/signup-verification.ts", import.meta.url))],
   outfile, bundle: true, platform: "node", format: "esm", packages: "external", logLevel: "silent",
+  loader: { ".png": "dataurl" },
   plugins: [{
     name: "mock-notification-outbox",
     setup(build) {
