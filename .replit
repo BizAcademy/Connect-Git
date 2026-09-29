@@ -44,6 +44,7 @@ timeoutMs = 20000
 [userenv.shared]
 SMM_PANEL_5_API_URL = "https://exosupplier.com/api/v2"
 AFRIBAPAY_API_BASE = "https://api.afribapay.com"
+MAILTRAP_FROM_EMAIL = "info@buzzbooster.site"
 
 [userenv.development]
 # Isolated account/email test preview; local-only MariaDB, not production.
