@@ -86,6 +86,11 @@ const Auth = () => {
   const [resendAvailableAt, setResendAvailableAt] = useState(0);
   const [resendSeconds, setResendSeconds] = useState(0);
 
+  const startResendCountdown = () => {
+    setResendSeconds(60);
+    setResendAvailableAt(Date.now() + 60_000);
+  };
+
   useEffect(() => {
     if (!resendAvailableAt) return;
     const update = () => setResendSeconds(Math.max(0, Math.ceil((resendAvailableAt - Date.now()) / 1000)));
@@ -108,6 +113,7 @@ const Auth = () => {
         setVerificationPassword(loginPassword);
         setLoginPassword("");
         setVerificationCode("");
+        startResendCountdown();
         setShowVerification(true);
         return;
       }
@@ -164,7 +170,7 @@ const Auth = () => {
       setConfirmPassword("");
       setVerificationCode("");
       setShowVerification(true);
-      setResendAvailableAt(Date.now() + 60_000);
+      startResendCountdown();
       toast.success("Compte créé. Vérifiez votre boîte mail pour le code de confirmation.");
     } catch {
       toast.error("Inscription temporairement indisponible");
@@ -232,7 +238,7 @@ const Auth = () => {
         toast.error(data.error || `Renvoi indisponible (erreur serveur ${response.status}).`);
         return;
       }
-      setResendAvailableAt(Date.now() + 60_000);
+      startResendCountdown();
       toast.success(data.message || "Si le compte est en attente et que le délai d'une minute est écoulé, un code sera envoyé.");
     } catch {
       toast.error("Impossible de joindre le serveur pour renvoyer le code. Réessayez dans un instant.");
@@ -331,10 +337,12 @@ const Auth = () => {
               {loading ? "Vérification…" : "Confirmer mon adresse e-mail"}
             </button>
           </form>
-            <button type="button" onClick={handleResendVerification} disabled={resending || resendSeconds > 0} className="w-full mt-4 py-2 text-sm font-medium text-orange-600 hover:underline disabled:opacity-60" data-testid="button-resend-verification">
-              {resending ? "Demande en cours…" : resendSeconds > 0 ? `Renvoyer dans ${resendSeconds} s` : "Je n'ai pas reçu le code — Renvoyer"}
+          <button type="button" onClick={handleResendVerification} disabled={resending || resendSeconds > 0} className="w-full mt-4 py-2 text-sm font-medium text-orange-600 hover:underline disabled:opacity-60" data-testid="button-resend-verification">
+            {resending ? "Demande en cours…" : resendSeconds > 0
+              ? `Renvoyer le code dans ${String(Math.floor(resendSeconds / 60)).padStart(2, "0")}:${String(resendSeconds % 60).padStart(2, "0")}`
+              : "Je n'ai pas reçu le code — Renvoyer"}
           </button>
-            <p className="text-xs text-center text-gray-500 mt-1" role="status" data-testid="status-resend-cooldown">Un nouveau code peut être demandé une minute après le précédent.</p>
+          <p className="text-xs text-center text-gray-500 mt-1" role="status" data-testid="status-resend-cooldown">Un nouveau code peut être demandé une minute après le précédent.</p>
           <button type="button" onClick={() => { setShowVerification(false); setVerificationPassword(""); setTab("login"); setLoginEmail(verifyEmail); }} className="w-full mt-2 py-2 text-sm text-gray-500 hover:text-gray-700">
             Retour à la connexion
           </button>
