@@ -24,6 +24,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /email-banner:
+    get:
+      operationId: getEmailBanner
+      tags: [notifications]
+      summary: Read the public email availability banner
+      responses:
+        "200":
+          description: Banner state and message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailBannerResponse"
+  /admin/email-banner:
+    get:
+      operationId: getAdminEmailBanner
+      tags: [notifications]
+      summary: Read email banner settings
+      responses:
+        "200":
+          description: Current banner settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailBannerResponse"
+    put:
+      operationId: updateAdminEmailBanner
+      tags: [notifications]
+      summary: Update email banner settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailBannerUpdate"
+      responses:
+        "200":
+          description: Updated banner settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailBannerResponse"
+        "400":
+          description: Invalid banner settings
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
 components:
   schemas:
     HealthStatus:
@@ -33,4 +80,28 @@ components:
           type: string
       required:
         - status
+    EmailBanner:
+      type: object
+      properties:
+        active:
+          type: boolean
+        message:
+          type: string
+          maxLength: 500
+      required: [active, message]
+    EmailBannerResponse:
+      type: object
+      properties:
+        emailBanner:
+          $ref: "#/components/schemas/EmailBanner"
+      required: [emailBanner]
+    EmailBannerUpdate:
+      type: object
+      properties:
+        active:
+          type: boolean
+        message:
+          type: string
+          maxLength: 500
+      required: [active, message]
 

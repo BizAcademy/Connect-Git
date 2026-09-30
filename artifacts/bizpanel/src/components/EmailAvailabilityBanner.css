@@ -1,0 +1,76 @@
+.email-availability-banner {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 14px;
+  overflow: hidden;
+  color: #fff;
+  background: #173247;
+  border-bottom: 1px solid #e97832;
+}
+
+.email-availability-banner__icon {
+  flex: 0 0 auto;
+  color: #ffb56f;
+}
+
+.email-availability-banner__viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.email-availability-banner__track {
+  display: flex;
+  width: max-content;
+  animation: email-availability-scroll 34s linear infinite;
+}
+
+.email-availability-banner__copy {
+  flex: 0 0 auto;
+  padding-inline: 28px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.email-availability-banner:hover .email-availability-banner__track,
+.email-availability-banner:focus-within .email-availability-banner__track {
+  animation-play-state: paused;
+}
+
+.email-availability-banner--preview {
+  min-height: 44px;
+  border-radius: 10px;
+}
+
+@keyframes email-availability-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .email-availability-banner__track {
+    width: 100%;
+    justify-content: center;
+    animation: none;
+  }
+
+  .email-availability-banner__copy {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    padding-inline: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .email-availability-banner__copy + .email-availability-banner__copy {
+    display: none;
+  }
+}

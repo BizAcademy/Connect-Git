@@ -6,6 +6,7 @@ import { PageMessages } from "@/lib/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { EmailAvailabilityBanner } from "@/components/EmailAvailabilityBanner";
 
 import Index from "./pages/Index";
 
@@ -41,6 +42,7 @@ const App = () => (
           Aperçu relié à Plesk : vos connexions et actions utilisent les données réelles du site.
         </div>
       )}
+      <EmailAvailabilityBanner />
 
       <BrowserRouter>
         <AuthProvider>

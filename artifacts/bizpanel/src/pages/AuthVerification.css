@@ -35,6 +35,14 @@
 .email-verification__title { font-size: clamp(25px, 6vw, 31px); line-height: 1.18; font-weight: 700; letter-spacing: -.04em; margin: 0 0 12px; }
 .email-verification__intro { color: var(--verify-muted); font-size: 14px; line-height: 1.65; margin: 0; }
 .email-verification__intro strong { color: var(--verify-ink); font-weight: 650; overflow-wrap: anywhere; }
+.email-verification__spam-note {
+  display: flex; align-items: flex-start; gap: 9px;
+  margin: 18px 0 0; padding: 12px 14px;
+  border: 1px solid #f0d9aa; border-radius: 12px;
+  background: #fff8e9; color: #71511d; text-align: left;
+}
+.email-verification__spam-note svg { flex: 0 0 auto; margin-top: 1px; color: #b7791f; }
+.email-verification__spam-note p { margin: 0; font-size: 11px; line-height: 1.55; font-weight: 700; }
 .email-verification__form { margin-top: 28px; }
 .email-verification__label { display: block; font-size: 12px; font-weight: 700; color: var(--verify-ink); text-align: left; }
 .email-verification__stage {

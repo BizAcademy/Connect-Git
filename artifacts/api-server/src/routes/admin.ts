@@ -37,6 +37,9 @@ type AdvertisementSegment = { text: string; color: string };
 const COLOR_RE = /^#[0-9a-f]{6}$/i;
 const LEGACY_IMAGE_RE = /^data:image\/(?:png|jpe?g|webp);base64,[a-z0-9+/=\r\n]+$/i;
 const CONTACT_RE = /^(?:https?:\/\/|mailto:|tel:)/i;
+const EMAIL_BANNER_SETTING_KEY = "email_availability_banner";
+const DEFAULT_EMAIL_BANNER_MESSAGE =
+  "Les e-mails sont disponibles : vous recevez un code de confirmation après votre inscription ou une connexion à un compte non vérifié, un code après une demande de réinitialisation du mot de passe, une facture PDF après confirmation d’un dépôt et un suivi après la livraison d’une commande.";
 
 let advertisementTableReady: Promise<void> | null = null;
 async function ensureAdvertisementTable(): Promise<void> {
@@ -218,6 +221,57 @@ async function setting(key: string): Promise<string | null> {
 async function putSetting(key: string, value: string, by?: string) {
   await getMysqlPool().execute("INSERT INTO settings (`key`,`value`,updated_by) VALUES (?,?,?) ON DUPLICATE KEY UPDATE `value`=VALUES(`value`),updated_by=VALUES(updated_by)", [key, value, by ?? null]);
 }
+
+type EmailBannerSettings = { active: boolean; message: string };
+async function readEmailBanner(): Promise<EmailBannerSettings> {
+  const raw = await setting(EMAIL_BANNER_SETTING_KEY);
+  if (raw === null) return { active: true, message: DEFAULT_EMAIL_BANNER_MESSAGE };
+  const saved: unknown = JSON.parse(raw);
+  if (!saved || typeof saved !== "object") throw new Error("Invalid email banner settings");
+  const value = saved as Record<string, unknown>;
+  if (typeof value.active !== "boolean" || typeof value.message !== "string" || value.message.length > 500) {
+    throw new Error("Invalid email banner settings");
+  }
+  return { active: value.active, message: value.message };
+}
+
+router.get("/email-banner", async (req, res): Promise<void> => {
+  try {
+    res.json({ emailBanner: await readEmailBanner() });
+  } catch (err) {
+    req.log.error({ err }, "email banner read");
+    res.status(500).json({ error: "Bannière e-mail indisponible" });
+  }
+});
+
+router.get("/admin/email-banner", requireUser, requireAdmin, async (req, res): Promise<void> => {
+  try {
+    res.json({ emailBanner: await readEmailBanner() });
+  } catch (err) {
+    req.log.error({ err }, "admin email banner read");
+    res.status(500).json({ error: "Paramètres de la bannière indisponibles" });
+  }
+});
+
+router.put("/admin/email-banner", requireUser, requireAdmin, async (req, res): Promise<void> => {
+  const body = req.body || {};
+  if (typeof body.active !== "boolean" || typeof body.message !== "string" || body.message.length > 500) {
+    res.status(400).json({ error: "Le texte de la bannière doit contenir au maximum 500 caractères." });
+    return;
+  }
+  const settings: EmailBannerSettings = { active: body.active, message: body.message.trim() };
+  if (settings.active && !settings.message) {
+    res.status(400).json({ error: "Saisissez un texte avant d’activer la bannière." });
+    return;
+  }
+  try {
+    await putSetting(EMAIL_BANNER_SETTING_KEY, JSON.stringify(settings), (req as AuthedRequest).userId);
+    res.json({ emailBanner: settings });
+  } catch (err) {
+    req.log.error({ err }, "admin email banner save");
+    res.status(500).json({ error: "Enregistrement de la bannière impossible" });
+  }
+});
 
 router.get("/admin/earnings", requireUser, requireAdmin, async (req, res) => {
   try {

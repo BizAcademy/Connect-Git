@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { getAuthHeaders, authedFetch } from "@/lib/authFetch";
 import { invalidateSiteContentCache } from "@/hooks/useSiteContent";
@@ -18,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Users, ShoppingCart, CreditCard, Settings, Layers,
+  Users, ShoppingCart, CreditCard, Settings, Layers, Mail,
   FileText, LogOut, Shield, Edit2, Save, X, ToggleLeft, ToggleRight, Megaphone,
   Plus, Trash2, RefreshCw, Image, Type, Link, CheckCircle2, Search, RotateCcw, ChevronDown, Loader2,
 } from "lucide-react";
@@ -70,6 +71,14 @@ import {
   type ThreadSummary,
 } from "@/lib/support";
 import { SupportImage } from "@/components/SupportImage";
+import { EmailAvailabilityTicker } from "@/components/EmailAvailabilityBanner";
+import {
+  ADMIN_EMAIL_BANNER_QUERY_KEY,
+  EMAIL_BANNER_QUERY_KEY,
+  fetchAdminEmailBanner,
+  saveAdminEmailBanner,
+  type EmailBannerSettings,
+} from "@/lib/emailBanner";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer, Legend,
@@ -187,6 +196,106 @@ const AdminAdvertisement = () => {
         </div>
         <Button onClick={save} disabled={saving}>{saving ? <Loader2 size={15} className="mr-2 animate-spin" /> : <Save size={15} className="mr-2" />}{form.active ? "Enregistrer et publier" : "Enregistrer"}</Button>
         <p className="text-xs text-muted-foreground">Le bouton de fermeture reste verrouillé pendant 5 secondes. Le texte est rendu sans HTML afin d'empêcher toute injection XSS.</p>
+      </CardContent>
+    </Card>
+  );
+};
+
+const AdminEmailBanner = () => {
+  const queryClient = useQueryClient();
+  const bannerQuery = useQuery({
+    queryKey: ADMIN_EMAIL_BANNER_QUERY_KEY,
+    queryFn: fetchAdminEmailBanner,
+    retry: false,
+  });
+  const [form, setForm] = useState<EmailBannerSettings>({ active: true, message: "" });
+
+  useEffect(() => {
+    if (bannerQuery.data) setForm(bannerQuery.data);
+  }, [bannerQuery.data]);
+
+  const saveMutation = useMutation({
+    mutationFn: saveAdminEmailBanner,
+    onSuccess: async settings => {
+      setForm(settings);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ADMIN_EMAIL_BANNER_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: EMAIL_BANNER_QUERY_KEY }),
+      ]);
+      toast.success(settings.active ? "Bannière e-mail publiée" : "Bannière e-mail désactivée");
+    },
+    onError: error => toast.error(error.message),
+  });
+
+  if (bannerQuery.isLoading) return <LogoLoader />;
+  if (bannerQuery.isError) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-between gap-4 py-5">
+          <p className="text-sm text-destructive">Impossible de charger les paramètres de la bannière.</p>
+          <Button variant="outline" onClick={() => void bannerQuery.refetch()}>Réessayer</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const previewText = form.message.trim() || "Votre message défilera ici.";
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Mail size={18} />Bannière d’information e-mail</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <p className="text-sm text-muted-foreground">
+          Cette bannière défile au-dessus du site sans recouvrir les pages. Elle indique les actions qui déclenchent l’envoi d’un e-mail.
+        </p>
+        <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
+          <div>
+            <p className="font-semibold">Publication</p>
+            <p className="text-xs text-muted-foreground">Désactivez-la ou réactivez-la sans perdre le texte enregistré.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={form.active}
+            aria-label={form.active ? "Désactiver la bannière e-mail" : "Activer la bannière e-mail"}
+            data-testid="switch-email-banner"
+            onClick={() => setForm(current => ({ ...current, active: !current.active }))}
+          >
+            {form.active
+              ? <ToggleRight size={36} className="text-green-600" />
+              : <ToggleLeft size={36} className="text-muted-foreground" />}
+          </button>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email-banner-message">Contenu de la bannière</Label>
+          <Textarea
+            id="email-banner-message"
+            data-testid="input-email-banner-message"
+            value={form.message}
+            maxLength={500}
+            rows={5}
+            onChange={event => setForm(current => ({ ...current, message: event.target.value }))}
+            placeholder="Indiquez après quelles actions les utilisateurs recevront un e-mail."
+          />
+          <p className="text-xs text-muted-foreground">{form.message.length}/500 caractères</p>
+        </div>
+        <div className="space-y-2">
+          <Label>Aperçu</Label>
+          <EmailAvailabilityTicker message={previewText} preview />
+        </div>
+        <Button
+          onClick={() => saveMutation.mutate({ ...form, message: form.message.trim() })}
+          disabled={saveMutation.isPending || (form.active && !form.message.trim())}
+        >
+          {saveMutation.isPending
+            ? <Loader2 size={15} className="mr-2 animate-spin" />
+            : <Save size={15} className="mr-2" />}
+          {form.active ? "Enregistrer et publier" : "Enregistrer"}
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          Le texte reste en place si la bannière est désactivée. Les autres visiteurs verront les changements au plus tard après une minute.
+        </p>
       </CardContent>
     </Card>
   );
@@ -5397,6 +5506,7 @@ export default function Admin() {
             <TabsTrigger value="services" className="flex flex-col gap-1 py-2 text-xs"><Layers size={15} />Tarifs</TabsTrigger>
             <TabsTrigger value="content" className="flex flex-col gap-1 py-2 text-xs"><FileText size={15} />Contenu</TabsTrigger>
             <TabsTrigger value="advertisement" className="flex flex-col gap-1 py-2 text-xs"><Megaphone size={15} />Publicité</TabsTrigger>
+            <TabsTrigger value="email-banner" className="flex flex-col gap-1 py-2 text-xs"><Mail size={15} />Bannière e-mail</TabsTrigger>
             <TabsTrigger value="currencies" className="flex flex-col gap-1 py-2 text-xs"><Wallet size={15} />Devises</TabsTrigger>
             <TabsTrigger value="logos" className="flex flex-col gap-1 py-2 text-xs"><Image size={15} />Logos</TabsTrigger>
             <TabsTrigger value="settings" className="flex flex-col gap-1 py-2 text-xs"><Settings size={15} />Paramètres</TabsTrigger>
@@ -5416,6 +5526,7 @@ export default function Admin() {
           <TabsContent value="services"><AdminServicesTab /></TabsContent>
           <TabsContent value="content"><AdminContent /></TabsContent>
           <TabsContent value="advertisement"><AdminAdvertisement /></TabsContent>
+          <TabsContent value="email-banner"><AdminEmailBanner /></TabsContent>
           <TabsContent value="currencies"><AdminCurrencies /></TabsContent>
           <TabsContent value="logos">
             <AdminOperatorLogos />

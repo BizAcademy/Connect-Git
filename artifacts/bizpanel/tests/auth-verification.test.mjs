@@ -67,7 +67,9 @@ async function scenario({ failAutomaticLogin, failFirstCode = false, transientVe
       calls.push({ route, body, confirmedAtRequest: confirmed });
       let status = 200;
       let response = {};
-      if (route === "/api/auth/me") {
+      if (route === "/api/email-banner") {
+        response = { emailBanner: { active: true, message: "Les e-mails sont disponibles pour les utilisateurs." } };
+      } else if (route === "/api/auth/me") {
         if (authenticated) response = { user };
         else { status = 401; response = { error: "Non connecté" }; }
       } else if (route === "/api/auth/login") {
@@ -101,11 +103,20 @@ async function scenario({ failAutomaticLogin, failFirstCode = false, transientVe
     });
     await page.goto(`${origin}/auth`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector('input[placeholder="Email"]');
+    await page.waitForSelector('[data-testid="email-availability-banner"]');
+    assert.equal(
+      await page.$eval(".email-availability-banner__copy", element => element.textContent),
+      "Les e-mails sont disponibles pour les utilisateurs.",
+    );
     await page.type('input[placeholder="Email"]', email);
     await page.type('input[placeholder="Mot de passe"]', password);
     await page.locator('form:has(input[placeholder="Email"]) button[type="submit"]').click();
     await page.waitForSelector("#email-otp");
     assert.equal(page.url(), `${origin}/auth`, "the OTP screen must not navigate to the dashboard");
+    assert.match(
+      await page.$eval('[data-testid="notice-email-spam"]', element => element.textContent),
+      /SI VOUS NE RECEVEZ PAS DE MAILS DANS LA BOÎTE PRINCIPALE.*SPAM OU POURRIEL/,
+    );
     assert.equal(authenticated, false, "denied login has no session");
     assert.equal(loginAttempts, 1);
     assert.ok(calls.some(call => call.route === "/api/auth/me"), "auth provider checks for a session");

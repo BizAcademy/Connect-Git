@@ -372,6 +372,10 @@ const Auth = () => {
             Nous avons envoyé un code à <strong data-testid="text-verification-email">{verifyEmail}</strong>.<br />
             Saisissez-le ci-dessous. Il expire après 10 minutes.
           </p>
+          <div className="email-verification__spam-note" role="note" data-testid="notice-email-spam">
+            <Mail size={16} aria-hidden="true" />
+            <p>SI VOUS NE RECEVEZ PAS DE MAILS DANS LA BOÎTE PRINCIPALE, VEUILLEZ CONSULTER VOTRE DOSSIER SPAM OU POURRIEL.</p>
+          </div>
           <form onSubmit={handleVerifyEmail} className="email-verification__form">
             <label htmlFor="email-otp" className="email-verification__label">Code de confirmation à 6 chiffres</label>
             <div className="email-verification__stage" data-phase={verificationPhase}>
