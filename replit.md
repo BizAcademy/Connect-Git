@@ -214,7 +214,7 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 
 ## User Preferences
 
-- **Déploiement production BUZZ BOOSTER** : la production est hébergée sur Cybrancy/Plesk, pas dans Replit Publishing. Avant tout push GitHub demandé par l'utilisateur, exécuter `bash build-for-plesk.sh` et inclure le `dist-deploy/` généré : Plesk sert ces fichiers précompilés et ne construit pas les sources. L'utilisateur effectue Pull → Deploy Now → Restart dans Plesk. Après sa confirmation, comparer les références JS/CSS du site public à `dist-deploy/api-server/public/index.html` et vérifier `/api/healthz`; ne jamais déclarer les changements en ligne sur la seule base du push. Si la production n'est pas vérifiable depuis l'environnement, le dire clairement. Ne jamais forcer un push.
+- **Déploiement production BUZZ BOOSTER** : la production est hébergée sur Cybrancy/Plesk, pas dans Replit Publishing. Avant tout push GitHub demandé par l'utilisateur qui inclut du code applicatif, exécuter `bash build-for-plesk.sh` et inclure le `dist-deploy/` généré : Plesk sert ces fichiers précompilés et ne construit pas les sources. L'utilisateur effectue Pull → Deploy Now → Restart dans Plesk. Après sa confirmation, comparer les références JS/CSS du site public à `dist-deploy/api-server/public/index.html` et vérifier `/api/healthz`; ne jamais déclarer les changements en ligne sur la seule base du push. Si la production n'est pas vérifiable depuis l'environnement, le dire clairement. Ne jamais forcer un push.
 - **Préférence utilisateur** : la base active est MySQL/MariaDB, pas Supabase. Fournir systématiquement le SQL MySQL complet de toute nouvelle migration dans la conversation ; l'utilisateur l'exécute lui-même.
 
 ## Notifications Mailtrap
