@@ -57,7 +57,7 @@ test("sends branded HTML and plain text with the actual logo inline", async () =
     from: { email: config.fromEmail, name: config.fromName },
     to: [{ email: notification.recipient_email, name: notification.recipient_name }],
     subject: notification.subject,
-    text: "Vérification de votre adresse\n\nSaisissez le code 548392. Il expire dans 10 minutes.\n\nType: Inscription\n\nOuvrir : https://example.com/verify\n\nNe partagez pas ce code.",
+    text: "Vérification de votre adresse\n\nSaisissez le code 548392. Il expire dans 10 minutes.\n\nCode de vérification : 548392\n\nType: Inscription\n\nOuvrir : https://example.com/verify\n\nNe partagez pas ce code.",
     category: "security",
     html: undefined, attachments: undefined,
   });

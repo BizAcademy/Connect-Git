@@ -11,7 +11,6 @@ import bcrypt from "bcryptjs";
 const dir = await mkdtemp(fileURLToPath(new URL("../node_modules/password-reset-test-", import.meta.url)));
 after(() => rm(dir, { recursive: true, force: true }));
 let enabled = true;
-let appUrl = true;
 let clock = new Date("2026-01-01T00:00:00Z");
 let users = new Map();
 let profiles = new Map();
@@ -20,6 +19,7 @@ let limits = new Map();
 let sessions = new Set();
 let queued = [];
 let queries = [];
+let transactionEvents = [];
 let verificationCodes = new Map();
 const userId = crypto.randomUUID();
 
@@ -27,14 +27,14 @@ function reset() {
   clock = new Date("2026-01-01T00:00:00Z");
   users = new Map([["someone@example.com", { id: userId, email: "someone@example.com", password_hash: "old", email_verified_at: new Date() }]]);
   profiles = new Map();
-  tokens = new Map(); limits = new Map(); sessions = new Set([userId]); queued = []; queries = [];
+  tokens = new Map(); limits = new Map(); sessions = new Set([userId]); queued = []; queries = []; transactionEvents = [];
   verificationCodes = new Map();
   if (globalThis.__resetTest) {
     globalThis.__resetTest.users = users;
     globalThis.__resetTest.verificationCodes = verificationCodes;
     globalThis.__resetTest.queued = queued;
   }
-  enabled = true; appUrl = true;
+  enabled = true;
 }
 reset();
 globalThis.__resetTest = {
@@ -43,13 +43,15 @@ globalThis.__resetTest = {
       const connection = await globalThis.__resetTest.pool.getConnection();
       return connection.execute(sql, args);
     },
-    getConnection: async () => ({
-      beginTransaction: async () => {},
-      commit: async () => {},
-      rollback: async () => {},
+    getConnection: async () => {
+      const connectionId = crypto.randomUUID();
+      return {
+      beginTransaction: async () => { transactionEvents.push(["begin", connectionId]); },
+      commit: async () => { transactionEvents.push(["commit", connectionId]); },
+      rollback: async () => { transactionEvents.push(["rollback", connectionId]); },
       release: () => {},
       execute: async (sql, args = []) => {
-        queries.push([sql, args]);
+        queries.push([sql, args, connectionId]);
         if (sql.includes("INSERT IGNORE INTO password_reset_throttles")) {
           if (!limits.has(args[0])) limits.set(args[0], 0);
           return [{ affectedRows: 1 }];
@@ -61,6 +63,13 @@ globalThis.__resetTest = {
           limits.set(args[1], clock.getTime() + args[0] / 1000);
           return [{ affectedRows: 1 }];
         }
+        if (sql.includes("UPDATE password_reset_tokens SET used_at=NOW(3) WHERE user_id=? AND reset_type='otp'")) {
+          for (const token of tokens.values()) {
+            if (token.user_id === args[0] && token.reset_type === "otp" && token.used_at === null) token.used_at = clock;
+          }
+          return [{ affectedRows: 1 }];
+        }
+        if (sql.includes("UPDATE notification_outbox")) return [{ affectedRows: 1 }];
         if (sql.includes("INSERT INTO users")) {
           users.set(args[1], { id: args[0], email: args[1], password_hash: args[2], email_verified_at: null });
           return [{ affectedRows: 1 }];
@@ -78,12 +87,30 @@ globalThis.__resetTest = {
           return [user ? [{ id: user.id, email_verified_at: user.email_verified_at }] : []];
         }
         if (sql.includes("INSERT INTO password_reset_tokens")) {
-          tokens.set(args[2], { id: args[0], user_id: args[1], expires_at: args[3], used_at: null });
+          tokens.set(args[2], {
+            id: args[0], user_id: args[1], token_hash: args[2], expires_at: args[3], used_at: null, attempts: 0,
+            reset_type: args[4] || "otp",
+          });
+          return [{ affectedRows: 1 }];
+        }
+        if (sql.includes("FROM password_reset_tokens") && sql.includes("reset_type='otp'")) {
+          const token = [...tokens.values()].filter(row =>
+            row.user_id === args[0] && row.reset_type === "otp" && row.used_at === null)
+            .sort((a, b) => new Date(b.created_at || b.expires_at) - new Date(a.created_at || a.expires_at))[0];
+          return [token ? [{ ...token }] : []];
+        }
+        if (sql.includes("SET attempts=attempts+1")) {
+          const token = [...tokens.values()].find(row => row.id === args[0]);
+          if (token && token.attempts < args[1]) token.attempts++;
           return [{ affectedRows: 1 }];
         }
         if (sql.includes("FROM password_reset_tokens WHERE token_hash")) {
           const token = tokens.get(args[0]);
-          return [token ? [token] : []];
+          return [token?.reset_type === "legacy" ? [{ ...token }] : []];
+        }
+        if (sql.includes("FROM users WHERE email")) {
+          const user = users.get(args[0]);
+          return [user ? [{ id: user.id, email_verified_at: user.email_verified_at }] : []];
         }
         if (sql.includes("FROM users WHERE id")) return [[...users.values()]
           .filter(user => user.id === args[0] && (!sql.includes("email_verified_at IS NULL") || !user.email_verified_at))
@@ -102,13 +129,13 @@ globalThis.__resetTest = {
         if (sql.includes("INSERT INTO user_roles") || sql.includes("INSERT INTO auth_sessions")) return [{ affectedRows: 1 }];
         throw new Error(`Unexpected SQL: ${sql}`);
       },
-    }),
+    };
+    },
   },
-  enabled: () => enabled,
+      enabled: () => enabled,
   users,
   verificationCodes,
   queued,
-  action: (p) => { if (!appUrl) throw new Error("No trusted app URL"); return `https://app.example${p}`; },
   enqueue: async (_conn, id, key, content) => { queued.push({ id, key, content }); },
 };
 const outfile = path.join(dir, "auth.mjs");
@@ -119,11 +146,12 @@ await build({
     name: "mock-auth-dependencies",
     setup(build) {
       build.onResolve({ filter: /^\.\.\/lib\/(mysql|auth|referrals|notification-outbox|signup-verification)$/ }, ({ path }) => ({ path, namespace: "mock" }));
-      build.onResolve({ filter: /^\.\/notification-outbox$/ }, ({ path }) => ({ path, namespace: "mock" }));
+      build.onResolve({ filter: /^\.\/(notification-outbox|mailtrap-notification-client)$/ }, ({ path }) => ({ path, namespace: "mock" }));
       build.onLoad({ filter: /.*/, namespace: "mock" }, ({ path }) => ({
         contents: path.endsWith("/mysql") ? "export const getMysqlPool = () => globalThis.__resetTest.pool;" :
           path.endsWith("/auth") ? "export const requireUser = (_req,_res,next) => next();" :
           path.endsWith("/referrals") ? "export const normalizeCode = x => x;" :
+          path.endsWith("/mailtrap-notification-client") ? "export const validateMailtrapConfig = () => ({ apiToken: 'test-trusted-server-secret', fromEmail: 'test@example.com', fromName: 'Tests' });" :
           path.endsWith("/signup-verification") ? `
             export async function queueSignupVerification(_conn, id) {
               globalThis.__resetTest.verificationCodes.set(id, { code: "123456", attempts: 0, expires: Date.now() + 600000, sentAt: Date.now(), sends: 1 });
@@ -182,7 +210,7 @@ async function post(endpoint, body, ip) {
   return { status: response.status, body: await response.json(), setCookie: response.headers.get("set-cookie") };
 }
 
-test("unknown and known requests have identical public responses; only known account queues a hashed token", async () => {
+test("unknown and known requests have identical responses; known account queues only a hashed OTP", async () => {
   reset();
   const unknown = await post("forgot-password", { email: "missing@example.com" });
   clock = new Date(clock.getTime() + 61_000);
@@ -190,13 +218,14 @@ test("unknown and known requests have identical public responses; only known acc
   assert.deepEqual(known, unknown);
   assert.equal(queued.length, 1);
   assert.match(queued[0].key, /^password-reset-/);
-  const link = queued[0].content.action_url;
-  assert.match(link, /^https:\/\/app\.example\/reset-password#token=/);
-  assert.equal(new URL(link).search, "");
-  const raw = new URLSearchParams(new URL(link).hash.slice(1)).get("token");
-  assert.equal(raw.length, 43);
-  assert.ok(tokens.has(crypto.createHash("sha256").update(raw).digest("hex")));
-  assert.ok(!queries.some(([sql, args]) => sql.includes("password_reset_tokens") && args.includes(raw)));
+  const code = queued[0].content.otp_code;
+  assert.match(code, /^\d{6}$/);
+  assert.equal(queued[0].content.action_url, undefined);
+  assert.ok(new Date(queued[0].content.expires_at).getTime() - Date.now() <= 10 * 60_000);
+  const digest = crypto.createHmac("sha256", "test-trusted-server-secret")
+    .update("bizpanel-password-reset-otp-v1\0").update(userId).update("\0").update(code).digest("hex");
+  assert.ok(tokens.has(digest));
+  assert.ok(!queries.some(([sql, args]) => sql.includes("password_reset_tokens") && args.includes(code)));
 });
 
 test("distributed IPs cannot flood one account; same IP cannot flood different accounts", async () => {
@@ -215,16 +244,14 @@ test("distributed IPs cannot flood one account; same IP cannot flood different a
   assert.equal(queued.length, 2);
 });
 
-test("missing delivery config or trusted URL fails closed for both account states", async () => {
-  for (const key of ["enabled", "url"]) {
-    reset();
-    if (key === "enabled") enabled = false; else appUrl = false;
-    const unknown = await post("forgot-password", { email: "missing@example.com" });
-    const known = await post("forgot-password", { email: "someone@example.com" });
-    assert.deepEqual(unknown, known);
-    assert.equal(known.status, 503);
-    assert.equal(queued.length, 0);
-  }
+test("missing delivery configuration fails closed without account enumeration", async () => {
+  reset();
+  enabled = false;
+  const unknown = await post("forgot-password", { email: "missing@example.com" });
+  const known = await post("forgot-password", { email: "someone@example.com" });
+  assert.deepEqual(unknown, known);
+  assert.equal(known.status, 503);
+  assert.equal(queued.length, 0);
 });
 
 test("registration creates an unverified account and queues one OTP event without a session", async () => {
@@ -270,6 +297,29 @@ test("register -> denied login -> verify -> login; verification code cannot repl
   assert.equal(login.status, 200);
   assert.equal(login.body.user.email, "fresh@example.com");
   assert.equal(queries.some(([sql]) => sql.includes("INSERT INTO auth_sessions")), true);
+});
+
+test("login verifies under the user lock and commits rehash plus session on the same transaction", async () => {
+  reset();
+  const verifiedHash = await bcrypt.hash("old-password", 10);
+  users.get("someone@example.com").password_hash = verifiedHash;
+  const login = await post("login", { email: "someone@example.com", password: "old-password" });
+  assert.equal(login.status, 200);
+
+  const lookupIndex = queries.findIndex(([sql]) =>
+    sql.includes("FROM users u LEFT JOIN profiles p") && sql.includes("FOR UPDATE"));
+  const rehashIndex = queries.findIndex(([sql]) =>
+    sql.includes("UPDATE users SET password_hash") && sql.includes("AND password_hash = ?"));
+  const sessionIndex = queries.findIndex(([sql]) => sql.includes("INSERT INTO auth_sessions"));
+  assert.ok(lookupIndex >= 0, "login query takes a user-row lock");
+  assert.ok(rehashIndex > lookupIndex, "opportunistic rehash follows the locked password verification");
+  assert.ok(sessionIndex > lookupIndex, "session insert follows the locked password verification");
+  assert.equal(queries[rehashIndex][1][2], verifiedHash, "rehash is conditional on the exact hash that was verified");
+
+  const connectionId = queries[lookupIndex][2];
+  assert.equal(queries[rehashIndex][2], connectionId);
+  assert.equal(queries[sessionIndex][2], connectionId);
+  assert.deepEqual(transactionEvents.filter(([, id]) => id === connectionId).map(([event]) => event), ["begin", "commit"]);
 });
 
 test("a legacy unverified account receives its first OTP on login, without duplicate sends", async () => {
@@ -334,23 +384,82 @@ test("wrong, expired, and resent verification codes are rejected or rotated", as
   assert.equal((await post("verify-email", { email: "fresh@example.com", code: "654321" })).status, 200);
 });
 
-test("valid reset rotates password, consumes all tokens, revokes sessions; replay/expiry fails", async () => {
+test("OTP reset consumes once, changes the password, and revokes all sessions", async () => {
   reset();
   await post("forgot-password", { email: "someone@example.com" });
-  const raw = new URLSearchParams(new URL(queued[0].content.action_url).hash.slice(1)).get("token");
-  const ok = await post("reset-password", { token: raw, password: "new-password-123" });
-  assert.equal(ok.status, 200);
+  const code = queued[0].content.otp_code;
+  const ok = await post("reset-password", { email: "someone@example.com", code, password: "new-password-123" });
+  assert.equal(ok.status, 200, JSON.stringify(ok));
   assert.ok(await bcrypt.compare("new-password-123", users.get("someone@example.com").password_hash));
   assert.equal(sessions.size, 0);
   assert.equal([...tokens.values()][0].used_at !== null, true);
-  assert.equal((await post("reset-password", { token: raw, password: "another-password" })).status, 400);
-  assert.equal((await post("reset-password", { token: "invalid", password: "another-password" })).status, 400);
-  assert.equal((await post("reset-password", { token: raw, password: "é".repeat(40) })).status, 400);
+  assert.equal((await post("reset-password", { email: "someone@example.com", code, password: "another-password" })).status, 400);
+  assert.equal((await post("reset-password", { email: "someone@example.com", code: "12x456", password: "another-password" })).status, 400);
+  assert.equal((await post("reset-password", { email: "someone@example.com", code, password: "é".repeat(37) })).status, 400);
+});
+
+test("OTP reset errors do not reveal whether an email exists", async () => {
+  reset();
+  const absentAccount = await post("reset-password", {
+    email: "missing@example.com", code: "123456", password: "new-password",
+  });
+  const absentCode = await post("reset-password", { email: "someone@example.com", password: "new-password" });
+  const wrongCode = await post("reset-password", {
+    email: "someone@example.com", code: "123456", password: "new-password",
+  });
+  assert.deepEqual(absentAccount.body, wrongCode.body);
+  assert.equal(absentAccount.status, wrongCode.status);
+  assert.equal(absentCode.status, 400);
+});
+
+test("wrong OTP attempts commit per token and stop after five; expired codes are rejected", async () => {
   reset();
   await post("forgot-password", { email: "someone@example.com" });
-  clock = new Date(clock.getTime() + 31 * 60_000);
-  const expired = new URLSearchParams(new URL(queued[0].content.action_url).hash.slice(1)).get("token");
-  // Date.now is wall clock in production; the fixture's expiry must be in the past.
+  const token = [...tokens.values()][0];
+  for (let attempt = 0; attempt < 5; attempt++) {
+    assert.equal((await post("reset-password", { email: "someone@example.com", code: "999999", password: "new-password" })).status, 400);
+  }
+  assert.equal(token.attempts, 5);
+  assert.equal((await post("reset-password", {
+    email: "someone@example.com", code: queued[0].content.otp_code, password: "new-password",
+  })).status, 400);
+  assert.equal(token.attempts, 5);
+
+  reset();
+  await post("forgot-password", { email: "someone@example.com" });
   [...tokens.values()][0].expires_at = new Date(0);
-  assert.equal((await post("reset-password", { token: expired, password: "another-password" })).status, 400);
+  assert.equal((await post("reset-password", {
+    email: "someone@example.com", code: queued[0].content.otp_code, password: "new-password",
+  })).status, 400);
+});
+
+test("a resend invalidates the previous OTP and allows only the newest code", async () => {
+  reset();
+  await post("forgot-password", { email: "someone@example.com" });
+  const oldCode = queued[0].content.otp_code;
+  clock = new Date(clock.getTime() + 5 * 60_000);
+  await post("forgot-password", { email: "someone@example.com" });
+  assert.equal(queued.length, 2);
+  assert.notEqual(queued[1].content.otp_code, oldCode);
+  assert.ok([...tokens.values()][0].used_at !== null);
+  assert.equal((await post("reset-password", {
+    email: "someone@example.com", code: oldCode, password: "new-password",
+  })).status, 400);
+  const newest = await post("reset-password", {
+    email: "someone@example.com", code: queued[1].content.otp_code, password: "new-password",
+  });
+  assert.equal(newest.status, 200, JSON.stringify(newest));
+});
+
+test("legacy links issued before OTP migration remain consumable once", async () => {
+  reset();
+  const raw = crypto.randomBytes(32).toString("base64url");
+  const hash = crypto.createHash("sha256").update(raw).digest("hex");
+  tokens.set(hash, {
+    id: crypto.randomUUID(), user_id: userId, expires_at: new Date(Date.now() + 30 * 60_000),
+    used_at: null, attempts: 0, reset_type: "legacy",
+  });
+  assert.equal((await post("reset-password", { token: raw, password: "new-password" })).status, 200);
+  assert.ok(await bcrypt.compare("new-password", users.get("someone@example.com").password_hash));
+  assert.equal((await post("reset-password", { token: raw, password: "another-password" })).status, 400);
 });

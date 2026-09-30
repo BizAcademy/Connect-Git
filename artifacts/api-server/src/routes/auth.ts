@@ -6,8 +6,8 @@ import crypto from "node:crypto";
 import { getMysqlPool } from "../lib/mysql";
 import { requireUser, type AuthedRequest } from "../lib/auth";
 import { normalizeCode } from "../lib/referrals";
-import { notificationAction, notificationsEnabled } from "../lib/notification-outbox";
-import { consumeResetToken, queuePasswordReset, reserveResetRequest } from "../lib/password-reset";
+import { notificationsEnabled } from "../lib/notification-outbox";
+import { consumeResetCode, consumeResetToken, queuePasswordReset, reserveResetRequest } from "../lib/password-reset";
 import { ensureSignupVerification, queueSignupVerification, resendSignupVerification, verifySignupEmail } from "../lib/signup-verification";
 
 const router = Router();
@@ -189,7 +189,7 @@ router.post("/auth/resend-verification", authLimiter, async (req: AuthedRequest,
   }
 });
 
-const forgotResponse = { message: "Si un compte existe pour cet email, vous recevrez un lien de réinitialisation." };
+const forgotResponse = { message: "Si un compte existe pour cet email, vous recevrez un code de réinitialisation." };
 const forgotUnavailable = { error: "Service de récupération temporairement indisponible" };
 
 router.post("/auth/forgot-password", async (req: AuthedRequest, res): Promise<void> => {
@@ -201,7 +201,6 @@ router.post("/auth/forgot-password", async (req: AuthedRequest, res): Promise<vo
   // Check before looking up the user: misconfiguration must never reveal account existence.
   try {
     if (!notificationsEnabled()) throw new Error("Notifications unavailable");
-    notificationAction("/reset-password");
   } catch {
     res.status(503).json(forgotUnavailable);
     return;
@@ -213,7 +212,7 @@ router.post("/auth/forgot-password", async (req: AuthedRequest, res): Promise<vo
     const allowed = await reserveResetRequest(connection, email, req.ip || "unknown");
     if (allowed) {
       const [users] = await connection.execute<mysql.RowDataPacket[]>(
-        "SELECT id FROM users WHERE email = ? AND disabled_at IS NULL LIMIT 1", [email],
+        "SELECT id FROM users WHERE email = ? AND disabled_at IS NULL LIMIT 1 FOR UPDATE", [email],
       );
       if (users[0]) await queuePasswordReset(connection, String(users[0].id));
     }
@@ -230,21 +229,36 @@ router.post("/auth/forgot-password", async (req: AuthedRequest, res): Promise<vo
 });
 
 router.post("/auth/reset-password", authLimiter, async (req: AuthedRequest, res): Promise<void> => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const code = typeof req.body?.code === "string" ? req.body.code : "";
   const token = req.body?.token;
   const password = req.body?.password;
-  if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token) ||
-      typeof password !== "string" || password.length < 8 || Buffer.byteLength(password, "utf8") > 72) {
-    res.status(400).json({ error: "Lien ou mot de passe invalide (8 caractères minimum)" });
+  const passwordBytes = typeof password === "string" ? Buffer.byteLength(password, "utf8") : 0;
+  const validPassword = typeof password === "string" && password.length >= 8 && passwordBytes <= 72;
+  const legacyRequest = typeof token === "string";
+  if (!validPassword || (legacyRequest
+    ? !/^[A-Za-z0-9_-]{43}$/.test(token)
+    : !emailPattern.test(email) || email.length > 254 || !/^\d{6}$/.test(code))) {
+    res.status(400).json({ error: "Code ou mot de passe invalide." });
     return;
   }
   let connection: mysql.PoolConnection | undefined;
   try {
     connection = await getMysqlPool().getConnection();
     await connection.beginTransaction();
-    const valid = await consumeResetToken(connection, token, password);
+    let valid: boolean;
+    if (legacyRequest) {
+      valid = await consumeResetToken(connection, token, password);
+    } else {
+      const [users] = await connection.execute<mysql.RowDataPacket[]>(
+        "SELECT id FROM users WHERE email=? AND disabled_at IS NULL FOR UPDATE", [email],
+      );
+      valid = users[0] ? await consumeResetCode(connection, String(users[0].id), code, password) : false;
+    }
     if (!valid) {
-      await connection.rollback();
-      res.status(400).json({ error: "Ce lien est invalide ou a expiré. Demandez-en un nouveau." });
+      // Wrong-code counters must commit, but all failures remain indistinguishable.
+      await connection.commit();
+      res.status(400).json({ error: "Code ou lien invalide ou expiré." });
       return;
     }
     await connection.commit();
@@ -263,49 +277,50 @@ router.post("/auth/login", authLimiter, async (req: AuthedRequest, res) => {
   const password = typeof req.body?.password === "string" ? req.body.password : "";
   const invalid = () => res.status(401).json({ error: "Email ou mot de passe incorrect" });
   if (!email || !password) return invalid();
+  let connection: mysql.PoolConnection | undefined;
   try {
-    const [rows] = await getMysqlPool().execute<mysql.RowDataPacket[]>(
+    connection = await getMysqlPool().getConnection();
+    await connection.beginTransaction();
+    const [rows] = await connection.execute<mysql.RowDataPacket[]>(
       `SELECT p.*, u.id, u.email, u.password_hash, u.email_verified_at,
         EXISTS(SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role = 'admin') AS is_admin
-       FROM users u LEFT JOIN profiles p ON p.user_id = u.id WHERE u.email = ? AND u.disabled_at IS NULL LIMIT 1`, [email],
+       FROM users u LEFT JOIN profiles p ON p.user_id = u.id
+       WHERE u.email = ? AND u.disabled_at IS NULL LIMIT 1 FOR UPDATE`, [email],
     );
     const user = rows[0];
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) return invalid();
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+      await connection.rollback();
+      return invalid();
+    }
     if (!user.email_verified_at) {
       if (!notificationsEnabled()) {
+        await connection.rollback();
         return res.status(503).json({ error: "Envoi du code de vérification indisponible. Réessayez plus tard." });
       }
-      const connection = await getMysqlPool().getConnection();
-      try {
-        await connection.beginTransaction();
-        const [unverified] = await connection.execute<mysql.RowDataPacket[]>(
-          "SELECT id FROM users WHERE id=? AND email_verified_at IS NULL FOR UPDATE", [user.id],
-        );
-        if (unverified[0]) await ensureSignupVerification(connection, String(user.id));
-        await connection.commit();
-        if (unverified[0]) {
-          return res.status(403).json({
-            code: "EMAIL_VERIFICATION_REQUIRED",
-            error: "Veuillez vérifier votre adresse email avant de vous connecter.",
-          });
-        }
-      } catch (err) {
-        await connection.rollback();
-        throw err;
-      } finally {
-        connection.release();
-      }
+      await ensureSignupVerification(connection, String(user.id));
+      await connection.commit();
+      return res.status(403).json({
+        code: "EMAIL_VERIFICATION_REQUIRED",
+        error: "Veuillez vérifier votre adresse email avant de vous connecter.",
+      });
     }
     if (bcrypt.getRounds(user.password_hash) < BCRYPT_COST) {
       const replacement = await bcrypt.hash(password, BCRYPT_COST);
-      await getMysqlPool().execute("UPDATE users SET password_hash = ? WHERE id = ?", [replacement, user.id]);
+      await connection.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ? AND password_hash = ?",
+        [replacement, user.id, user.password_hash],
+      );
     }
-    const sessionToken = await createSessionToken(user.id, req);
+    const sessionToken = await createSessionToken(user.id, req, connection);
+    await connection.commit();
     setSessionCookie(res, sessionToken);
     return res.json({ user: publicUser(user) });
   } catch (err) {
+    if (connection) await connection.rollback();
     req.log.error({ err }, "login failed");
     return res.status(503).json({ error: "Connexion temporairement indisponible" });
+  } finally {
+    connection?.release();
   }
 });
 

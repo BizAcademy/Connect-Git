@@ -76,7 +76,6 @@ const Auth = () => {
 
   const [forgotEmail, setForgotEmail] = useState("");
   const [showForgot, setShowForgot] = useState(false);
-  const [forgotSent, setForgotSent] = useState(false);
   const [verifyEmail, setVerifyEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   // Retained in memory only until verification; never stored in browser storage.
@@ -257,7 +256,7 @@ const Auth = () => {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) { toast.error(data.error || "Service temporairement indisponible"); return; }
-      setForgotSent(true);
+      navigate("/reset-password", { state: { email: forgotEmail.trim().toLowerCase() } });
     } catch {
       toast.error("Service temporairement indisponible");
     } finally {
@@ -274,7 +273,7 @@ const Auth = () => {
             <img src={logoImg} alt="BUZZ BOOSTER" className="h-12 w-auto mx-auto rounded-md" />
             <p className="text-gray-500 text-sm mt-3">Récupération du mot de passe</p>
           </div>
-          {forgotSent && <p role="status" className="text-sm text-green-700 mb-4">Si un compte existe pour cet email, vous recevrez un lien de réinitialisation.</p>}
+          <p className="text-sm text-gray-500 mb-4">Saisissez votre adresse e-mail. Si un compte existe, un code de réinitialisation vous sera envoyé.</p>
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
@@ -292,11 +291,11 @@ const Auth = () => {
               disabled={loading}
               className="w-full py-3 rounded-xl bg-gray-900 text-white font-semibold text-sm hover:bg-gray-800 transition disabled:opacity-60"
             >
-              {loading ? "Envoi en cours…" : "Envoyer le lien"}
+              {loading ? "Envoi en cours…" : "Envoyer le code"}
             </button>
             <button
               type="button"
-              onClick={() => { setShowForgot(false); setForgotSent(false); }}
+              onClick={() => setShowForgot(false)}
               className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 transition"
             >
               ← Retour à la connexion

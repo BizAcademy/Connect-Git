@@ -79,6 +79,7 @@ function plainText(input: NotificationEmail): string {
     input.title,
     input.subtitle,
     input.message,
+    input.otp_code && `Code de vérification : ${input.otp_code}`,
     input.details && Object.entries(input.details).map(([key, value]) => `${key}: ${value}`).join("\n"),
     input.action_url && `${input.action_label || "Ouvrir le lien"} : ${input.action_url}`,
     input.note,

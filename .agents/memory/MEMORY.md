@@ -13,3 +13,4 @@
 - [Local MariaDB CLI environment precedence](local-mariadb-cli-env.md) — development MYSQL_* env can override socket CLI flags; clear them only for manual test-db commands.
 - [OTP sign-in boundary](otp-sign-in-boundary.md) — verification unlocks auto-login, but an OTP alone must not create an authenticated session.
 - [Referral recovery after mail failure](referral-mail-recovery.md) — a failed transactional notification can roll back bonus credit after deposit commit; recovery must revisit pending referrals too.
+- [Password reset and login race](password-reset-login-race.md) — session revocation only blocks old-password access when login verification and session creation serialize with the reset.
