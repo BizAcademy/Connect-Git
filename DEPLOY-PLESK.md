@@ -16,9 +16,10 @@ bash push-to-github.sh "description de vos changements"
 
 1. Aller dans **Git** → cliquer **Pull** (pour récupérer les nouveaux fichiers depuis GitHub)
 2. Cliquer **Deploy Now**
-3. Cliquer **Restart** (ou redémarrer l'app Node.js)
+3. Pour la mise à jour de la vérification par e-mail : dans l'application Node.js dont l'Application Root est `dist-deploy/api-server`, lancer une fois le script npm **`migrate:account-emails`**. Il applique uniquement les migrations 008 à 011 et ignore celles déjà enregistrées ; ne pas relancer toute la série d'anciennes migrations à la place.
+4. Cliquer **Restart** (ou redémarrer l'app Node.js)
 
-**C'est tout. Aucun build n'est nécessaire dans Plesk.**
+**Aucun build n'est nécessaire dans Plesk.** La migration ajoute les tables d'e-mails et de vérification. Les comptes existants sans code de vérification sont considérés comme déjà vérifiés ; les nouveaux comptes doivent saisir le code reçu.
 
 ---
 
@@ -38,6 +39,14 @@ bash push-to-github.sh "description de vos changements"
 ```
 NODE_ENV=production
 PORT=<port assigné par Plesk>
+MYSQL_HOST=<hôte MySQL>
+MYSQL_PORT=3306
+MYSQL_DATABASE=<base MySQL>
+MYSQL_USER=<utilisateur MySQL>
+MYSQL_PASSWORD=<mot de passe MySQL>
+MAILTRAP_API_TOKEN=<jeton Mailtrap>
+MAILTRAP_FROM_EMAIL=<adresse d'envoi validée>
+NOTIFICATION_APP_URL=https://buzzbooster.site
 SUPABASE_SERVICE_ROLE_KEY=<votre clé>
 AFRIBAPAY_API_USER=<votre clé>
 AFRIBAPAY_API_KEY=<votre clé>
@@ -50,6 +59,8 @@ SMM_PANEL_5_API_URL=<url>
 SMM_PANEL_5_API_KEY=<clé>
 SESSION_SECRET=<secret aléatoire long>
 ```
+
+Pour l'inscription avec code, l'application Node.js vérifie précisément `MAILTRAP_API_TOKEN` et `MAILTRAP_FROM_EMAIL`. Les variables `BCA_NOTIFICATION_*` ne les remplacent pas. `BCA_NOTIFICATION_APP_URL` peut remplacer `NOTIFICATION_APP_URL` pour les liens des e-mails de compte.
 
 > **Note** : Les variables `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` sont intégrées
 > dans le build frontend (statique) — elles n'ont PAS besoin d'être dans Plesk.
