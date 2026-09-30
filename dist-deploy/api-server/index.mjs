@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-30T02:09:05.634Z";
+var BUILD_TIME = "2026-09-30T02:59:58.083Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -74254,15 +74254,19 @@ async function enqueueUserNotification(conn, userId, key2, content) {
   if (!notificationsEnabled()) return;
   if (!/^[\x21-\x7E]{1,191}$/.test(key2)) throw new Error("Invalid notification event key");
   const [rows] = await conn.execute(
-    "SELECT u.email, p.username FROM users u LEFT JOIN profiles p ON p.user_id=u.id WHERE u.id=?",
+    "SELECT email FROM users WHERE id=? FOR UPDATE",
     [userId]
   );
   const recipient = rows[0];
   if (!recipient || typeof recipient.email !== "string") throw new Error("Notification recipient unavailable");
+  const [profiles] = await conn.execute(
+    "SELECT username FROM profiles WHERE user_id=?",
+    [userId]
+  );
   const payload = {
     ...content,
     recipient_email: recipient.email,
-    ...recipient.username ? { recipient_name: String(recipient.username) } : {}
+    ...profiles[0]?.username ? { recipient_name: String(profiles[0].username) } : {}
   };
   const expires = content.expires_at ? new Date(content.expires_at) : null;
   if (expires && !Number.isFinite(expires.getTime())) throw new Error("Invalid notification expiration");
@@ -74271,6 +74275,29 @@ async function enqueueUserNotification(conn, userId, key2, content) {
      VALUES (?,?,?) ON DUPLICATE KEY UPDATE event_key=event_key`,
     [key2, encryptNotification(payload), expires]
   );
+}
+async function requeuePendingNotificationsForEmailChange(conn, previousEmail, nextEmail) {
+  const [pending] = await conn.execute(
+    `SELECT event_key,payload_encrypted,expires_at FROM notification_outbox
+     WHERE status='pending' AND payload_encrypted IS NOT NULL FOR UPDATE`
+  );
+  for (const row of pending) {
+    const payload = decryptNotification(String(row.payload_encrypted));
+    if (payload.recipient_email.toLowerCase() !== previousEmail.toLowerCase()) continue;
+    const [expired] = await conn.execute(
+      `UPDATE notification_outbox SET status='expired',payload_encrypted=NULL,
+       lock_token=NULL,locked_until=NULL,finished_at=NOW(3)
+       WHERE event_key=? AND status='pending'`,
+      [row.event_key]
+    );
+    if (expired.affectedRows !== 1) throw new Error("Pending notification changed during email update");
+    if (payload.category === "security") continue;
+    await conn.execute(
+      `INSERT INTO notification_outbox (event_key,payload_encrypted,expires_at)
+       VALUES (?,?,?)`,
+      [`recipient-change-${randomUUID2()}`, encryptNotification({ ...payload, recipient_email: nextEmail }), row.expires_at]
+    );
+  }
 }
 function retryDelaySeconds(attempt) {
   return Math.min(300, 5 * 2 ** Math.max(0, attempt - 1));
@@ -76592,6 +76619,148 @@ var bcryptjs_default = {
 // src/routes/admin.ts
 init_logger();
 
+// src/lib/signup-verification.ts
+import crypto4 from "node:crypto";
+var CODE_LIFETIME_MS = 10 * 6e4;
+var HOUR_MS = 60 * 6e4;
+var MAX_SENDS_PER_HOUR = 5;
+var MAX_ATTEMPTS2 = 5;
+function codeHash(userId, code) {
+  const config2 = validateMailtrapConfig();
+  if (!config2) throw new Error("Notification configuration is required for signup verification");
+  return crypto4.createHmac("sha256", config2.apiToken).update("bizpanel-signup-email-otp-v2\0").update(userId).update("\0").update(code).digest("hex");
+}
+function generateCode() {
+  return crypto4.randomInt(0, 1e6).toString().padStart(6, "0");
+}
+async function queueCode(conn, userId, initial) {
+  const code = generateCode();
+  const expiresAt = new Date(Date.now() + CODE_LIFETIME_MS);
+  if (initial) {
+    await conn.execute(
+      `INSERT INTO signup_email_verifications
+       (user_id, code_hash, expires_at, attempts, sent_at, hour_window_started_at, sends_in_window)
+       VALUES (?, ?, ?, 0, NOW(3), NOW(3), 1)`,
+      [userId, codeHash(userId, code), expiresAt]
+    );
+  } else {
+    const [rows] = await conn.execute(
+      `SELECT sent_at > DATE_SUB(NOW(3), INTERVAL 60 SECOND) AS in_cooldown,
+         hour_window_started_at > DATE_SUB(NOW(3), INTERVAL 1 HOUR) AS in_hour_window,
+         sends_in_window
+       FROM signup_email_verifications WHERE user_id=? FOR UPDATE`,
+      [userId]
+    );
+    const prior = rows[0];
+    if (!prior || Boolean(prior.in_cooldown) || Boolean(prior.in_hour_window) && Number(prior.sends_in_window) >= MAX_SENDS_PER_HOUR) return;
+    const continueWindow = Boolean(prior.in_hour_window);
+    await conn.execute(
+      `UPDATE signup_email_verifications SET code_hash=?, expires_at=?, attempts=0,
+         sent_at=NOW(3), hour_window_started_at=IF(?, hour_window_started_at, NOW(3)),
+         sends_in_window=IF(?, sends_in_window+1, 1), consumed_at=NULL
+       WHERE user_id=?`,
+      [codeHash(userId, code), expiresAt, continueWindow, continueWindow, userId]
+    );
+  }
+  const eventId = crypto4.randomUUID();
+  if (!initial) {
+    await conn.execute(
+      `UPDATE notification_outbox SET status='expired', payload_encrypted=NULL,
+         lock_token=NULL, locked_until=NULL, finished_at=NOW(3)
+       WHERE status='pending' AND event_key LIKE ?`,
+      [`signup-verification-${userId}-%`]
+    );
+  }
+  await enqueueUserNotification(conn, userId, `signup-verification-${userId}-${eventId}`, {
+    subject: "V\xE9rifiez votre adresse email BUZZ BOOSTER",
+    title: "V\xE9rification de votre adresse email",
+    message: `Saisissez le code ${code} pour v\xE9rifier votre adresse email. Ce code expire dans 10 minutes.`,
+    category: "security",
+    otp_code: code,
+    expires_at: expiresAt.toISOString()
+  });
+}
+async function queueSignupVerification(conn, userId) {
+  await queueCode(conn, userId, true);
+}
+async function ensureSignupVerification(conn, userId) {
+  const [rows] = await conn.execute(
+    `SELECT expires_at <= NOW(3) AS expired, consumed_at IS NOT NULL AS consumed, attempts
+     FROM signup_email_verifications WHERE user_id=? FOR UPDATE`,
+    [userId]
+  );
+  const prior = rows[0];
+  if (!prior) await queueCode(conn, userId, true);
+  else if (Boolean(prior.expired) || Boolean(prior.consumed) || Number(prior.attempts) >= MAX_ATTEMPTS2) {
+    await queueCode(conn, userId, false);
+  }
+}
+async function resendSignupVerification(conn, userId) {
+  const [rows] = await conn.execute(
+    "SELECT user_id FROM signup_email_verifications WHERE user_id=? FOR UPDATE",
+    [userId]
+  );
+  await queueCode(conn, userId, !rows[0]);
+}
+async function verifySignupEmail(conn, userId, code) {
+  const [rows] = await conn.execute(
+    `SELECT code_hash, attempts, consumed_at, expires_at > NOW(3) AS not_expired
+     FROM signup_email_verifications WHERE user_id=? FOR UPDATE`,
+    [userId]
+  );
+  const record2 = rows[0];
+  if (!record2 || record2.consumed_at || Number(record2.attempts) >= MAX_ATTEMPTS2) return false;
+  if (!Boolean(record2.not_expired)) {
+    await conn.execute(
+      "UPDATE signup_email_verifications SET consumed_at=NOW(3) WHERE user_id=? AND consumed_at IS NULL",
+      [userId]
+    );
+    return false;
+  }
+  const expected = Buffer.from(String(record2.code_hash), "hex");
+  const supplied = Buffer.from(codeHash(userId, code), "hex");
+  if (expected.length !== supplied.length || !crypto4.timingSafeEqual(expected, supplied)) {
+    await conn.execute(
+      "UPDATE signup_email_verifications SET attempts=attempts+1 WHERE user_id=? AND consumed_at IS NULL",
+      [userId]
+    );
+    return false;
+  }
+  await conn.execute("UPDATE users SET email_verified_at=NOW(3) WHERE id=? AND email_verified_at IS NULL", [userId]);
+  await conn.execute(
+    "UPDATE signup_email_verifications SET consumed_at=NOW(3), code_hash=NULL WHERE user_id=?",
+    [userId]
+  );
+  await conn.execute(
+    "UPDATE auth_sessions SET revoked_at=NOW() WHERE user_id=? AND revoked_at IS NULL",
+    [userId]
+  );
+  return true;
+}
+
+// src/lib/account-email.ts
+async function updateAccountEmail(conn, userId, currentEmail, nextEmail) {
+  const changed = nextEmail !== currentEmail.toLowerCase();
+  await conn.execute(
+    "UPDATE users SET email=?, email_verified_at=IF(?, NULL, email_verified_at) WHERE id=?",
+    [nextEmail, changed, userId]
+  );
+  await conn.execute("UPDATE profiles SET email=? WHERE user_id=?", [nextEmail, userId]);
+  if (!changed) return false;
+  await conn.execute("UPDATE password_reset_tokens SET used_at=NOW(3) WHERE user_id=? AND used_at IS NULL", [userId]);
+  await conn.execute("DELETE FROM signup_email_verifications WHERE user_id=?", [userId]);
+  await conn.execute(
+    `UPDATE notification_outbox SET status='expired', payload_encrypted=NULL,
+      lock_token=NULL, locked_until=NULL, finished_at=NOW(3)
+     WHERE status='pending' AND (event_key LIKE ? OR event_key LIKE ?)`,
+    [`signup-verification-${userId}-%`, `password-reset-${userId}-%`]
+  );
+  await requeuePendingNotificationsForEmailChange(conn, currentEmail, nextEmail);
+  await queueSignupVerification(conn, userId);
+  await conn.execute("UPDATE auth_sessions SET revoked_at=NOW() WHERE user_id=? AND revoked_at IS NULL", [userId]);
+  return true;
+}
+
 // src/lib/currency.ts
 var COUNTRY_CURRENCY = {
   // XOF zone (BCEAO) — 1 XAF = 0.90 XOF → 1 XOF = 0.90 FCFA (plateforme XAF-based)
@@ -76682,11 +76851,11 @@ function toFcfa(localAmount, country) {
 
 // src/lib/deposits.ts
 init_logger();
-import crypto5 from "node:crypto";
+import crypto6 from "node:crypto";
 
 // src/lib/referrals.ts
 init_logger();
-import crypto4 from "node:crypto";
+import crypto5 from "node:crypto";
 var DEFAULT_CONFIG2 = { referrerPct: 5, referredPct: 2, minDepositFcfa: 2e3 };
 var configCache = null;
 async function getReferralConfig() {
@@ -76764,7 +76933,7 @@ async function maybeAwardReferralBonus(referredUserId, paymentId, amountFcfa) {
       const after = before + amount;
       const [insert] = await conn.execute(
         "INSERT IGNORE INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?, 'XOF',?,'referral',?)",
-        [crypto4.randomUUID(), userId, amount, after, type, r.id]
+        [crypto5.randomUUID(), userId, amount, after, type, r.id]
       );
       if (insert.affectedRows) {
         await conn.execute("UPDATE profiles SET balance_minor=?, affiliate_earnings_minor=affiliate_earnings_minor + ? WHERE user_id=?", [after, leg === "referrer" ? amount : 0, userId]);
@@ -76906,7 +77075,7 @@ async function fetchPaymentByOrderId(orderId) {
   return rows[0] ? mapPayment(rows[0]) : null;
 }
 async function createPayment(input) {
-  const id = crypto5.randomUUID();
+  const id = crypto6.randomUUID();
   await getMysqlPool().execute(
     `INSERT INTO payments (id,user_id,amount_minor,fee_minor,charge_minor,currency,status,provider,method,order_id,country,operator,phone_number)
      VALUES (?,?,?,?,?,?, 'pending','afribapay','afribapay',?,?,?,?)`,
@@ -76976,7 +77145,7 @@ async function creditDeposit(paymentId, opts) {
     const [insert] = await conn.execute(
       `INSERT IGNORE INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id)
        VALUES (?,?,?,?,? ,?,'payment',?)`,
-      [crypto5.randomUUID(), row.user_id, totalMinor, after, row.currency, type, paymentId]
+      [crypto6.randomUUID(), row.user_id, totalMinor, after, row.currency, type, paymentId]
     );
     if (insert.affectedRows === 0) {
       await conn.commit();
@@ -77021,7 +77190,7 @@ async function markPaymentStatus(paymentId, status, _userToken) {
 
 // src/lib/operator-logos.ts
 init_logger();
-import crypto6 from "node:crypto";
+import crypto7 from "node:crypto";
 import path from "node:path";
 import { promises as fs } from "node:fs";
 var KEY_PREFIX = "operator_logo_";
@@ -77063,7 +77232,7 @@ async function uploadOperatorLogoFile(operatorCode, fileBuffer, mimeType) {
   const ext = mimeType.includes("svg") ? "svg" : mimeType.includes("png") ? "png" : "jpg";
   const safeCode = operatorCode.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
   if (!safeCode) throw new Error("Invalid operator code");
-  const filename = `${safeCode}-${crypto6.randomBytes(8).toString("hex")}.${ext}`;
+  const filename = `${safeCode}-${crypto7.randomBytes(8).toString("hex")}.${ext}`;
   await fs.mkdir(LOGO_DIR, { recursive: true });
   await fs.writeFile(path.join(LOGO_DIR, filename), fileBuffer, { flag: "wx" });
   const publicUrl = `${LOGO_URL_PREFIX}${encodeURIComponent(filename)}?t=${Date.now()}`;
@@ -77093,7 +77262,7 @@ function operatorLogoPath(filename) {
 // src/lib/afribapay.ts
 init_logger();
 init_operator_health();
-import crypto7 from "node:crypto";
+import crypto8 from "node:crypto";
 var API_USER = process.env["AFRIBAPAY_API_USER"] ?? "";
 var API_KEY = process.env["AFRIBAPAY_API_KEY"] ?? "";
 var MERCHANT_KEY = process.env["AFRIBAPAY_MERCHANT_KEY"] ?? "";
@@ -77444,11 +77613,11 @@ function verifyWebhookSignature(rawBody, headerSign) {
   if (!API_KEY) return false;
   if (!headerSign) return false;
   const data = typeof rawBody === "string" ? rawBody : rawBody.toString("utf8");
-  const computed = crypto7.createHmac("sha256", API_KEY).update(data, "utf8").digest("hex");
+  const computed = crypto8.createHmac("sha256", API_KEY).update(data, "utf8").digest("hex");
   const a = Buffer.from(computed, "utf8");
   const b = Buffer.from(String(headerSign).trim().toLowerCase(), "utf8");
   if (a.length !== b.length) return false;
-  return crypto7.timingSafeEqual(a, b);
+  return crypto8.timingSafeEqual(a, b);
 }
 function isSuccessStatus(s) {
   if (!s) return false;
@@ -77800,6 +77969,10 @@ router3.patch("/admin/users/:userId", requireUser, requireAdmin, actionCode, asy
   const id = String(req.params.userId), b = req.body || {};
   if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: "user_id invalide" });
   if (b.balance !== void 0 && (!Number.isFinite(Number(b.balance)) || Number(b.balance) < 0)) return res.status(400).json({ error: "Solde invalide" });
+  const email = b.email === void 0 ? null : typeof b.email === "string" ? b.email.trim().toLowerCase() : "";
+  if (email !== null && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+    return res.status(400).json({ error: "Adresse e-mail invalide" });
+  }
   const db = getMysqlPool(), c = await db.getConnection();
   try {
     await c.beginTransaction();
@@ -77808,18 +77981,29 @@ router3.patch("/admin/users/:userId", requireUser, requireAdmin, actionCode, asy
       await c.rollback();
       return res.status(404).json({ error: "Utilisateur introuvable" });
     }
+    const [account] = await c.execute("SELECT email FROM users WHERE id=? FOR UPDATE", [id]);
+    if (!account[0]) {
+      await c.rollback();
+      return res.status(404).json({ error: "Utilisateur introuvable" });
+    }
+    const oldEmail = String(account[0].email);
+    let emailChanged = false;
     const before = Number(profile2[0].balance_minor), after = b.balance === void 0 ? before : Math.round(Number(b.balance) * 100);
     const fields = [], values = [];
-    for (const [key2, col] of [["username", "username"], ["email", "email"], ["country", "country"]]) if (typeof b[key2] === "string") {
-      fields.push(`${col}=?`);
-      values.push(b[key2].trim());
+    for (const [key2, col] of [["username", "username"], ["country", "country"]]) {
+      if (typeof b[key2] === "string") {
+        fields.push(`${col}=?`);
+        values.push(b[key2].trim());
+      }
     }
     if (b.balance !== void 0) {
       fields.push("balance_minor=?");
       values.push(after);
     }
     if (fields.length) await c.execute(`UPDATE profiles SET ${fields.join(",")} WHERE user_id=?`, [...values, id]);
-    if (typeof b.email === "string" && b.email.trim()) await c.execute("UPDATE users SET email=? WHERE id=?", [b.email.trim().toLowerCase(), id]);
+    if (email !== null) {
+      emailChanged = await updateAccountEmail(c, id, oldEmail, email);
+    }
     if (typeof b.is_active === "boolean") await c.execute(`UPDATE users SET disabled_at=${b.is_active ? "NULL" : "NOW()"} WHERE id=?`, [id]);
     if (after !== before) {
       const paymentId = randomUUID3();
@@ -77828,10 +78012,12 @@ router3.patch("/admin/users/:userId", requireUser, requireAdmin, actionCode, asy
       await c.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason,actor_user_id) VALUES (?,?,?,?,?)", [id, before, after, "admin_adjustment", authReq.userId]);
     }
     await c.commit();
-    return res.json({ ok: true });
+    return res.json({ ok: true, email: email ?? oldEmail, verificationRequired: emailChanged });
   } catch (err) {
     await c.rollback();
-    logger.error({ err }, "admin user update");
+    const code = err.code;
+    if (code === "ER_DUP_ENTRY") return res.status(409).json({ error: "Cette adresse e-mail est d\xE9j\xE0 utilis\xE9e" });
+    req.log.error({ code }, "admin user update failed");
     return res.status(500).json({ error: "Mise \xE0 jour du profil impossible" });
   } finally {
     c.release();
@@ -78113,7 +78299,7 @@ init_logger();
 
 // src/lib/support.ts
 init_logger();
-import crypto8 from "node:crypto";
+import crypto9 from "node:crypto";
 import path3 from "node:path";
 import { promises as fs3 } from "node:fs";
 var SupportError = class extends Error {
@@ -78141,7 +78327,7 @@ async function appendMessage(userId, input) {
     [userId]
   );
   if (Number(counts[0]?.n || 0) >= 200) throw new SupportError("Limite de messages atteinte pour ce fil de support (max 200)", 429);
-  const id = crypto8.randomUUID();
+  const id = crypto9.randomUUID();
   await getMysqlPool().execute("INSERT INTO support_messages (id, user_id, sender, sender_user_id, text, image_filename) VALUES (?, ?, ?, ?, ?, ?)", [id, userId, input.sender, input.sender_user_id, text, input.image_filename ?? null]);
   return { id, ts: (/* @__PURE__ */ new Date()).toISOString(), sender: input.sender, sender_user_id: input.sender_user_id, text, image_filename: input.image_filename };
 }
@@ -78179,7 +78365,7 @@ async function saveImageDataUrl(userId, data) {
   const buffer = Buffer.from(m[2], "base64");
   if (!buffer.length || buffer.length > 5 * 1024 * 1024) throw new SupportError("Image trop volumineuse (max 5 MB)", 413);
   const ext = m[1].toLowerCase() === "jpeg" ? "jpg" : m[1].toLowerCase();
-  const name = `${userId.replace(/[^a-zA-Z0-9_-]/g, "")}-${crypto8.randomBytes(8).toString("hex")}.${ext}`;
+  const name = `${userId.replace(/[^a-zA-Z0-9_-]/g, "")}-${crypto9.randomBytes(8).toString("hex")}.${ext}`;
   await fs3.mkdir(UPLOADS, { recursive: true });
   await fs3.writeFile(path3.join(UPLOADS, name), buffer, { flag: "wx" });
   return name;
@@ -78711,11 +78897,11 @@ var payments_default = router5;
 
 // src/routes/izipay.ts
 var import_express6 = __toESM(require_express2(), 1);
-import crypto10 from "node:crypto";
+import crypto11 from "node:crypto";
 init_logger();
 
 // src/lib/izipay.ts
-import crypto9 from "node:crypto";
+import crypto10 from "node:crypto";
 var CRYPTO_DEPOSIT_FEE_BPS = 150;
 var RETRIEVE_SPACING_MS = 1500;
 var retrieveQueue = Promise.resolve();
@@ -78810,9 +78996,9 @@ async function retrieveIntent(id) {
 function verifyIzipayWebhook(raw, header) {
   const secret = process.env["IZIPAY_WEBHOOK_SECRET"];
   if (!secret || !raw || !header || !/^sha256=[0-9a-f]{64}$/i.test(header)) throw new Error("Signature absente");
-  const expected = crypto9.createHmac("sha256", secret).update(raw).digest();
+  const expected = crypto10.createHmac("sha256", secret).update(raw).digest();
   const actual = Buffer.from(header.slice(7), "hex");
-  if (actual.length !== expected.length || !crypto9.timingSafeEqual(actual, expected)) throw new Error("Signature invalide");
+  if (actual.length !== expected.length || !crypto10.timingSafeEqual(actual, expected)) throw new Error("Signature invalide");
   const body = JSON.parse(raw);
   if (!Number.isInteger(body.timestamp)) throw new Error("Webhook sans horodatage");
   if (typeof body.event !== "string" || typeof body.data?.intentId !== "string") throw new Error("Webhook invalide");
@@ -78861,7 +79047,7 @@ async function reconcileCryptoPayment(paymentId) {
       await conn.execute("UPDATE profiles SET balance_usd_minor=? WHERE user_id=?", [after, row.user_id]);
       await conn.execute(
         "INSERT INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?, 'USD','deposit','payment',?)",
-        [crypto9.randomUUID(), row.user_id, row.amount_minor, after, paymentId]
+        [crypto10.randomUUID(), row.user_id, row.amount_minor, after, paymentId]
       );
       await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason) VALUES (?,?,?,'crypto_usd_deposit')", [row.user_id, before, after]);
       await conn.execute(
@@ -78937,7 +79123,7 @@ router6.post("/payments/crypto", requireUser, async (req, res) => {
   const origin = process.env["PUBLIC_API_URL"]?.replace(/\/+$/, "");
   if (!origin || !/^https:\/\//.test(origin) || !process.env["IZIPAY_API_KEY"] || !process.env["IZIPAY_WEBHOOK_SECRET"])
     return res.status(503).json({ error: "Paiement crypto non configur\xE9" });
-  const id = crypto10.randomUUID();
+  const id = crypto11.randomUUID();
   const reference = `BB-CR-${id}`;
   try {
     const [users] = await getMysqlPool().execute("SELECT email FROM users WHERE id=?", [req.userId]);
@@ -78996,7 +79182,7 @@ var import_express7 = __toESM(require_express2(), 1);
 init_logger();
 
 // src/lib/tickets.ts
-import crypto11 from "node:crypto";
+import crypto12 from "node:crypto";
 var TicketError = class extends Error {
   constructor(message, statusCode) {
     super(message);
@@ -79031,8 +79217,8 @@ async function createTicket(input) {
   const message = String(input.message || "").slice(0, 2e3).trim();
   if (!message) throw new TicketError("Message requis", 400);
   if (!["cancel", "refund", "speed_up", "other"].includes(input.action_type)) throw new TicketError("Type d'action requis", 400);
-  const id = crypto11.randomUUID();
-  const short = `T-${crypto11.randomBytes(3).toString("hex").toUpperCase()}`;
+  const id = crypto12.randomUUID();
+  const short = `T-${crypto12.randomBytes(3).toString("hex").toUpperCase()}`;
   await getMysqlPool().execute(
     `INSERT INTO tickets (id, short_code, user_id, order_external_id, order_local_id, provider_id, service_name, action_type, message)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -79248,7 +79434,7 @@ var tickets_default = router7;
 // src/routes/profile.ts
 var import_express8 = __toESM(require_express2(), 1);
 init_logger();
-import crypto12 from "node:crypto";
+import crypto13 from "node:crypto";
 import { promises as fs5 } from "node:fs";
 import path5 from "node:path";
 var router8 = (0, import_express8.Router)();
@@ -79329,7 +79515,7 @@ router8.post("/profile/avatar", requireUser, async (req, res) => {
   try {
     await fs5.mkdir(AVATAR_DIR, { recursive: true });
     const userId = String(req.userId);
-    const filename = `${userId}-${crypto12.randomBytes(8).toString("hex")}.${ext}`;
+    const filename = `${userId}-${crypto13.randomBytes(8).toString("hex")}.${ext}`;
     await fs5.writeFile(path5.join(AVATAR_DIR, filename), buffer, { flag: "wx" });
     const avatarUrl = `/api/profile/avatar/${encodeURIComponent(filename)}`;
     await ensureProfile(userId);
@@ -79529,16 +79715,16 @@ var import_express10 = __toESM(require_express2(), 1);
 import crypto15 from "node:crypto";
 
 // src/lib/password-reset.ts
-import crypto13 from "node:crypto";
+import crypto14 from "node:crypto";
 var RESET_LIFETIME_MS = 10 * 6e4;
 var ACCOUNT_COOLDOWN_MS = 5 * 6e4;
 var IP_COOLDOWN_MS = 6e4;
-var MAX_ATTEMPTS2 = 5;
-var hashResetToken = (token) => crypto13.createHash("sha256").update(token).digest("hex");
-function codeHash(userId, code) {
+var MAX_ATTEMPTS3 = 5;
+var hashResetToken = (token) => crypto14.createHash("sha256").update(token).digest("hex");
+function codeHash2(userId, code) {
   const config2 = validateMailtrapConfig();
   if (!config2) throw new Error("Notification configuration is required for password recovery");
-  return crypto13.createHmac("sha256", config2.apiToken).update("bizpanel-password-reset-otp-v1\0").update(userId).update("\0").update(code).digest("hex");
+  return crypto14.createHmac("sha256", config2.apiToken).update("bizpanel-password-reset-otp-v1\0").update(userId).update("\0").update(code).digest("hex");
 }
 async function reserveResetRequest(conn, email, ip) {
   const limits = [
@@ -79565,8 +79751,8 @@ async function reserveResetRequest(conn, email, ip) {
   return true;
 }
 async function queuePasswordReset(conn, userId) {
-  const code = crypto13.randomInt(0, 1e6).toString().padStart(6, "0");
-  const id = crypto13.randomUUID();
+  const code = crypto14.randomInt(0, 1e6).toString().padStart(6, "0");
+  const id = crypto14.randomUUID();
   const expiresAt = new Date(Date.now() + RESET_LIFETIME_MS);
   await conn.execute(
     "UPDATE password_reset_tokens SET used_at=NOW(3) WHERE user_id=? AND reset_type='otp' AND used_at IS NULL",
@@ -79580,7 +79766,7 @@ async function queuePasswordReset(conn, userId) {
   );
   await conn.execute(
     "INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, attempts, reset_type) VALUES (?, ?, ?, ?, 0, 'otp')",
-    [id, userId, codeHash(userId, code), expiresAt]
+    [id, userId, codeHash2(userId, code), expiresAt]
   );
   await enqueueUserNotification(conn, userId, `password-reset-${userId}-${id}`, {
     subject: "R\xE9initialisation de votre mot de passe BUZZ BOOSTER",
@@ -79600,13 +79786,13 @@ async function consumeResetCode(conn, userId, code, password) {
     [userId]
   );
   const record2 = rows[0];
-  if (!record2 || record2.used_at || Number(record2.attempts) >= MAX_ATTEMPTS2 || new Date(record2.expires_at).getTime() <= Date.now()) return false;
+  if (!record2 || record2.used_at || Number(record2.attempts) >= MAX_ATTEMPTS3 || new Date(record2.expires_at).getTime() <= Date.now()) return false;
   const expected = Buffer.from(String(record2.token_hash), "hex");
-  const supplied = Buffer.from(codeHash(userId, code), "hex");
-  if (expected.length !== supplied.length || !crypto13.timingSafeEqual(expected, supplied)) {
+  const supplied = Buffer.from(codeHash2(userId, code), "hex");
+  if (expected.length !== supplied.length || !crypto14.timingSafeEqual(expected, supplied)) {
     await conn.execute(
       "UPDATE password_reset_tokens SET attempts=attempts+1 WHERE id=? AND used_at IS NULL AND attempts < ?",
-      [record2.id, MAX_ATTEMPTS2]
+      [record2.id, MAX_ATTEMPTS3]
     );
     return false;
   }
@@ -79640,125 +79826,6 @@ async function consumeResetToken(conn, token, password) {
   await conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", [passwordHash, record2.user_id]);
   await conn.execute("UPDATE password_reset_tokens SET used_at = NOW(3) WHERE user_id = ? AND used_at IS NULL", [record2.user_id]);
   await conn.execute("UPDATE auth_sessions SET revoked_at = NOW() WHERE user_id = ? AND revoked_at IS NULL", [record2.user_id]);
-  return true;
-}
-
-// src/lib/signup-verification.ts
-import crypto14 from "node:crypto";
-var CODE_LIFETIME_MS = 10 * 6e4;
-var HOUR_MS = 60 * 6e4;
-var MAX_SENDS_PER_HOUR = 5;
-var MAX_ATTEMPTS3 = 5;
-function codeHash2(userId, code) {
-  const config2 = validateMailtrapConfig();
-  if (!config2) throw new Error("Notification configuration is required for signup verification");
-  return crypto14.createHmac("sha256", config2.apiToken).update("bizpanel-signup-email-otp-v2\0").update(userId).update("\0").update(code).digest("hex");
-}
-function generateCode() {
-  return crypto14.randomInt(0, 1e6).toString().padStart(6, "0");
-}
-async function queueCode(conn, userId, initial) {
-  const code = generateCode();
-  const expiresAt = new Date(Date.now() + CODE_LIFETIME_MS);
-  if (initial) {
-    await conn.execute(
-      `INSERT INTO signup_email_verifications
-       (user_id, code_hash, expires_at, attempts, sent_at, hour_window_started_at, sends_in_window)
-       VALUES (?, ?, ?, 0, NOW(3), NOW(3), 1)`,
-      [userId, codeHash2(userId, code), expiresAt]
-    );
-  } else {
-    const [rows] = await conn.execute(
-      `SELECT sent_at > DATE_SUB(NOW(3), INTERVAL 60 SECOND) AS in_cooldown,
-         hour_window_started_at > DATE_SUB(NOW(3), INTERVAL 1 HOUR) AS in_hour_window,
-         sends_in_window
-       FROM signup_email_verifications WHERE user_id=? FOR UPDATE`,
-      [userId]
-    );
-    const prior = rows[0];
-    if (!prior || Boolean(prior.in_cooldown) || Boolean(prior.in_hour_window) && Number(prior.sends_in_window) >= MAX_SENDS_PER_HOUR) return;
-    const continueWindow = Boolean(prior.in_hour_window);
-    await conn.execute(
-      `UPDATE signup_email_verifications SET code_hash=?, expires_at=?, attempts=0,
-         sent_at=NOW(3), hour_window_started_at=IF(?, hour_window_started_at, NOW(3)),
-         sends_in_window=IF(?, sends_in_window+1, 1), consumed_at=NULL
-       WHERE user_id=?`,
-      [codeHash2(userId, code), expiresAt, continueWindow, continueWindow, userId]
-    );
-  }
-  const eventId = crypto14.randomUUID();
-  if (!initial) {
-    await conn.execute(
-      `UPDATE notification_outbox SET status='expired', payload_encrypted=NULL,
-         lock_token=NULL, locked_until=NULL, finished_at=NOW(3)
-       WHERE status='pending' AND event_key LIKE ?`,
-      [`signup-verification-${userId}-%`]
-    );
-  }
-  await enqueueUserNotification(conn, userId, `signup-verification-${userId}-${eventId}`, {
-    subject: "V\xE9rifiez votre adresse email BUZZ BOOSTER",
-    title: "V\xE9rification de votre adresse email",
-    message: `Saisissez le code ${code} pour v\xE9rifier votre adresse email. Ce code expire dans 10 minutes.`,
-    category: "security",
-    otp_code: code,
-    expires_at: expiresAt.toISOString()
-  });
-}
-async function queueSignupVerification(conn, userId) {
-  await queueCode(conn, userId, true);
-}
-async function ensureSignupVerification(conn, userId) {
-  const [rows] = await conn.execute(
-    `SELECT expires_at <= NOW(3) AS expired, consumed_at IS NOT NULL AS consumed, attempts
-     FROM signup_email_verifications WHERE user_id=? FOR UPDATE`,
-    [userId]
-  );
-  const prior = rows[0];
-  if (!prior) await queueCode(conn, userId, true);
-  else if (Boolean(prior.expired) || Boolean(prior.consumed) || Number(prior.attempts) >= MAX_ATTEMPTS3) {
-    await queueCode(conn, userId, false);
-  }
-}
-async function resendSignupVerification(conn, userId) {
-  const [rows] = await conn.execute(
-    "SELECT user_id FROM signup_email_verifications WHERE user_id=? FOR UPDATE",
-    [userId]
-  );
-  await queueCode(conn, userId, !rows[0]);
-}
-async function verifySignupEmail(conn, userId, code) {
-  const [rows] = await conn.execute(
-    `SELECT code_hash, attempts, consumed_at, expires_at > NOW(3) AS not_expired
-     FROM signup_email_verifications WHERE user_id=? FOR UPDATE`,
-    [userId]
-  );
-  const record2 = rows[0];
-  if (!record2 || record2.consumed_at || Number(record2.attempts) >= MAX_ATTEMPTS3) return false;
-  if (!Boolean(record2.not_expired)) {
-    await conn.execute(
-      "UPDATE signup_email_verifications SET consumed_at=NOW(3) WHERE user_id=? AND consumed_at IS NULL",
-      [userId]
-    );
-    return false;
-  }
-  const expected = Buffer.from(String(record2.code_hash), "hex");
-  const supplied = Buffer.from(codeHash2(userId, code), "hex");
-  if (expected.length !== supplied.length || !crypto14.timingSafeEqual(expected, supplied)) {
-    await conn.execute(
-      "UPDATE signup_email_verifications SET attempts=attempts+1 WHERE user_id=? AND consumed_at IS NULL",
-      [userId]
-    );
-    return false;
-  }
-  await conn.execute("UPDATE users SET email_verified_at=NOW(3) WHERE id=? AND email_verified_at IS NULL", [userId]);
-  await conn.execute(
-    "UPDATE signup_email_verifications SET consumed_at=NOW(3), code_hash=NULL WHERE user_id=?",
-    [userId]
-  );
-  await conn.execute(
-    "UPDATE auth_sessions SET revoked_at=NOW() WHERE user_id=? AND revoked_at IS NULL",
-    [userId]
-  );
   return true;
 }
 
