@@ -18,7 +18,10 @@ export async function requireUser(req: AuthedRequest, res: Response, next: NextF
     const hash = crypto.createHash("sha256").update(token).digest("hex");
     const [rows] = await getMysqlPool().execute<(RowDataPacket & { user_id: string })[]>(
       `SELECT s.user_id FROM auth_sessions s
-       INNER JOIN users u ON u.id=s.user_id AND u.email_verified_at IS NOT NULL
+       INNER JOIN users u ON u.id=s.user_id
+         AND (u.email_verified_at IS NOT NULL OR EXISTS (
+           SELECT 1 FROM user_roles r WHERE r.user_id=u.id AND r.role='admin'
+         ))
        WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > NOW() LIMIT 1`,
       [hash],
     );

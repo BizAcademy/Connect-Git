@@ -47,12 +47,13 @@ const email = "fresh@example.com";
 const password = "previously-entered-password";
 const user = { id: "test-user", email, isAdmin: false, profile: { country: "CI", username: "newmember" } };
 
-async function scenario({ failAutomaticLogin }) {
+async function scenario({ failAutomaticLogin, failFirstCode = false, transientVerificationFailure = false }) {
   const page = await browser.newPage();
   const calls = [];
   let confirmed = false;
   let authenticated = false;
   let loginAttempts = 0;
+  let verificationAttempts = 0;
   try {
     await page.setRequestInterception(true);
     page.on("request", request => {
@@ -83,9 +84,16 @@ async function scenario({ failAutomaticLogin }) {
           response = { user };
         }
       } else if (route === "/api/auth/verify-email") {
-        assert.deepEqual(body, { email, code: "123456" });
-        confirmed = true;
-        response = { message: "Adresse vérifiée" };
+        verificationAttempts++;
+        if ((failFirstCode || transientVerificationFailure) && verificationAttempts === 1) {
+          assert.deepEqual(body, { email, code: failFirstCode ? "000000" : "123456" });
+          status = failFirstCode ? 400 : 503;
+          response = { error: failFirstCode ? "Code non reconnu ou expiré" : "Vérification temporairement indisponible" };
+        } else {
+          assert.deepEqual(body, { email, code: "123456" });
+          confirmed = true;
+          response = { message: "Adresse vérifiée" };
+        }
       } else if (route === "/api/auth/resend-verification" || route === "/api/auth/register") {
         throw new Error(`Unexpected notification-producing request: ${route}`);
       }
@@ -106,8 +114,25 @@ async function scenario({ failAutomaticLogin }) {
       [null, null],
       "the password stays out of browser storage",
     );
-    await page.type("#email-otp", "123456");
-    await page.locator('form:has(#email-otp) button[type="submit"]').click();
+    if (failFirstCode || transientVerificationFailure) {
+      await page.type("#email-otp", failFirstCode ? "000000" : "123456");
+      await page.waitForSelector('.email-verification__stage[data-phase="error"]');
+      assert.match(
+        await page.$eval('[data-testid="status-verification"]', element => element.textContent),
+        failFirstCode ? /Code OTP incorrect/ : /Vérification temporairement indisponible/,
+      );
+      assert.equal(authenticated, false, "a rejected code never creates a session");
+      if (failFirstCode) {
+        await page.focus("#email-otp");
+        for (let index = 0; index < 6; index++) await page.keyboard.press("Backspace");
+      } else {
+        assert.equal(await page.$eval('[data-testid="button-verify-email"]', button => button.disabled), false);
+        await page.locator('[data-testid="button-verify-email"]').click();
+      }
+    }
+    if (!transientVerificationFailure) await page.type("#email-otp", "123456");
+    await page.waitForSelector('.email-verification__stage[data-phase="success"]');
+    assert.match(await page.$eval('[data-testid="status-verification"]', element => element.textContent), /Vérification réussie/);
     await page.waitForFunction(() =>
       location.pathname === "/dashboard" || !!document.querySelector('input[placeholder="Email"]'),
     );
@@ -115,7 +140,9 @@ async function scenario({ failAutomaticLogin }) {
     assert.deepEqual(
       calls.filter(call => ["/api/auth/login", "/api/auth/verify-email"].includes(call.route))
         .map(call => call.route),
-      ["/api/auth/login", "/api/auth/verify-email", "/api/auth/login"],
+      (failFirstCode || transientVerificationFailure)
+        ? ["/api/auth/login", "/api/auth/verify-email", "/api/auth/verify-email", "/api/auth/login"]
+        : ["/api/auth/login", "/api/auth/verify-email", "/api/auth/login"],
       "verification must precede the second credential-based login",
     );
     if (failAutomaticLogin) {
@@ -146,4 +173,12 @@ test("unverified login shows OTP without session, then signs in with the origina
 
 test("failed automatic sign-in keeps email confirmed and offers a working login form", async () => {
   await scenario({ failAutomaticLogin: true });
+});
+
+test("a wrong OTP turns the tiles red, then a corrected code signs in automatically", async () => {
+  await scenario({ failAutomaticLogin: false, failFirstCode: true });
+});
+
+test("a temporary verification failure can retry the same code without retyping", async () => {
+  await scenario({ failAutomaticLogin: false, transientVerificationFailure: true });
 });

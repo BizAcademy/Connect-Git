@@ -292,7 +292,7 @@ router.post("/auth/login", authLimiter, async (req: AuthedRequest, res) => {
       await connection.rollback();
       return invalid();
     }
-    if (!user.email_verified_at) {
+    if (!user.email_verified_at && !user.is_admin) {
       if (!notificationsEnabled()) {
         await connection.rollback();
         return res.status(503).json({ error: "Envoi du code de vérification indisponible. Réessayez plus tard." });

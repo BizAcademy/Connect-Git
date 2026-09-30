@@ -11,7 +11,9 @@
 - [Crypto webhook recovery](izipay-webhook-recovery.md) — five consecutive failed deliveries disable the provider endpoint; acknowledge signed events quickly only with durable intent records and independent reconciliation.
 - [Notification delivery policy](notification-delivery-policy.md) — transactional frozen mail payloads; encrypted reset links require draining the queue before planned credential rotation.
 - [Local MariaDB CLI environment precedence](local-mariadb-cli-env.md) — development MYSQL_* env can override socket CLI flags; clear them only for manual test-db commands.
-- [OTP sign-in boundary](otp-sign-in-boundary.md) — verification unlocks auto-login, but an OTP alone must not create an authenticated session.
+- [OTP sign-in boundary](otp-sign-in-boundary.md) — OTP alone never authenticates; admin exemption follows the live role so demotion restores the verification gate.
 - [Referral recovery after mail failure](referral-mail-recovery.md) — a failed transactional notification can roll back bonus credit after deposit commit; recovery must revisit pending referrals too.
 - [Password reset and login race](password-reset-login-race.md) — session revocation only blocks old-password access when login verification and session creation serialize with the reset.
 - [Filtered workspace install](filtered-workspace-install.md) — if root pnpm install is blocked by an unrelated workspace package, a filtered install may restore only the needed artifact.
+- [Vite port drift after merges](workflow-reconciliation-orphans.md) — reconciliation can leave old listeners alive, making new workflows serve on fallback ports while the preview shows old code.
+- [Preview auth interception](preview-auth-interception.md) — normalize default-port URL origins when mocking auth, or unmatched calls may reach the real local API.

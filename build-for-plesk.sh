@@ -53,7 +53,7 @@ cat > dist-deploy/api-server/package.json << 'EOF'
     "import:supabase-users": "node scripts/import-supabase-users.mjs",
     "import:supabase-history": "node scripts/import-supabase-history.mjs",
     "migrate:mysql": "node scripts/migrate-mysql.mjs",
-    "migrate:account-emails": "node scripts/migrate-mysql.mjs --from=008 --to=011"
+    "migrate:account-emails": "node scripts/migrate-mysql.mjs --from=008 --to=012"
   },
   "engines": {
     "node": ">=20"

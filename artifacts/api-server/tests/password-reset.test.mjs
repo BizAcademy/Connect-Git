@@ -80,7 +80,7 @@ globalThis.__resetTest = {
         }
         if (sql.includes("FROM users u LEFT JOIN profiles p")) {
           const user = users.get(args[0]);
-          return [user ? [{ ...profiles.get(user.id), ...user, is_admin: 0 }] : []];
+          return [user ? [{ ...profiles.get(user.id), ...user, is_admin: user.is_admin ? 1 : 0 }] : []];
         }
         if (sql.includes("FROM users WHERE email")) {
           const user = users.get(args[0]);
@@ -344,6 +344,27 @@ test("a legacy unverified account receives its first OTP on login, without dupli
   assert.equal(queued.length, 2, "expired code is replaced on login");
   assert.equal((await post("verify-email", { email: "legacy@example.com", code: "654321" })).status, 200);
   assert.equal((await post("login", { email: "legacy@example.com", password: "legacy-password" })).status, 200);
+});
+
+test("an unverified administrator signs in without an OTP or a synthetic verified timestamp", async () => {
+  reset();
+  const admin = users.get("someone@example.com");
+  admin.password_hash = await bcrypt.hash("admin-password", 10);
+  admin.email_verified_at = null;
+  admin.is_admin = 1;
+  const login = await post("login", { email: "someone@example.com", password: "admin-password" });
+  assert.equal(login.status, 200);
+  assert.ok(login.setCookie);
+  assert.equal(admin.email_verified_at, null);
+  assert.equal(queued.length, 0);
+  assert.equal(queries.some(([sql]) => sql.includes("INSERT INTO auth_sessions")), true);
+  admin.is_admin = 0;
+  const sessionsBeforeDemotion = queries.filter(([sql]) => sql.includes("INSERT INTO auth_sessions")).length;
+  const deniedAfterDemotion = await post("login", { email: "someone@example.com", password: "admin-password" });
+  assert.equal(deniedAfterDemotion.status, 403);
+  assert.equal(deniedAfterDemotion.body.code, "EMAIL_VERIFICATION_REQUIRED");
+  assert.equal(queries.filter(([sql]) => sql.includes("INSERT INTO auth_sessions")).length, sessionsBeforeDemotion);
+  assert.equal(queued.length, 1);
 });
 
 test("resend creates the first OTP for a legacy account even before a fresh login", async () => {

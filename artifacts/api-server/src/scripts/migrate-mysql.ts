@@ -9,7 +9,7 @@ async function main() {
   const toArg = args.find((arg) => /^--to=\d{3}$/.test(arg));
   if (args.length > 0 && (args.length !== 2 || !fromArg || !toArg ||
       Number(fromArg.slice(7)) > Number(toArg.slice(5)))) {
-    throw new Error("Usage: migrate-mysql [--from=008 --to=011]");
+    throw new Error("Usage: migrate-mysql [--from=008 --to=012]");
   }
   const from = fromArg ? Number(fromArg.slice(7)) : null;
   const to = toArg ? Number(toArg.slice(5)) : null;

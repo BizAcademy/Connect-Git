@@ -1,6 +1,8 @@
--- Apply before deploying the registration/login code. Existing accounts without
--- a verification record are grandfathered; new users retain NULL. This remains
--- safe to reapply after new users register, since they have a verification row.
+-- Apply before deploying the registration/login code. Leave legacy accounts
+-- unverified: the administrator exemption is checked from the current role at
+-- login/session validation, not recorded as a permanent verification timestamp.
+-- Migration 012 corrects installations that applied the earlier version of
+-- this file, which grandfathered existing accounts.
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS email_verified_at DATETIME(3) NULL DEFAULT NULL;
 
@@ -18,7 +20,3 @@ CREATE TABLE IF NOT EXISTS signup_email_verifications (
   CONSTRAINT signup_email_verifications_user_fk
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-UPDATE users u LEFT JOIN signup_email_verifications sev ON sev.user_id=u.id
-SET u.email_verified_at=NOW(3)
-WHERE u.email_verified_at IS NULL AND sev.user_id IS NULL;

@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "@/lib/toast";
-import { Eye, EyeOff, User, Lock, Mail, CheckCircle2, Zap, Shield, Clock, Globe, ChevronDown, Gift } from "lucide-react";
+import { Eye, EyeOff, User, Lock, Mail, CheckCircle2, AlertCircle, Zap, Shield, Clock, Globe, ChevronDown, Gift } from "lucide-react";
+import "./AuthVerification.css";
 import logoImg from "@/assets/logo-buzzbooster.png";
 import loginHeroImg from "@assets/auth-person.webp";
 import signupHeroImg from "@assets/signup-person.webp";
@@ -84,6 +85,20 @@ const Auth = () => {
   const [resending, setResending] = useState(false);
   const [resendAvailableAt, setResendAvailableAt] = useState(0);
   const [resendSeconds, setResendSeconds] = useState(0);
+  const [verificationPhase, setVerificationPhase] = useState<"idle" | "checking" | "success" | "error">("idle");
+  const [verificationError, setVerificationError] = useState("");
+  const [verificationRetryable, setVerificationRetryable] = useState(false);
+  // Prevent duplicate requests from the auto-submit effect, button and repeated renders.
+  const submittedCodeRef = useRef<string | null>(null);
+  const verifyingRef = useRef(false);
+
+  const resetVerification = () => {
+    setVerificationCode("");
+    setVerificationError("");
+    setVerificationRetryable(false);
+    setVerificationPhase("idle");
+    submittedCodeRef.current = null;
+  };
 
   const startResendCountdown = () => {
     setResendSeconds(60);
@@ -111,7 +126,7 @@ const Auth = () => {
         setVerifyEmail(loginEmail.trim().toLowerCase());
         setVerificationPassword(loginPassword);
         setLoginPassword("");
-        setVerificationCode("");
+        resetVerification();
         startResendCountdown();
         setShowVerification(true);
         return;
@@ -167,7 +182,7 @@ const Auth = () => {
       setVerificationPassword(signupPassword);
       setSignupPassword("");
       setConfirmPassword("");
-      setVerificationCode("");
+      resetVerification();
       setShowVerification(true);
       startResendCountdown();
       toast.success("Compte créé. Vérifiez votre boîte mail pour le code de confirmation.");
@@ -178,23 +193,41 @@ const Auth = () => {
     }
   };
 
-  const handleVerifyEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!/^\d{6}$/.test(verificationCode)) {
-      toast.error("Saisissez le code à 6 chiffres reçu par e-mail.");
-      return;
-    }
+  const verifyEmailCode = async (code: string) => {
+    if (!/^\d{6}$/.test(code) || verifyingRef.current || submittedCodeRef.current === code || verificationPhase === "success") return;
+    verifyingRef.current = true;
+    submittedCodeRef.current = code;
+    setVerificationError("");
+    setVerificationRetryable(false);
+    setVerificationPhase("checking");
     setLoading(true);
+    const animationStartedAt = window.performance.now();
+    const minimumMotionMs = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1000;
+    const finishMotion = async () => {
+      const remaining = minimumMotionMs - (window.performance.now() - animationStartedAt);
+      if (remaining > 0) await new Promise<void>(resolve => window.setTimeout(resolve, remaining));
+    };
     let emailConfirmed = false;
     try {
       const response = await fetch("/api/auth/verify-email", {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: verifyEmail, code: verificationCode }),
+        body: JSON.stringify({ email: verifyEmail, code }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) { toast.error(data.error || "Code incorrect ou expiré. Vérifiez le dernier e-mail reçu."); return; }
+      await finishMotion();
+      if (!response.ok) {
+        const serverMessage = typeof data.error === "string" ? data.error : "";
+        // The API deliberately gives the same 400 response for wrong and expired codes.
+        const wrongCode = [400, 401, 422].includes(response.status);
+        setVerificationPhase("error");
+        setVerificationRetryable(!wrongCode);
+        setVerificationError(wrongCode ? "Code OTP incorrect" : serverMessage || "Vérification indisponible. Réessayez.");
+        return;
+      }
       emailConfirmed = true;
-      setVerificationCode("");
+      setVerificationPhase("success");
+      // Keep the server-confirmed state visible before the existing auto-login.
+      await new Promise<void>(resolve => window.setTimeout(resolve, 1400));
       const password = verificationPassword;
       setVerificationPassword("");
       if (!password) throw new Error("No password available for automatic sign-in");
@@ -217,15 +250,36 @@ const Auth = () => {
         setVerificationPassword("");
         toast.error("Adresse confirmée, mais connexion automatique indisponible. Connectez-vous avec votre mot de passe.");
       } else {
-        toast.error("Vérification temporairement indisponible");
+        await finishMotion();
+        setVerificationPhase("error");
+        setVerificationRetryable(true);
+        setVerificationError("Vérification temporairement indisponible. Réessayez.");
       }
     } finally {
+      verifyingRef.current = false;
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (showVerification && verificationPhase === "idle" && /^\d{6}$/.test(verificationCode)) {
+      void verifyEmailCode(verificationCode);
+    }
+    // The effect reacts to code entry only; verifyEmailCode's synchronous ref guard
+    // prevents a second request when state changes or React re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verificationCode, verificationPhase, showVerification]);
+
+  const handleVerifyEmail = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (verificationCode.length !== 6) return;
+    if (verificationPhase === "error" && verificationRetryable) submittedCodeRef.current = null;
+    void verifyEmailCode(verificationCode);
+  };
+
   const handleResendVerification = async () => {
     if (resendSeconds > 0) return;
+    resetVerification();
     setResending(true);
     try {
       const response = await fetch("/api/auth/resend-verification", {
@@ -308,45 +362,86 @@ const Auth = () => {
 
   if (showVerification) {
     return (
-      <div className="min-h-screen bg-[#f0f0f0] flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-          <div className="text-center mb-6">
-            <img src={logoImg} alt="BUZZ BOOSTER" className="h-12 w-auto mx-auto rounded-md" />
-            <h1 className="text-xl font-bold text-gray-900 mt-5">Confirmez votre e-mail</h1>
-            <p className="text-gray-600 text-sm mt-2">Saisissez le code à 6 chiffres envoyé à <strong className="break-all">{verifyEmail}</strong>. Le code expire après 10 minutes.</p>
-          </div>
-          <form onSubmit={handleVerifyEmail} className="space-y-4">
-            <div>
-              <label htmlFor="email-otp" className="block text-sm font-medium text-gray-700 mb-2">Code de confirmation</label>
+      <main className="email-verification">
+        <section className="email-verification__card" aria-labelledby="verification-title">
+          <img src={logoImg} alt="BUZZ BOOSTER" className="email-verification__logo" />
+          <div className="email-verification__icon" aria-hidden="true"><Shield size={27} strokeWidth={1.8} /></div>
+          <p className="email-verification__eyebrow">Sécurité de votre compte</p>
+          <h1 id="verification-title" className="email-verification__title">Confirmez votre e-mail</h1>
+          <p className="email-verification__intro">
+            Nous avons envoyé un code à <strong data-testid="text-verification-email">{verifyEmail}</strong>.<br />
+            Saisissez-le ci-dessous. Il expire après 10 minutes.
+          </p>
+          <form onSubmit={handleVerifyEmail} className="email-verification__form">
+            <label htmlFor="email-otp" className="email-verification__label">Code de confirmation à 6 chiffres</label>
+            <div className="email-verification__stage" data-phase={verificationPhase}>
+              <div className="email-verification__ring" aria-hidden="true" />
+              <div className="email-verification__tiles" aria-hidden="true">
+                {Array.from({ length: 6 }, (_, index) => {
+                  const angle = index * Math.PI / 3 - Math.PI / 2;
+                  return (
+                    <span
+                      key={index}
+                      className="email-verification__tile"
+                      data-active={verificationPhase === "idle" && index === verificationCode.length}
+                      style={{
+                        "--tile-index": index,
+                        "--orbit-x": `${Math.cos(angle) * 76}px`,
+                        "--orbit-y": `${Math.sin(angle) * 76}px`,
+                      } as CSSProperties}
+                    >{verificationCode[index] || ""}</span>
+                  );
+                })}
+              </div>
               <input
                 id="email-otp"
+                data-testid="input-email-otp"
+                className="email-verification__input"
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 pattern="[0-9]{6}"
                 maxLength={6}
                 value={verificationCode}
-                onChange={e => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="000000"
+                onChange={e => {
+                  const nextCode = e.target.value.replace(/\D/g, "").slice(0, 6);
+                  if (nextCode !== verificationCode) {
+                    submittedCodeRef.current = null;
+                    setVerificationError("");
+                    setVerificationRetryable(false);
+                    setVerificationPhase("idle");
+                    setVerificationCode(nextCode);
+                  }
+                }}
+                disabled={verificationPhase === "checking" || verificationPhase === "success"}
+                aria-describedby="verification-feedback"
+                aria-invalid={verificationPhase === "error"}
                 required
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 text-center text-2xl tracking-[0.4em] focus:outline-none focus:ring-2 focus:ring-orange-400"
+                autoFocus
               />
             </div>
-            <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-gray-900 text-white font-semibold text-sm disabled:opacity-60">
-              {loading ? "Vérification…" : "Confirmer mon adresse e-mail"}
+            <div id="verification-feedback" className="email-verification__status" data-phase={verificationPhase} role="status" aria-live="polite" data-testid="status-verification">
+              {verificationPhase === "checking" && "Vérification du code en cours…"}
+              {verificationPhase === "success" && <><CheckCircle2 size={17} aria-hidden="true" /> Vérification réussie</>}
+              {verificationPhase === "error" && <><AlertCircle size={17} aria-hidden="true" /> {verificationError}</>}
+              {verificationPhase === "idle" && "Le code sera vérifié automatiquement."}
+            </div>
+            <button type="submit" data-testid="button-verify-email" disabled={verificationCode.length !== 6 || verificationPhase === "checking" || verificationPhase === "success" || (verificationPhase === "error" && !verificationRetryable)} className="email-verification__submit">
+              {verificationPhase === "checking" ? "Vérification en cours…" : verificationPhase === "success" ? "Adresse confirmée" : verificationPhase === "error" && verificationRetryable ? "Réessayer la vérification" : "Confirmer mon adresse e-mail"}
             </button>
           </form>
-          <button type="button" onClick={handleResendVerification} disabled={resending || resendSeconds > 0} className="w-full mt-4 py-2 text-sm font-medium text-orange-600 hover:underline disabled:opacity-60" data-testid="button-resend-verification">
+          <div className="email-verification__divider" />
+          <button type="button" onClick={handleResendVerification} disabled={resending || resendSeconds > 0 || verificationPhase === "checking" || verificationPhase === "success"} className="email-verification__resend" data-testid="button-resend-verification">
             {resending ? "Demande en cours…" : resendSeconds > 0
               ? `Renvoyer le code dans ${String(Math.floor(resendSeconds / 60)).padStart(2, "0")}:${String(resendSeconds % 60).padStart(2, "0")}`
               : "Je n'ai pas reçu le code — Renvoyer"}
           </button>
-          <p className="text-xs text-center text-gray-500 mt-1" role="status" data-testid="status-resend-cooldown">Un nouveau code peut être demandé une minute après le précédent.</p>
-          <button type="button" onClick={() => { setShowVerification(false); setVerificationPassword(""); setTab("login"); setLoginEmail(verifyEmail); }} className="w-full mt-2 py-2 text-sm text-gray-500 hover:text-gray-700">
+          <p className="email-verification__hint" role="status" data-testid="status-resend-cooldown">Un nouveau code peut être demandé une minute après le précédent.</p>
+          <button type="button" disabled={verificationPhase === "checking" || verificationPhase === "success"} onClick={() => { setShowVerification(false); setVerificationPassword(""); resetVerification(); setTab("login"); setLoginEmail(verifyEmail); }} className="email-verification__back" data-testid="button-back-to-login">
             Retour à la connexion
           </button>
-        </div>
-      </div>
+        </section>
+      </main>
     );
   }
 

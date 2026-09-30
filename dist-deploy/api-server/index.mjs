@@ -73584,7 +73584,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-30T01:36:05.660Z";
+var BUILD_TIME = "2026-09-30T02:09:05.634Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -73626,7 +73626,10 @@ async function requireUser(req, res, next) {
     const hash2 = crypto2.createHash("sha256").update(token).digest("hex");
     const [rows] = await getMysqlPool().execute(
       `SELECT s.user_id FROM auth_sessions s
-       INNER JOIN users u ON u.id=s.user_id AND u.email_verified_at IS NOT NULL
+       INNER JOIN users u ON u.id=s.user_id
+         AND (u.email_verified_at IS NOT NULL OR EXISTS (
+           SELECT 1 FROM user_roles r WHERE r.user_id=u.id AND r.role='admin'
+         ))
        WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > NOW() LIMIT 1`,
       [hash2]
     );
@@ -80031,7 +80034,7 @@ router10.post("/auth/login", authLimiter, async (req, res) => {
       await connection.rollback();
       return invalid();
     }
-    if (!user.email_verified_at) {
+    if (!user.email_verified_at && !user.is_admin) {
       if (!notificationsEnabled()) {
         await connection.rollback();
         return res.status(503).json({ error: "Envoi du code de v\xE9rification indisponible. R\xE9essayez plus tard." });
