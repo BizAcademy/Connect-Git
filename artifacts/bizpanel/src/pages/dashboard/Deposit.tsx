@@ -5,6 +5,7 @@ import { getAuthHeaders, authedFetch } from "@/lib/authFetch";
 import { formatBalance, getCurrencyInfo, toFcfa } from "@/lib/currency";
 import { toast } from "@/lib/toast";
 import CryptoDeposit from "./CryptoDeposit";
+import DepositMethodPicker from "@/components/dashboard/DepositMethodPicker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -458,14 +459,20 @@ export default function Deposit() {
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
-  if (method !== "mobile") return <div className="space-y-5 max-w-2xl">
-    <h2 className="text-xl font-bold">Recharger mon solde</h2>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <Button variant={method === null ? "default" : "outline"} onClick={() => setMethod("mobile")}>Dépôt Mobile Money</Button>
-      <Button variant={method === "crypto" ? "default" : "outline"} onClick={() => setMethod("crypto")}>Dépôt Crypto</Button>
+  if (method === null) return (
+    <DepositMethodPicker
+      onBack={() => navigate("/dashboard")}
+      onContinue={(selected) => setMethod(selected)}
+    />
+  );
+  if (method === "crypto") return (
+    <div className="space-y-5 max-w-2xl">
+      <Button variant="ghost" size="sm" onClick={() => setMethod(null)}>
+        <ArrowLeft size={16} className="mr-2" /> Choisir une autre méthode
+      </Button>
+      <CryptoDeposit />
     </div>
-    {method === "crypto" && <CryptoDeposit />}
-  </div>;
+  );
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Header */}
@@ -474,11 +481,15 @@ export default function Deposit() {
           <h2 className="text-xl font-bold font-heading">Recharger mon solde</h2>
           <p className="text-sm text-muted-foreground">Paiement Mobile Money sécurisé</p>
         </div>
-        {canBack && (
+        {canBack ? (
           <Button variant="ghost" size="sm" onClick={goBack}>
             <ArrowLeft size={14} className="mr-1" /> Retour
           </Button>
-        )}
+        ) : step === "country" ? (
+          <Button variant="ghost" size="sm" onClick={() => setMethod(null)}>
+            <ArrowLeft size={14} className="mr-1" /> Méthodes
+          </Button>
+        ) : null}
       </div>
 
       {/* Balance card */}
