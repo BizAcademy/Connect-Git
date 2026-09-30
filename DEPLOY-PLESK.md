@@ -12,14 +12,16 @@ bash build-for-plesk.sh
 bash push-to-github.sh "description de vos changements"
 ```
 
+Avant l'envoi, vérifier les fichiers supprimés avec `git diff --name-status origin/main..HEAD`. Le script n'écrase plus la branche distante : si GitHub a reçu d'autres modifications, il s'arrête au lieu de forcer le push.
+
 ### 2. Dans Plesk — Déployer la nouvelle version
 
 1. Aller dans **Git** → cliquer **Pull** (pour récupérer les nouveaux fichiers depuis GitHub)
 2. Cliquer **Deploy Now**
-3. Pour la mise à jour de la vérification par e-mail : dans l'application Node.js dont l'Application Root est `dist-deploy/api-server`, lancer une fois le script npm **`migrate:account-emails`**. Il applique uniquement les migrations 008 à 012 et ignore celles déjà enregistrées ; ne pas relancer toute la série d'anciennes migrations à la place.
+3. Après sauvegarde de la base, pour la mise à jour de la vérification par e-mail : dans l'application Node.js dont l'Application Root est `dist-deploy/api-server`, lancer une fois le script npm **`migrate:account-emails`**. Il applique uniquement les migrations 008 à 012 et ignore celles déjà enregistrées ; ne pas relancer toute la série d'anciennes migrations à la place.
 4. Cliquer **Restart** (ou redémarrer l'app Node.js)
 
-**Aucun build n'est nécessaire dans Plesk.** Les migrations ajoutent les tables d'e-mails et de vérification. La migration 012 retire le statut « e-mail vérifié » des anciens comptes non administrateurs qui n'ont jamais eu de code OTP : leurs sessions actuelles ne donnent alors plus accès au tableau de bord et ils doivent confirmer leur adresse à leur prochaine connexion. Les comptes administrateurs restent exemptés, et les comptes déjà confirmés par OTP conservent leur statut. Les nouveaux comptes doivent saisir le code reçu.
+**Aucun build n'est nécessaire dans Plesk.** Les migrations ajoutent les tables d'e-mails et de vérification. La migration 012 retire le statut « e-mail vérifié » des anciens comptes sans historique OTP, y compris les administrateurs. Les sessions des non-administrateurs concernés ne donnent alors plus accès au tableau de bord et ils doivent confirmer leur adresse à leur prochaine connexion. Les administrateurs restent exemptés tant qu'ils conservent ce rôle ; les comptes déjà confirmés par OTP conservent leur statut. Les nouveaux comptes doivent saisir le code reçu.
 
 ---
 

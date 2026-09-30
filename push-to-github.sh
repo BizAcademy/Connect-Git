@@ -16,9 +16,8 @@ set -e
 MSG="${1:-"chore: mise à jour"}"
 GITHUB_TOKEN="${GITHUB_PERSONAL_ACCESS_TOKEN:-${GITHUB_PAT:-}}"
 
-if [ -z "$GITHUB_TOKEN" ]; then
-  echo "❌ Secret GitHub manquant."
-  echo "   Ajoutez GITHUB_PAT (ou GITHUB_PERSONAL_ACCESS_TOKEN) dans l'onglet Secrets de Replit."
+if [ -z "$GITHUB_TOKEN" ] && ! git remote get-url origin >/dev/null 2>&1; then
+  echo "❌ Aucun accès GitHub configuré : ni remote origin, ni secret GitHub."
   exit 1
 fi
 
@@ -33,13 +32,14 @@ echo "============================================================"
 echo "🚀 Étape 2/2 : Push vers GitHub..."
 echo "============================================================"
 
-REPO_URL="https://x-token:${GITHUB_TOKEN}@github.com/BizAcademy/Connect-Git.git"
-
 git config user.email "replit@buzzbooster.app"
 git config user.name "BizAcademy"
 
-git remote set-url origin "$REPO_URL" 2>/dev/null \
-  || git remote add origin "$REPO_URL"
+if [ -n "$GITHUB_TOKEN" ]; then
+  REPO_URL="https://x-token:${GITHUB_TOKEN}@github.com/BizAcademy/Connect-Git.git"
+  git remote set-url origin "$REPO_URL" 2>/dev/null \
+    || git remote add origin "$REPO_URL"
+fi
 
 BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
 
@@ -52,19 +52,12 @@ else
   echo "✅ Commit : $MSG"
 fi
 
-echo "🚀 Push vers GitHub (branche main)..."
-if ! git push --force-with-lease origin "$BRANCH:main"; then
-  if ! git push --force origin "$BRANCH:main"; then
-    echo ""
-    echo "❌ Échec du push (authentification refusée)."
-    echo "   Cause la plus fréquente : vous avez mis à jour le token GitHub"
-    echo "   dans un onglet Shell DÉJÀ OUVERT. Un shell ouvert garde l'ancien"
-    echo "   token en mémoire."
-    echo ""
-    echo "   👉 Solution : fermez cet onglet Shell, ouvrez-en un NOUVEAU,"
-    echo "      puis relancez :  bash push-to-github.sh \"votre message\""
-    exit 1
-  fi
+echo "🚀 Push vers GitHub (branche main, sans écraser les commits distants)..."
+if ! git push origin "$BRANCH:main"; then
+  echo ""
+  echo "❌ Push refusé. Aucun push forcé ne sera tenté."
+  echo "   Vérifiez l'accès GitHub et comparez la branche distante avant de réessayer."
+  exit 1
 fi
 
 echo ""
