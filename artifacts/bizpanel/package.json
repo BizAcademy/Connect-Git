@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
+    "test:auth-verification": "node --test tests/auth-verification.test.mjs",
     "build": "vite build --config vite.config.ts",
     "prerender": "node prerender.mjs",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
