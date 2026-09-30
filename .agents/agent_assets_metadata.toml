@@ -42,3 +42,17 @@ mtime_ms = 1788696235616
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:1a67866f-edc3-4d00-ba60-42cc792c384a/e8bd5dca-7474-43b1-a04d-1fe1e6a4196d/cae051e2-65fe-4cfa-ad3f-f9f5c6552783"
 storage_version_token = "1788699966080189"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "sB65iA99EjF6NfrysTylu"
+uri = "file://artifacts/bizpanel/dist/buzzbooster-cybrancy-frontend.zip"
+type = "unspecified"
+title = "Frontend BUZZ BOOSTER prêt pour Cybrancy"
+description = "Build de production BizPanel incluant le nouvel écran de choix du dépôt. À extraire dans le document root configuré pour le site."
+logical_id = "ec7e9e88-d1a7-4b17-b59b-d813dbdcd875"
+content_hash = "sha256:7d215498746e44d85ea80dc372fab710df0af6e5e8c9a23a1a41d24a61744e3d"
+size = 815520
+mtime_ms = 1790730381359
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:c0a4427f-5eb5-4a20-9166-d8f69a21ee30/ec7e9e88-d1a7-4b17-b59b-d813dbdcd875/8c94a9d7-d05c-40eb-9ff9-59d5e670fe2a"
+storage_version_token = "1790730395459225"
+content_type = "application/octet-stream"
