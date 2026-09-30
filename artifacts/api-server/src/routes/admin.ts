@@ -7,6 +7,7 @@ import type { RowDataPacket } from "mysql2/promise";
 import { requireUser, requireAdmin, type AuthedRequest } from "../lib/auth";
 import { logger } from "../lib/logger";
 import { getMysqlPool } from "../lib/mysql";
+import { updateAccountEmail } from "../lib/account-email";
 import { readEarnings, appendEarning, estimateGainFromRevenue } from "../lib/earnings";
 import { loadPricing, setEntry, deleteEntry, enrichServices, usdToFcfaRate, getUsdRates, setUsdRatesOverride, clearUsdRatesOverride, USD_TO_LOCAL_RATES } from "../lib/smm-pricing";
 import { invalidateServicesCache } from "./smm";
@@ -270,12 +271,43 @@ router.get("/admin/users", requireUser, requireAdmin, async (req, res) => {
 });
 router.patch("/admin/users/:userId", requireUser, requireAdmin, actionCode, async (req, res) => {
   const authReq = req as AuthedRequest;
-  const id = String(req.params.userId), b = req.body || {}; if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: "user_id invalide" }); if (b.balance !== undefined && (!Number.isFinite(Number(b.balance)) || Number(b.balance) < 0)) return res.status(400).json({ error: "Solde invalide" });
-  const db = getMysqlPool(), c = await db.getConnection(); try { await c.beginTransaction(); const [profile] = await c.execute<RowDataPacket[]>("SELECT balance_minor FROM profiles WHERE user_id=? FOR UPDATE", [id]); if (!profile[0]) { await c.rollback(); return res.status(404).json({ error: "Utilisateur introuvable" }); } const before = Number(profile[0].balance_minor), after = b.balance === undefined ? before : Math.round(Number(b.balance) * 100);
-    const fields: string[] = [], values: any[] = []; for (const [key, col] of [["username", "username"], ["email", "email"], ["country", "country"]] as const) if (typeof b[key] === "string") { fields.push(`${col}=?`); values.push(b[key].trim()); } if (b.balance !== undefined) { fields.push("balance_minor=?"); values.push(after); } if (fields.length) await c.execute(`UPDATE profiles SET ${fields.join(",")} WHERE user_id=?`, [...values, id]); if (typeof b.email === "string" && b.email.trim()) await c.execute("UPDATE users SET email=? WHERE id=?", [b.email.trim().toLowerCase(), id]); if (typeof b.is_active === "boolean") await c.execute(`UPDATE users SET disabled_at=${b.is_active ? "NULL" : "NOW()"} WHERE id=?`, [id]);
+  const id = String(req.params.userId), b = req.body || {};
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: "user_id invalide" });
+  if (b.balance !== undefined && (!Number.isFinite(Number(b.balance)) || Number(b.balance) < 0)) return res.status(400).json({ error: "Solde invalide" });
+  const email = b.email === undefined ? null : typeof b.email === "string" ? b.email.trim().toLowerCase() : "";
+  if (email !== null && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+    return res.status(400).json({ error: "Adresse e-mail invalide" });
+  }
+  const db = getMysqlPool(), c = await db.getConnection();
+  try {
+    await c.beginTransaction();
+    const [profile] = await c.execute<RowDataPacket[]>("SELECT balance_minor FROM profiles WHERE user_id=? FOR UPDATE", [id]);
+    if (!profile[0]) { await c.rollback(); return res.status(404).json({ error: "Utilisateur introuvable" }); }
+    const [account] = await c.execute<RowDataPacket[]>("SELECT email FROM users WHERE id=? FOR UPDATE", [id]);
+    if (!account[0]) { await c.rollback(); return res.status(404).json({ error: "Utilisateur introuvable" }); }
+    const oldEmail = String(account[0].email);
+    let emailChanged = false;
+    const before = Number(profile[0].balance_minor), after = b.balance === undefined ? before : Math.round(Number(b.balance) * 100);
+    const fields: string[] = [], values: any[] = [];
+    for (const [key, col] of [["username", "username"], ["country", "country"]] as const) {
+      if (typeof b[key] === "string") { fields.push(`${col}=?`); values.push(b[key].trim()); }
+    }
+    if (b.balance !== undefined) { fields.push("balance_minor=?"); values.push(after); }
+    if (fields.length) await c.execute(`UPDATE profiles SET ${fields.join(",")} WHERE user_id=?`, [...values, id]);
+    if (email !== null) {
+      emailChanged = await updateAccountEmail(c, id, oldEmail, email);
+    }
+    if (typeof b.is_active === "boolean") await c.execute(`UPDATE users SET disabled_at=${b.is_active ? "NULL" : "NOW()"} WHERE id=?`, [id]);
     if (after !== before) { const paymentId = randomUUID(); await c.execute("INSERT INTO payments (id,user_id,provider_reference,amount_minor,currency,status,method,credited_at,balance_before_minor,balance_after_minor) VALUES (?,?,?,?,?,'completed','admin_adjustment',NOW(),?,?)", [paymentId, id, `ADJ-${paymentId}`, after - before, "XAF", before, after]); await c.execute("INSERT INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?,?,'admin_adjustment','payment',?)", [randomUUID(), id, after - before, after, "XAF", paymentId]); await c.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason,actor_user_id) VALUES (?,?,?,?,?)", [id, before, after, "admin_adjustment", authReq.userId!]); }
-    await c.commit(); return res.json({ ok: true });
-  } catch (err) { await c.rollback(); logger.error({ err }, "admin user update"); return res.status(500).json({ error: "Mise à jour du profil impossible" }); } finally { c.release(); }
+    await c.commit();
+    return res.json({ ok: true, email: email ?? oldEmail, verificationRequired: emailChanged });
+  } catch (err) {
+    await c.rollback();
+    const code = (err as { code?: string }).code;
+    if (code === "ER_DUP_ENTRY") return res.status(409).json({ error: "Cette adresse e-mail est déjà utilisée" });
+    req.log.error({ code }, "admin user update failed");
+    return res.status(500).json({ error: "Mise à jour du profil impossible" });
+  } finally { c.release(); }
 });
 router.post("/admin/users/:userId/password", requireUser, requireAdmin, actionCode, async (req, res) => { const pass = String(req.body?.password || ""); if (pass.length < 8 || pass.length > 200) return res.status(400).json({ error: "Le mot de passe doit contenir entre 8 et 200 caractères" }); await getMysqlPool().execute("UPDATE users SET password_hash=? WHERE id=?", [await bcrypt.hash(pass, 12), req.params.userId]); return res.json({ ok: true, user_id: req.params.userId }); });
 

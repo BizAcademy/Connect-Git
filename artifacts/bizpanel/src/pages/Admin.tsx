@@ -2053,12 +2053,17 @@ const AdminUsers = () => {
     if (!editing) return;
     setSaving(true);
     try {
-      await adminApiFetch(`/api/admin/users/${editing.user_id}`, {
+      const result = await adminApiFetch(`/api/admin/users/${editing.user_id}`, {
         method: "PATCH",
         headers: { "X-Admin-Action-Code": code },
         body: JSON.stringify(form),
       });
-      toast.success("Utilisateur mis à jour");
+      setUsers(previous => previous.map(user =>
+        user.user_id === editing.user_id ? { ...user, ...form, email: result.email } : user
+      ));
+      toast.success(result.verificationRequired
+        ? "Nouvel e-mail enregistré. Un code de confirmation a été envoyé à cette adresse."
+        : "Utilisateur mis à jour");
       setEditing(null);
       load();
     } finally {
@@ -2303,7 +2308,8 @@ const AdminUsers = () => {
             </div>
             <div className="sm:col-span-2">
               <Label className="text-xs">Email</Label>
-              <Input type="email" value={form.email ?? ""} onChange={e => setForm({ ...form, email: e.target.value })} className="h-10 mt-1" />
+              <Input type="email" data-testid="input-admin-user-email" value={form.email ?? ""} onChange={e => setForm({ ...form, email: e.target.value })} className="h-10 mt-1" />
+              <p className="text-xs text-muted-foreground mt-1">Un changement d’adresse coupe les sessions en cours et envoie un nouveau code à confirmer à la nouvelle adresse.</p>
             </div>
             <div>
               <Label className="text-xs">Téléphone</Label>

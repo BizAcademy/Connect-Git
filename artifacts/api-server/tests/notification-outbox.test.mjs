@@ -39,15 +39,28 @@ function database() {
     advance(ms) { now += ms; },
     async execute(sql, args = []) {
       calls.push({ sql, args });
-      if (sql.includes("SELECT u.email, p.username")) return [[
-        { email: "owned@example.test", username: "Real Profile" },
+      if (sql.includes("SELECT email FROM users WHERE id=? FOR UPDATE")) return [[
+        { email: "owned@example.test" },
       ]];
+      if (sql.includes("SELECT username FROM profiles WHERE user_id=?")) return [[
+        { username: "Real Profile" },
+      ]];
+      if (sql.includes("SELECT event_key,payload_encrypted,expires_at FROM notification_outbox")) {
+        return [[...rows.values()].filter(row => row.status === "pending" && row.payload_encrypted)];
+      }
       if (sql.includes("INSERT INTO notification_outbox")) {
         const [key, encrypted, expires] = args;
         if (!rows.has(key)) rows.set(key, {
-          event_key: key, payload_encrypted: encrypted, expires_at: expires?.getTime() ?? null,
+          event_key: key, payload_encrypted: encrypted,
+          expires_at: expires instanceof Date ? expires.getTime() : expires ?? null,
           status: "pending", attempts: 0, available_at: now, lock_token: null, locked_until: null,
         });
+        return [{ affectedRows: 1 }];
+      }
+      if (sql.includes("WHERE event_key=? AND status='pending'")) {
+        const row = rows.get(args[0]);
+        if (!row || row.status !== "pending") return [{ affectedRows: 0 }];
+        Object.assign(row, { status: "expired", payload_encrypted: null, finished_at: now });
         return [{ affectedRows: 1 }];
       }
       if (sql.includes("SET status='expired'")) {
@@ -123,8 +136,36 @@ test("enqueue derives encrypted recipients from own user/profile and freezes fir
     ...content, message: "Changed", recipient_email: "elsewhere@attacker.test",
   });
   assert.equal(row.payload_encrypted, first);
-  assert.equal(db.calls.filter(c => c.sql.includes("SELECT u.email")).length, 2);
+  assert.equal(db.calls.filter(c => c.sql.includes("SELECT email FROM users")).length, 2);
   await assert.rejects(outbox.enqueueUserNotification(db, "user-1", "bad key", content), /Invalid notification event key/);
+});
+
+test("email changes requeue pending business mail without changing old event payloads or in-flight mail", async () => {
+  const db = database();
+  await outbox.enqueueUserNotification(db, "user-1", "payment-confirmed-old", content);
+  const old = db.rows.get("payment-confirmed-old");
+  const frozen = outbox.decryptNotification(old.payload_encrypted);
+  const security = {
+    ...old, event_key: "old-security", status: "pending",
+    payload_encrypted: outbox.encryptNotification({ ...frozen, category: "security" }),
+  };
+  const sending = {
+    ...old, event_key: "already-sending", status: "sending",
+  };
+  db.rows.set(security.event_key, security);
+  db.rows.set(sending.event_key, sending);
+
+  await outbox.requeuePendingNotificationsForEmailChange(db, "owned@example.test", "updated@example.test");
+
+  assert.equal(old.status, "expired");
+  assert.equal(old.payload_encrypted, null);
+  assert.equal(security.status, "expired");
+  assert.equal(sending.status, "sending");
+  const replacements = [...db.rows.values()].filter(row => row.event_key.startsWith("recipient-change-"));
+  assert.equal(replacements.length, 1);
+  assert.deepEqual(outbox.decryptNotification(replacements[0].payload_encrypted), {
+    ...frozen, recipient_email: "updated@example.test",
+  });
 });
 
 test("dispatch sends frozen content to Mailtrap, erases ciphertext and stores message ID", async () => {

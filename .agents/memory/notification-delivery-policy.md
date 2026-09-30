@@ -9,6 +9,12 @@ Account and credited-payment notifications must persist with their business tran
 
 **How to apply:** Any new notification trigger should use the same transaction as the event. Never call the mail provider while holding the business transaction.
 
+An account e-mail change invalidates codes addressed to the old mailbox. Unsent non-security notifications may be requeued to the new address under **new event keys**, but never edit a frozen payload under its existing key. A message already leased for sending cannot be recalled.
+
+**Why:** An old mailbox must not verify a newly assigned address, while rewriting a queued event across retries breaks the first-payload guarantee and may conflict with a provider acceptance whose database acknowledgement was lost.
+
+**How to apply:** Serialize recipient lookup with account e-mail updates, invalidate old security codes, enqueue fresh verification in the same transaction, and requeue pending business mail rather than changing its existing payload. Be explicit that an in-flight delivery may still reach the former address.
+
 Queued payloads are encrypted with a domain-separated key derived from the mail provider's API token; planned token rotation must first drain the queue.
 
 **Why:** Password-reset links must not sit in plaintext in MySQL. Reusing a derived key avoids imposing an extra deployment secret on this small integration, but rotating the provider token makes pending ciphertext unreadable.

@@ -57,14 +57,17 @@ export async function enqueueUserNotification(
   if (!notificationsEnabled()) return;
   if (!/^[\x21-\x7E]{1,191}$/.test(key)) throw new Error("Invalid notification event key");
   const [rows] = await conn.execute<RowDataPacket[]>(
-    "SELECT u.email, p.username FROM users u LEFT JOIN profiles p ON p.user_id=u.id WHERE u.id=?",
+    "SELECT email FROM users WHERE id=? FOR UPDATE",
     [userId],
   );
   const recipient = rows[0];
   if (!recipient || typeof recipient.email !== "string") throw new Error("Notification recipient unavailable");
+  const [profiles] = await conn.execute<RowDataPacket[]>(
+    "SELECT username FROM profiles WHERE user_id=?", [userId],
+  );
   const payload: NotificationEmail = {
     ...content, recipient_email: recipient.email,
-    ...(recipient.username ? { recipient_name: String(recipient.username) } : {}),
+    ...(profiles[0]?.username ? { recipient_name: String(profiles[0].username) } : {}),
   };
   const expires = content.expires_at ? new Date(content.expires_at) : null;
   if (expires && !Number.isFinite(expires.getTime())) throw new Error("Invalid notification expiration");
@@ -74,6 +77,34 @@ export async function enqueueUserNotification(
      VALUES (?,?,?) ON DUPLICATE KEY UPDATE event_key=event_key`,
     [key, encryptNotification(payload), expires],
   );
+}
+
+/** Retarget unsent messages without changing the frozen payload of an existing event. */
+export async function requeuePendingNotificationsForEmailChange(
+  conn: PoolConnection, previousEmail: string, nextEmail: string,
+): Promise<void> {
+  const [pending] = await conn.execute<RowDataPacket[]>(
+    `SELECT event_key,payload_encrypted,expires_at FROM notification_outbox
+     WHERE status='pending' AND payload_encrypted IS NOT NULL FOR UPDATE`,
+  );
+  for (const row of pending) {
+    const payload = decryptNotification(String(row.payload_encrypted));
+    if (payload.recipient_email.toLowerCase() !== previousEmail.toLowerCase()) continue;
+    const [expired] = await conn.execute<ResultSetHeader>(
+      `UPDATE notification_outbox SET status='expired',payload_encrypted=NULL,
+       lock_token=NULL,locked_until=NULL,finished_at=NOW(3)
+       WHERE event_key=? AND status='pending'`,
+      [row.event_key],
+    );
+    if (expired.affectedRows !== 1) throw new Error("Pending notification changed during email update");
+    // An old security code must not be forwarded to a newly assigned mailbox.
+    if (payload.category === "security") continue;
+    await conn.execute(
+      `INSERT INTO notification_outbox (event_key,payload_encrypted,expires_at)
+       VALUES (?,?,?)`,
+      [`recipient-change-${randomUUID()}`, encryptNotification({ ...payload, recipient_email: nextEmail }), row.expires_at],
+    );
+  }
 }
 
 export function retryDelaySeconds(attempt: number): number {
