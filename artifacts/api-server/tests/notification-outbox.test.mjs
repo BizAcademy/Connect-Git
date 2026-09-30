@@ -117,6 +117,10 @@ function database() {
 const content = {
   subject: "Payment confirmed", title: "Deposit", message: "Credited",
   recipient_email: "injected@attacker.test", recipient_name: "Injected",
+  attachments: [{
+    filename: "facture-depot.pdf", type: "application/pdf",
+    content: Buffer.from("%PDF-1.4").toString("base64"),
+  }],
 };
 const json = (status, body) => new Response(JSON.stringify(body), { status });
 const originalFetch = globalThis.fetch;

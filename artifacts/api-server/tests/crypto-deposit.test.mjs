@@ -11,6 +11,7 @@ await build({
   platform: "node",
   format: "esm",
   packages: "external",
+  loader: { ".png": "dataurl" },
   logLevel: "silent",
 });
 const { quoteCryptoDeposit, storedCryptoCharge, createIntent } = await import(pathToFileURL(outfile).href);

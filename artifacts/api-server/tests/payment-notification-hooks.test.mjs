@@ -22,7 +22,8 @@ await build({
           "./mysql": "export const getMysqlPool = () => globalThis.__paymentDb;",
           "./logger": "export const logger = { info() {}, warn() {}, error() {} };",
           "./referrals": "export const maybeAwardReferralBonus = async (...args) => globalThis.__referrals.push(args);",
-          "./notification-outbox": `export const enqueueUserNotification = async (...args) => {
+          "./notification-outbox": `export const notificationsEnabled = () => true;
+          export const enqueueUserNotification = async (...args) => {
             globalThis.__notifications.push({
               connection: args[0], userId: args[1], key: args[2], content: args[3],
               committed: globalThis.__paymentEvents.includes("commit"),
@@ -51,8 +52,13 @@ function fixture(payment, { duplicate = false } = {}) {
     async execute(sql, args) {
       events.push(sql);
       if (sql.includes("SELECT * FROM payments") && sql.includes("FOR UPDATE")) return [[payment]];
-      if (sql.includes("SELECT balance_minor FROM profiles")) return [[{ balance_minor: 100_000 }]];
-      if (sql.includes("SELECT balance_usd_minor FROM profiles")) return [[{ balance_usd_minor: 20_000 }]];
+      if (sql.includes("SELECT balance_minor,username FROM profiles")) {
+        return [[{ balance_minor: 100_000, username: "Client Test" }]];
+      }
+      if (sql.includes("SELECT balance_usd_minor,username FROM profiles")) {
+        return [[{ balance_usd_minor: 20_000, username: "Client Crypto" }]];
+      }
+      if (sql.includes("SELECT email FROM users")) return [[{ email: "client@example.test" }]];
       if (sql.includes("INSERT IGNORE INTO wallet_transactions")) return [{ affectedRows: duplicate ? 0 : 1 }];
       return [{ affectedRows: 1 }];
     },
@@ -105,8 +111,11 @@ test("fiat credit queues confirmation on the payment transaction before commit",
   assert.equal(note.userId, "user-1");
   assert.equal(note.key, "payment-confirmed-fiat-1");
   assert.equal(note.committed, false);
-  assert.match(note.content.details["Montant crédité"], /6.000 FCFA/);
+  assert.match(note.content.details["Montant crédité"].replace(/\s/g, ""), /6200FCFA/);
   assert.equal(note.content.details["Référence"], "fiat-ref");
+  assert.equal(note.content.attachments[0].type, "application/pdf");
+  assert.match(note.content.attachments[0].filename, /^facture-depot-BP-DEP-FIAT1\.pdf$/);
+  assert.equal(Buffer.from(note.content.attachments[0].content, "base64").subarray(0, 5).toString(), "%PDF-");
   assert.ok(events.indexOf("enqueue") > events.findIndex(e => e.includes("UPDATE payments SET status='completed'")));
   assert.ok(events.indexOf("enqueue") < events.indexOf("commit"));
 });
@@ -137,8 +146,10 @@ test("crypto completed exact payment queues once in its transaction before commi
   assert.equal(note.userId, "user-2");
   assert.equal(note.key, "payment-confirmed-crypto-1");
   assert.equal(note.committed, false);
-  assert.equal(note.content.details["Montant crédité"], "100.00 USD");
+  assert.equal(note.content.details["Montant crédité"], "100,00 USD");
   assert.equal(note.content.details["Référence"], "crypto-ref");
+  assert.equal(note.content.attachments[0].type, "application/pdf");
+  assert.equal(Buffer.from(note.content.attachments[0].content, "base64").subarray(0, 5).toString(), "%PDF-");
   assert.ok(events.indexOf("enqueue") > events.findIndex(e => e.includes("UPDATE payments SET status='completed'")));
   assert.ok(events.indexOf("enqueue") < events.indexOf("commit"));
 });

@@ -3,6 +3,14 @@ import { logoAttachment, renderNotificationHtml } from "./notification-email-tem
 const ENDPOINT = "https://send.api.mailtrap.io/api/send";
 const DEFAULT_TIMEOUT_MS = 10_000;
 
+export interface NotificationAttachment {
+  filename: string;
+  type: string;
+  content: string;
+  disposition?: "attachment" | "inline";
+  content_id?: string;
+}
+
 /** The application's provider-independent, frozen email content. */
 export interface NotificationEmail {
   recipient_email: string;
@@ -19,6 +27,7 @@ export interface NotificationEmail {
   action_url?: string;
   action_label?: string;
   note?: string;
+  attachments?: NotificationAttachment[];
 }
 
 export interface MailtrapDelivery {
@@ -65,6 +74,15 @@ function validateNotification(input: NotificationEmail): void {
       (input.details !== undefined && (typeof input.details !== "object" ||
         input.details === null || Array.isArray(input.details) ||
         !Object.entries(input.details).every(([key, value]) => key.length > 0 && typeof value === "string"))) ||
+       (input.attachments !== undefined && (!Array.isArray(input.attachments) ||
+         input.attachments.length > 4 ||
+         !input.attachments.every(file =>
+           typeof file?.filename === "string" && /^[A-Za-z0-9._ -]{1,120}$/.test(file.filename) &&
+           typeof file.type === "string" && /^[\w.+-]+\/[\w.+-]+$/.test(file.type) &&
+           typeof file.content === "string" && file.content.length > 0 && file.content.length <= 8_000_000 &&
+           /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(file.content) &&
+           (file.disposition === undefined || file.disposition === "attachment" || file.disposition === "inline") &&
+           (file.content_id === undefined || typeof file.content_id === "string")))) ||
       !["recipient_name", "preheader", "category", "subtitle", "otp_code", "expires_at", "action_label", "note"]
         .every(key => input[key as keyof NotificationEmail] === undefined ||
           typeof input[key as keyof NotificationEmail] === "string") ||
@@ -141,7 +159,7 @@ export class MailtrapNotificationClient {
         subject: input.subject,
         text: plainText(input),
         html: renderNotificationHtml(input),
-        attachments: [logoAttachment],
+        attachments: [logoAttachment, ...(input.attachments ?? [])],
         ...(input.category ? { category: input.category } : {}),
       }),
       signal,

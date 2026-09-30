@@ -25,6 +25,7 @@
     "express-rate-limit": "^8.5.2",
     "multer": "^2.1.1",
     "mysql2": "^3.24.3",
+    "pdf-lib": "^1.17.1",
     "pino": "^9",
     "pino-http": "^10"
   },

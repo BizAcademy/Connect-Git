@@ -282,14 +282,41 @@ export async function syncOrderInternal(opts:{localOrderId?:string;externalId?:s
       await conn.execute("UPDATE orders SET status=? WHERE id=?",[status,order.id]);
       if(status==="completed"&&previousStatus!=="completed"&&!current.refunded_at){
         const orderReference=String(current.external_order_id??current.provider_order_id??current.id);
+        const orderCurrency=String(current.currency??"XAF").toUpperCase();
+        const orderAmount=Number(current.charge_minor??0)/100;
+        const amountLabel=`${orderAmount.toLocaleString("fr-FR",{
+          minimumFractionDigits:orderCurrency==="USD"?2:0,
+          maximumFractionDigits:2,
+        })} ${orderCurrency}`;
+        const createdAt=current.created_at?new Date(current.created_at):null;
+        const createdLabel=createdAt&&Number.isFinite(createdAt.getTime())
+          ?createdAt.toLocaleString("fr-FR",{timeZone:"Africa/Douala"})
+          :"—";
+        const updatedAt=current.updated_at?new Date(current.updated_at):null;
+        const updatedLabel=updatedAt&&Number.isFinite(updatedAt.getTime())
+          ?updatedAt.toLocaleString("fr-FR",{timeZone:"Africa/Douala"})
+          :"—";
         await enqueueUserNotification(conn,String(current.user_id),`smm-order-completed-${current.id}`,{
           subject:"Votre commande SMM est terminée",
           title:"Commande terminée",
           message:"Votre commande a été réalisée avec succès.",
           category:"transactionnel",
           details:{
-            Service:String(current.service_name??current.service_id??"Service SMM"),
+            "Service":String(current.service_name??current.service_id??"Service SMM"),
+            "Catégorie":String(current.service_category||"—"),
+            "ID du service":String(current.service_id??"—"),
+            "URL du compte ou de la publication":String(current.link||"—"),
+            "Quantité":String(current.quantity??"—"),
+            "Montant débité":amountLabel,
+            "Portefeuille débité":String(current.wallet_charged??orderCurrency),
+            "Fournisseur":`#${String(current.provider??"—")}`,
             "Référence de commande":orderReference,
+            "Identifiant fournisseur":String(current.provider_order_id??"—"),
+            "Identifiant externe":String(current.external_order_id??"—"),
+            "Référence interne":String(current.id),
+            "Date de création":createdLabel,
+            "Dernière mise à jour":updatedLabel,
+            "Statut":String(status),
           },
         });
       }

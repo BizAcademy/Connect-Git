@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
-import { enqueueUserNotification } from "./notification-outbox";
+import { enqueueUserNotification, notificationsEnabled } from "./notification-outbox";
+import { createDepositInvoiceAttachment } from "./deposit-invoice";
 import type { RowDataPacket } from "mysql2/promise";
 import { getMysqlPool } from "./mysql";
 
@@ -155,7 +156,7 @@ export async function reconcileCryptoPayment(paymentId: string) {
       await conn.commit(); return "irregular";
     }
     if (intent.status === "completed") {
-      const [profiles] = await conn.execute<RowDataPacket[]>("SELECT balance_usd_minor FROM profiles WHERE user_id=? FOR UPDATE", [row.user_id]);
+      const [profiles] = await conn.execute<RowDataPacket[]>("SELECT balance_usd_minor,username FROM profiles WHERE user_id=? FOR UPDATE", [row.user_id]);
       if (!profiles[0]) throw new Error("Profil introuvable");
       const before = Number(profiles[0].balance_usd_minor), after = before + Number(row.amount_minor);
       await conn.execute("UPDATE profiles SET balance_usd_minor=? WHERE user_id=?", [after, row.user_id]);
@@ -164,16 +165,46 @@ export async function reconcileCryptoPayment(paymentId: string) {
       await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason) VALUES (?,?,?,'crypto_usd_deposit')", [row.user_id, before, after]);
       await conn.execute("UPDATE payments SET status='completed',credited_at=NOW(),completed_at=NOW(),balance_before_minor=?,balance_after_minor=? WHERE id=?",
         [before, after, paymentId]);
-      await enqueueUserNotification(conn, row.user_id, `payment-confirmed-${paymentId}`, {
-        subject: "Confirmation de dépôt — BUZZ BOOSTER",
-        title: "Votre dépôt est confirmé",
-        category: "Paiement",
-        message: "Votre dépôt a été confirmé et votre portefeuille USD a été crédité.",
-        details: {
-          "Montant crédité": `${(Number(row.amount_minor) / 100).toFixed(2)} USD`,
-          "Référence": row.reference || paymentId,
-        },
-      });
+      if (notificationsEnabled()) {
+        const [accounts] = await conn.execute<RowDataPacket[]>(
+          "SELECT email FROM users WHERE id=? FOR UPDATE", [row.user_id],
+        );
+        if (!accounts[0]?.email) throw new Error("Adresse e-mail du client introuvable");
+        const amount = Number(row.amount_minor) / 100;
+        const method = String(row.method || "crypto");
+        const reference = String(row.reference || paymentId);
+        const invoice = await createDepositInvoiceAttachment({
+          id: paymentId,
+          createdAt: row.created_at,
+          customerName: profiles[0].username,
+          customerEmail: String(accounts[0].email),
+          method,
+          reference,
+          transactionId: row.transaction_id,
+          orderId: row.order_id,
+          depositedAmount: amount,
+          depositedCurrency: "USD",
+          creditedAmount: amount,
+          creditedCurrency: "USD",
+        });
+        const formattedAmount = `${amount.toLocaleString("fr-FR", {
+          minimumFractionDigits: 2, maximumFractionDigits: 2,
+        })} USD`;
+        await enqueueUserNotification(conn, row.user_id, `payment-confirmed-${paymentId}`, {
+          subject: "Confirmation de dépôt — BUZZ BOOSTER",
+          title: "Votre dépôt est confirmé",
+          category: "Paiement",
+          message: "Votre dépôt a été confirmé et votre portefeuille USD a été crédité.",
+          details: {
+            "Montant du dépôt": formattedAmount,
+            "Montant crédité": formattedAmount,
+            "Méthode": method,
+            "Référence": reference,
+          },
+          note: "Votre facture de dépôt est jointe à cet e-mail au format PDF.",
+          attachments: [invoice],
+        });
+      }
       await conn.commit(); return "completed";
     }
     const status = ["expired", "failed", "canceled", "cancelled"].includes(intent.status) ? intent.status : "pending";

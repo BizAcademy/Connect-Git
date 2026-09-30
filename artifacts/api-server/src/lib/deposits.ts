@@ -4,7 +4,8 @@ import { logger } from "./logger";
 import { toFcfa, toFcfaByCurrency, setRateOverrides, isRateCacheValid } from "./currency";
 import { getMysqlPool } from "./mysql";
 import { maybeAwardReferralBonus } from "./referrals";
-import { enqueueUserNotification } from "./notification-outbox";
+import { createDepositInvoiceAttachment } from "./deposit-invoice";
+import { enqueueUserNotification, notificationsEnabled } from "./notification-outbox";
 
 export const BONUS_THRESHOLD_FCFA = 5000;
 export const BONUS_AMOUNT_FCFA = 200;
@@ -82,7 +83,7 @@ export async function creditDeposit(paymentId: string, opts?: { userToken?: stri
     const onlyBonus = Boolean(opts?.forceBonusCredit && row.credited_at && eligible && row.bonus_status !== "credited");
     if (row.credited_at && !onlyBonus) { await conn.commit(); return { ok: true, alreadyCredited: true, amountCredited: 0, bonusCredited: 0, newBalance: null, payment }; }
     const totalMinor = minor(onlyBonus ? bonus : amount + bonus);
-    const [profiles] = await conn.execute<RowDataPacket[]>("SELECT balance_minor FROM profiles WHERE user_id = ? FOR UPDATE", [row.user_id]);
+    const [profiles] = await conn.execute<RowDataPacket[]>("SELECT balance_minor,username FROM profiles WHERE user_id = ? FOR UPDATE", [row.user_id]);
     if (!profiles[0]) throw new Error("Profil introuvable");
     const before = Number(profiles[0].balance_minor); const after = before + totalMinor;
     const type = onlyBonus ? "deposit_bonus" : "deposit";
@@ -97,17 +98,43 @@ export async function creditDeposit(paymentId: string, opts?: { userToken?: stri
     if (onlyBonus) await conn.execute("UPDATE payments SET bonus_amount_minor=?, bonus_status='credited', bonus_credited_at=NOW(), balance_after_minor=? WHERE id=?", [minor(bonus), after, paymentId]);
     else await conn.execute("UPDATE payments SET status='completed', credited_at=NOW(), completed_at=NOW(), bonus_amount_minor=?, bonus_status=?, bonus_credited_at=?, balance_before_minor=?, balance_after_minor=? WHERE id=?",
       [minor(bonus), eligible ? "credited" : "not_eligible", eligible ? new Date() : null, before, after, paymentId]);
-    if (!onlyBonus) await enqueueUserNotification(conn, row.user_id, `payment-confirmed-${paymentId}`, {
-      subject: "Confirmation de dépôt — BUZZ BOOSTER",
-      title: "Votre dépôt est confirmé",
-      category: "Paiement",
-      message: "Votre dépôt a été confirmé et votre portefeuille a été crédité.",
-      details: {
-        "Montant crédité": `${amount.toLocaleString("fr-FR")} FCFA`,
-        "Bonus": `${bonus.toLocaleString("fr-FR")} FCFA`,
-        "Référence": payment.reference || paymentId,
-      },
-    });
+    if (!onlyBonus && notificationsEnabled()) {
+      const [accounts] = await conn.execute<RowDataPacket[]>(
+        "SELECT email FROM users WHERE id=? FOR UPDATE", [row.user_id],
+      );
+      if (!accounts[0]?.email) throw new Error("Adresse e-mail du client introuvable");
+      const creditedAmount = amount + bonus;
+      const invoice = await createDepositInvoiceAttachment({
+        id: paymentId,
+        createdAt: payment.created_at,
+        customerName: profiles[0].username,
+        customerEmail: String(accounts[0].email),
+        method: payment.method,
+        reference: payment.reference || paymentId,
+        transactionId: payment.transaction_id,
+        orderId: payment.order_id,
+        depositedAmount: payment.amount,
+        depositedCurrency: payment.currency || "FCFA",
+        creditedAmount,
+        creditedCurrency: "FCFA",
+        bonusAmount: bonus,
+      });
+      await enqueueUserNotification(conn, row.user_id, `payment-confirmed-${paymentId}`, {
+        subject: "Confirmation de dépôt — BUZZ BOOSTER",
+        title: "Votre dépôt est confirmé",
+        category: "Paiement",
+        message: "Votre dépôt a été confirmé et votre portefeuille a été crédité.",
+        details: {
+          "Montant du dépôt": `${payment.amount.toLocaleString("fr-FR")} ${payment.currency || "FCFA"}`,
+          "Montant crédité": `${creditedAmount.toLocaleString("fr-FR")} FCFA`,
+          "Bonus": `${bonus.toLocaleString("fr-FR")} FCFA`,
+          "Méthode": payment.method,
+          "Référence": payment.reference || paymentId,
+        },
+        note: "Votre facture de dépôt est jointe à cet e-mail au format PDF.",
+        attachments: [invoice],
+      });
+    }
     await conn.commit();
     outcome = { ok: true, alreadyCredited: false, amountCredited: onlyBonus ? 0 : amount, bonusCredited: bonus, newBalance: fcfa(after), payment: (await fetchPayment(paymentId))! };
     if (!onlyBonus) await maybeAwardReferralBonus(payment.user_id, paymentId, amount);

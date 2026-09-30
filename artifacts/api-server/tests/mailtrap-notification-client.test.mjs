@@ -72,6 +72,33 @@ test("sends branded HTML and plain text with the actual logo inline", async () =
   assert.equal(sent.otp_code, undefined);
 });
 
+test("sends a PDF invoice alongside the inline logo and includes order links in email content", async () => {
+  let sent;
+  const client = new MailtrapNotificationClient({
+    config, http: async (_url, init) => {
+      sent = JSON.parse(init.body);
+      return json(200, { success: true, message_ids: ["invoice-123"] });
+    },
+  });
+  const url = "https://instagram.com/customer?ref=mail";
+  const pdf = Buffer.from("%PDF-1.7\n%%EOF", "ascii").toString("base64");
+  await client.sendEmail({
+    ...notification,
+    category: "Paiement",
+    details: { "URL du compte ou de la publication": url },
+    note: "Votre facture est jointe.",
+    attachments: [{ filename: "facture-depot.pdf", type: "application/pdf", content: pdf }],
+  });
+
+  assert.equal(sent.attachments.length, 2);
+  assert.equal(sent.attachments[1].filename, "facture-depot.pdf");
+  assert.equal(sent.attachments[1].type, "application/pdf");
+  assert.equal(sent.attachments[1].content, pdf);
+  assert.match(sent.text, new RegExp(url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(sent.html, /href="https:\/\/instagram\.com\/customer\?ref=mail"/);
+  assert.match(sent.html, /Votre facture est jointe/);
+});
+
 test("escapes user content in both layouts while keeping the logo", async () => {
   const sent = [];
   const client = new MailtrapNotificationClient({

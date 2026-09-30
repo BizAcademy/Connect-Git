@@ -16,6 +16,7 @@ await build({
   platform: "node",
   format: "esm",
   packages: "external",
+  loader: { ".png": "dataurl" },
   logLevel: "silent",
 });
 const { scanCryptoDepositsOnce } = await import(pathToFileURL(`${outdir}/crypto-deposit-scanner.mjs`).href);

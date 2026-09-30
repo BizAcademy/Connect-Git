@@ -45,9 +45,12 @@ const { syncOrderInternal } = await import(pathToFileURL(outfile).href);
 function testDb() {
   const order = {
     id: "order-123", user_id: "user-1", provider: 1, service_id: "42",
-    service_name: "Abonnés Instagram", quantity: 100, charge_minor: 1000,
-    revenue_fcfa_minor: 1000, currency: "XOF", provider_order_id: "provider-456",
-    external_order_id: "provider-456", status: "processing",
+    service_name: "Abonnés Instagram", service_category: "Réseaux sociaux",
+    link: "https://instagram.com/example", quantity: 100, charge_minor: 1000,
+    revenue_fcfa_minor: 1000, currency: "XOF", wallet_charged: "local",
+    provider_order_id: "provider-456", external_order_id: "provider-456",
+    created_at: "2026-09-29T10:00:00.000Z", updated_at: "2026-09-30T10:00:00.000Z",
+    status: "processing",
   };
   const notifications = new Map();
   const outboxTransactions = [];
@@ -120,7 +123,22 @@ test("completion notification is queued once with French transaction details", a
       category: "transactionnel",
       details: {
         Service: "Abonnés Instagram",
+        "Catégorie": "Réseaux sociaux",
+        "ID du service": "42",
+        "URL du compte ou de la publication": "https://instagram.com/example",
+        "Quantité": "100",
+        "Montant débité": "10 XOF",
+        "Portefeuille débité": "local",
+        "Fournisseur": "#1",
         "Référence de commande": "provider-456",
+        "Identifiant fournisseur": "provider-456",
+        "Identifiant externe": "provider-456",
+        "Référence interne": "order-123",
+        "Date de création": new Date("2026-09-29T10:00:00.000Z")
+          .toLocaleString("fr-FR", { timeZone: "Africa/Douala" }),
+        "Dernière mise à jour": new Date("2026-09-30T10:00:00.000Z")
+          .toLocaleString("fr-FR", { timeZone: "Africa/Douala" }),
+        "Statut": "completed",
       },
     },
     status: "pending",

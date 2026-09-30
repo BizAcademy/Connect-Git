@@ -27,10 +27,13 @@ function detailsTable(details: Record<string, string> | undefined, dark: boolean
   const border = dark ? "#424b60" : "#d8dde6";
   const muted = dark ? "#a9b4c8" : "#596274";
   const ink = dark ? "#f3f6ff" : "#141b29";
-  const rows = Object.entries(details).map(([key, value]) =>
-    `<tr><td style="padding:12px 8px 12px 0;color:${muted};font-size:14px;vertical-align:top;">${escapeHtml(key)}</td>
-     <td style="padding:12px 0;text-align:right;color:${ink};font-weight:600;font-size:14px;vertical-align:top;word-break:break-word;">${escapeHtml(value)}</td></tr>`,
-  ).join("");
+  const rows = Object.entries(details).map(([key, value]) => {
+    const visibleValue = /(?:url|lien|link)/i.test(key) && /^https?:\/\//i.test(value)
+      ? `<a href="${escapeHtml(value)}" style="color:${dark ? "#a9bdff" : "#246dff"};text-decoration:underline;">${escapeHtml(value)}</a>`
+      : escapeHtml(value);
+    return `<tr><td style="padding:12px 8px 12px 0;color:${muted};font-size:14px;vertical-align:top;">${escapeHtml(key)}</td>
+     <td style="padding:12px 0;text-align:right;color:${ink};font-weight:600;font-size:14px;vertical-align:top;word-break:break-word;">${visibleValue}</td></tr>`;
+  }).join("");
   return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:28px 0;border-top:1px solid ${border};border-bottom:1px solid ${border};border-collapse:collapse;">${rows}</table>`;
 }
 
