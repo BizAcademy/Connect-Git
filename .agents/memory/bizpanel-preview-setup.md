@@ -40,3 +40,17 @@ fresh checkout needs initialization and all migrations before testing.
 The API development workflow builds before it starts. A committed `dist/`
 bundle can be stale, so restart `artifacts/api-server: API Server` after source
 or dependency changes.
+
+## Production migration history
+
+Run only the relevant new migrations on Plesk unless the historical migration
+ledger is known to be complete.
+
+**Why:** A previous migration overwrites administrator-edited selling rates
+when replayed. A legacy installation can already have its schema changes
+without having recorded that migration as applied.
+
+**How to apply:** Favor the scoped migration command for account e-mail
+upgrades. Before running the entire historical migration sequence on the
+production database, verify its migration history; the presence of SQL files
+in a deployment package does not prove they were applied.
