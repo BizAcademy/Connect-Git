@@ -25,6 +25,22 @@ Avant l'envoi, vérifier les fichiers supprimés avec `git diff --name-status or
 
 ---
 
+### 3. Vérifier la version réellement servie
+
+Après **Pull → Deploy Now → Restart**, vérifier que Plesk sert bien le build poussé. Depuis le Shell Replit :
+
+```bash
+PROD=https://buzzbooster.site
+diff -u \
+  <(grep -Eo '(src|href)="/assets/[^"]+\.(js|css)"' dist-deploy/api-server/public/index.html | sort -u) \
+  <(curl -fsS "$PROD/" | grep -Eo '(src|href)="/assets/[^"]+\.(js|css)"' | sort -u)
+curl -fsS "$PROD/api/healthz"
+```
+
+Le `diff` doit être vide et la vérification API doit répondre avec `{"status":"ok"}`. Sinon, ne pas considérer le déploiement terminé : refaire **Pull → Deploy Now → Restart** dans Plesk, puis vérifier de nouveau. Pour confirmer le rendu navigateur, ouvrir le site en navigation privée ou faire un rechargement forcé afin d'écarter le cache local.
+
+---
+
 ## Configuration Plesk requise (une seule fois)
 
 ### Application Node.js
