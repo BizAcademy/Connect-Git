@@ -687,6 +687,8 @@ type TxRow = {
   currency?: string | null;
   payment_provider?: string | null;
   payment_method?: string | null;
+  charge_amount?: number | null;
+  provider_fee_total?: number | null;
 };
 
 // Minimal shape for order updates from API payloads.
@@ -787,6 +789,8 @@ const AdminTransactions = () => {
           currency: row.currency || null,
           payment_provider: row.payment_provider || null,
           payment_method: row.payment_method || null,
+          charge_amount: row.charge_amount == null ? null : Number(row.charge_amount),
+          provider_fee_total: row.provider_fee_total == null ? null : Number(row.provider_fee_total),
         };
       });
 
@@ -864,6 +868,26 @@ const AdminTransactions = () => {
     totals[currency] = (totals[currency] || 0) + r.amount;
     return totals;
   }, {})).sort(([a], [b]) => a.localeCompare(b));
+  const afribapayByCurrency = Object.entries(
+    totalDeposits
+      .filter((r) => r.status === "completed" && (r.payment_provider === "afribapay" || r.payment_method === "afribapay"))
+      .reduce<Record<string, { count: number; knownCount: number; unknownCount: number; gross: number; fees: number; net: number }>>((totals, r) => {
+        const currency = r.currency || "XAF";
+        const entry = totals[currency] || (totals[currency] = { count: 0, knownCount: 0, unknownCount: 0, gross: 0, fees: 0, net: 0 });
+        entry.count += 1;
+        if (r.charge_amount == null || r.provider_fee_total == null) {
+          entry.unknownCount += 1;
+          return totals;
+        }
+        entry.knownCount += 1;
+        entry.gross += r.charge_amount;
+        entry.fees += r.provider_fee_total;
+        entry.net += r.charge_amount - r.provider_fee_total;
+        return totals;
+      }, {}),
+  ).sort(([a], [b]) => a.localeCompare(b));
+  const formatCurrencyAmount = (amount: number, currency: string) =>
+    amount.toLocaleString("fr-FR", { minimumFractionDigits: currency === "USD" ? 2 : 0, maximumFractionDigits: 2 });
 
   return (
     <div className="space-y-4">
@@ -894,6 +918,40 @@ const AdminTransactions = () => {
           </p>
         </div>
       </div>
+
+      <section className="rounded-lg border bg-card p-4 space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold">AfribaPAY — dépôts réussis nets de frais</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Net encaissé = montant facturé par AfribaPAY moins les frais et taxes réels renvoyés par son API.
+          </p>
+        </div>
+        {afribapayByCurrency.length ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {afribapayByCurrency.map(([currency, stats]) => (
+              <div key={currency} className="rounded-md border p-3">
+                <p className="text-xs text-muted-foreground uppercase">{currency}</p>
+                <p className="text-sm font-semibold mt-1">{stats.count.toLocaleString()} dépôts validés</p>
+                <p className="text-xs mt-2">
+                  Net calculé sur {stats.knownCount.toLocaleString()} :{" "}
+                  <span className="font-semibold">{formatCurrencyAmount(stats.net, currency)} {currency}</span>
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Frais AfribaPAY : {formatCurrencyAmount(stats.fees, currency)} {currency}
+                  {" · "}Montant facturé : {formatCurrencyAmount(stats.gross, currency)} {currency}
+                </p>
+                {stats.unknownCount > 0 && (
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">
+                    Frais ou montant fournisseur inconnus pour {stats.unknownCount} dépôt(s) ; exclus du net.
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">Aucun dépôt AfribaPAY validé sur cette période.</p>
+        )}
+      </section>
 
       {/* Period filter */}
       <div className="flex gap-1.5 flex-wrap items-center">

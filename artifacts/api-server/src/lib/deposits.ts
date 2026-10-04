@@ -6,6 +6,7 @@ import { getMysqlPool } from "./mysql";
 import { maybeAwardReferralBonus } from "./referrals";
 import { createDepositInvoiceAttachment } from "./deposit-invoice";
 import { enqueueUserNotification, notificationsEnabled } from "./notification-outbox";
+import { extractAfribapayProviderFees } from "./afribapay-fees";
 
 export const BONUS_THRESHOLD_FCFA = 5000;
 export const BONUS_AMOUNT_FCFA = 200;
@@ -49,6 +50,21 @@ export async function createPayment(input: { userId: string; amount: number; ord
 }
 export async function updatePaymentTransaction(paymentId: string, transactionId: string): Promise<void> {
   await getMysqlPool().execute("UPDATE payments SET transaction_id = COALESCE(transaction_id, ?) WHERE id = ?", [transactionId, paymentId]);
+}
+export async function recordAfribapayProviderFees(paymentId: string, payload: unknown): Promise<void> {
+  const costs = extractAfribapayProviderFees(payload);
+  if (!costs) return;
+  const toMinor = (value: number | null) => value === null ? null : Math.round(value * 100);
+  const total = costs.total ?? (costs.fees !== null && costs.taxes !== null ? costs.fees + costs.taxes : null);
+  if (costs.fees === null && costs.taxes === null && total === null) return;
+  await getMysqlPool().execute(
+    `UPDATE payments
+     SET provider_fee_minor = COALESCE(?, provider_fee_minor),
+         provider_tax_minor = COALESCE(?, provider_tax_minor),
+         provider_fee_total_minor = COALESCE(?, provider_fee_total_minor)
+     WHERE id = ? AND (provider = 'afribapay' OR method = 'afribapay')`,
+    [toMinor(costs.fees), toMinor(costs.taxes), toMinor(total), paymentId],
+  );
 }
 export async function ensureRatesLoaded(): Promise<void> {
   if (isRateCacheValid()) return;

@@ -11,7 +11,7 @@
 //   4. Older than AUTO_FAIL_MINUTES with no terminal status → mark failed
 
 import { logger } from "./logger";
-import { creditDeposit, markPaymentStatus, fetchPayment } from "./deposits";
+import { creditDeposit, markPaymentStatus, fetchPayment, recordAfribapayProviderFees } from "./deposits";
 import { recoverStuckReferrals } from "./referrals";
 import { getStatus, isSuccessStatus, isFailureStatus, isAfribapayConfigured } from "./afribapay";
 import { getMysqlPool } from "./mysql";
@@ -68,6 +68,11 @@ async function reconcileOne(p: PendingPayment): Promise<"credited" | "failed" | 
 
   try {
     const remote = await getStatus(p.order_id);
+    try {
+      await recordAfribapayProviderFees(p.id, remote.raw);
+    } catch (err: any) {
+      logger.error({ paymentId: p.id, err: err?.message }, "pending-payment-scanner: failed to persist AfribaPAY fees");
+    }
 
     if (isSuccessStatus(remote.status)) {
       const result = await creditDeposit(p.id);

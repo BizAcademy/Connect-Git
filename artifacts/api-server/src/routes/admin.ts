@@ -407,7 +407,8 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req,res) => 
           o.provider,p.country,o.currency,
           NULL payment_provider,NULL payment_method,
           COALESCE(o.external_order_id,o.provider_order_id) external_order_id,
-          o.service_category,o.service_name
+           o.service_category,o.service_name,
+           NULL charge_minor,NULL provider_fee_total_minor
         FROM orders o
         LEFT JOIN profiles p ON p.user_id=o.user_id
 
@@ -423,7 +424,8 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req,res) => 
           o.provider,p.country,o.currency,
           NULL payment_provider,NULL payment_method,
           COALESCE(o.external_order_id,o.provider_order_id) external_order_id,
-          o.service_category,o.service_name
+           o.service_category,o.service_name,
+           NULL charge_minor,NULL provider_fee_total_minor
         FROM orders o
         LEFT JOIN profiles p ON p.user_id=o.user_id
         WHERE o.refunded_at IS NOT NULL AND o.refunded_amount_minor > 0
@@ -438,7 +440,8 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req,res) => 
           COALESCE(x.transaction_id,x.order_id,x.provider_reference) reference,
           COALESCE(x.transaction_id,x.order_id,x.provider_reference) order_number,
           NULL provider,x.country,x.currency,x.provider payment_provider,x.method payment_method,NULL external_order_id,
-          NULL service_category,NULL service_name
+           NULL service_category,NULL service_name,
+           x.charge_minor,x.provider_fee_total_minor
         FROM payments x
         LEFT JOIN profiles p ON p.user_id=x.user_id
       ) t ${where}
@@ -450,6 +453,8 @@ router.get("/admin/transactions", requireUser, requireAdmin, async (req,res) => 
         ...r,
         amount:Number(r.amount)/100,
         refunded_amount:r.refunded_amount_minor==null?null:Number(r.refunded_amount_minor)/100,
+        charge_amount:r.charge_minor==null?null:Number(r.charge_minor)/100,
+        provider_fee_total:r.provider_fee_total_minor==null?null:Number(r.provider_fee_total_minor)/100,
       })),
       total_count:null,
       has_more:rows.length===limit,

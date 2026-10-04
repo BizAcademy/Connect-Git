@@ -8,6 +8,7 @@ import {
   fetchPaymentByOrderId,
   createPayment,
   updatePaymentTransaction,
+  recordAfribapayProviderFees,
   BONUS_THRESHOLD_FCFA,
   BONUS_AMOUNT_FCFA,
   isEligibleForBonus,
@@ -66,6 +67,14 @@ async function insertPayment(args: InsertPaymentArgs): Promise<string> {
 async function patchPayment(paymentId: string, patch: Record<string, unknown>) {
   if (typeof patch.transaction_id === "string") await updatePaymentTransaction(paymentId, patch.transaction_id);
   if (patch.status === "failed" || patch.status === "rejected" || patch.status === "pending") await markPaymentStatus(paymentId, patch.status);
+}
+
+async function persistAfribapayProviderFees(paymentId: string, payload: unknown, source: string): Promise<void> {
+  try {
+    await recordAfribapayProviderFees(paymentId, payload);
+  } catch (err) {
+    logger.error({ err, paymentId, source }, "Failed to persist AfribaPAY provider fees");
+  }
 }
 
 const findPaymentByOrderId = fetchPaymentByOrderId;
@@ -260,6 +269,7 @@ router.post("/payments/initiate", requireUser, async (req: AuthedRequest, res) =
       notify_url: notifyUrl(),
       otp_code: otpCode,
     });
+    await persistAfribapayProviderFees(paymentId, result.raw, "payin");
     if (result.transaction_id) {
       await patchPayment(paymentId, { transaction_id: result.transaction_id });
     }
@@ -311,6 +321,7 @@ router.get("/payments/status/:orderId", requireUser, async (req: AuthedRequest, 
   }
   try {
     const remote = await getStatus(orderId);
+    await persistAfribapayProviderFees(local.id, remote.raw, "status");
     // Persist transaction_id whenever we learn it (idempotent)
     if (remote.transaction_id && !local.transaction_id) {
       await patchPayment(local.id, { transaction_id: remote.transaction_id }).catch(() => undefined);
@@ -372,6 +383,8 @@ router.post("/payments/webhook", async (req: Request & { rawBody?: string }, res
     logger.warn({ orderId }, "AfribaPay webhook: payment not found");
     return res.status(200).json({ ok: false, error: "Paiement introuvable" });
   }
+
+  await persistAfribapayProviderFees(local.id, body, "webhook");
 
   // Update transaction_id if newly known
   const txId = inner["transaction_id"] || inner["transactionId"];

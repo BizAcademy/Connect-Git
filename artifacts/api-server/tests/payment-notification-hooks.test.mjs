@@ -36,11 +36,12 @@ await build({
     },
   }],
 });
-const { creditDeposit } = await import(pathToFileURL(`${outdir}/deposits.mjs`).href);
+const { creditDeposit, recordAfribapayProviderFees } = await import(pathToFileURL(`${outdir}/deposits.mjs`).href);
 const { reconcileCryptoPayment } = await import(pathToFileURL(`${outdir}/izipay.mjs`).href);
 
 function fixture(payment, { duplicate = false } = {}) {
   const events = [];
+  const poolCalls = [];
   globalThis.__paymentEvents = events;
   globalThis.__notifications = [];
   globalThis.__referrals = [];
@@ -65,14 +66,16 @@ function fixture(payment, { duplicate = false } = {}) {
   };
   globalThis.__paymentDb = {
     async getConnection() { return conn; },
-    async execute(sql) {
+    async execute(sql, args) {
       events.push(sql);
+      poolCalls.push({ sql, args });
       if (sql.includes("FROM settings")) return [[]];
+      if (sql.includes("UPDATE payments")) return [{ affectedRows: 1 }];
       if (sql.includes("FROM payments")) return [[payment]];
       throw new Error(`Unexpected pool SQL: ${sql}`);
     },
   };
-  return { conn, events, notifications: globalThis.__notifications };
+  return { conn, events, notifications: globalThis.__notifications, poolCalls };
 }
 
 const fiat = (overrides = {}) => ({
@@ -98,6 +101,25 @@ test.after(() => {
   delete globalThis.__paymentEvents;
   delete globalThis.__notifications;
   delete globalThis.__referrals;
+});
+
+test("AfribaPAY fees are persisted separately from the customer surcharge", async () => {
+  const { events, poolCalls } = fixture(fiat());
+  await recordAfribapayProviderFees("fiat-1", {
+    data: { fees: "2", taxes: 0.2, fees_taxes_ttc: "2.2" },
+  });
+
+  assert.equal(poolCalls.length, 1);
+  assert.match(poolCalls[0].sql, /provider_fee_total_minor/);
+  assert.doesNotMatch(poolCalls[0].sql, /SET\s+fee_minor\s*=/i);
+  assert.deepEqual(poolCalls[0].args, [200, 20, 220, "fiat-1"]);
+  assert.equal(events.some((sql) => sql.includes("wallet_transactions")), false);
+});
+
+test("AfribaPAY fees are not guessed when the response omits them", async () => {
+  const { poolCalls } = fixture(fiat());
+  await recordAfribapayProviderFees("fiat-1", { data: { status: "SUCCESS" } });
+  assert.equal(poolCalls.length, 0);
 });
 
 test("fiat credit queues confirmation on the payment transaction before commit", async () => {
