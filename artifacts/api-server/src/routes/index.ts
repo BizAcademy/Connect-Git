@@ -9,6 +9,7 @@ import ticketsRouter from "./tickets";
 import profileRouter from "./profile";
 import referralsRouter from "./referrals";
 import authRouter from "./auth";
+import afribapayAdminRouter from "./afribapay-admin";
 
 const router: IRouter = Router();
 
@@ -16,6 +17,7 @@ router.use(healthRouter);
 router.use(authRouter);
 router.use(smmRouter);
 router.use(adminRouter);
+router.use(afribapayAdminRouter);
 router.use(supportRouter);
 router.use(paymentsRouter);
 router.use(izipayRouter);

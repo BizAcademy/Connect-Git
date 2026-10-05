@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: admin
+    description: Administrator operations
 paths:
   /healthz:
     get:
@@ -71,6 +73,70 @@ paths:
           description: Authentication required
         "403":
           description: Administrator access required
+  /admin/afribapay/deposits:
+    get:
+      operationId: listAdminAfribapayDeposits
+      tags: [admin]
+      summary: List successful AfribaPAY deposits and exact net totals
+      parameters:
+        - name: from
+          in: query
+          description: Inclusive start date in YYYY-MM-DD format
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          description: Inclusive end date in YYYY-MM-DD format
+          schema:
+            type: string
+            format: date
+        - name: currency
+          in: query
+          schema:
+            type: string
+            pattern: "^[A-Za-z]{3,8}$"
+        - name: country
+          in: query
+          schema:
+            type: string
+            pattern: "^[A-Za-z]{2}$"
+        - name: operator
+          in: query
+          schema:
+            type: string
+            maxLength: 80
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 120
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Successful AfribaPAY deposits, exact per-currency totals, and filter options
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAfribapayDepositsResponse"
+        "400":
+          description: Invalid filters
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
 components:
   schemas:
     HealthStatus:
@@ -104,4 +170,116 @@ components:
           type: string
           maxLength: 500
       required: [active, message]
+    AdminAfribapayDeposit:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        user_label:
+          type: string
+        user_email:
+          type: [string, "null"]
+        phone_number:
+          type: [string, "null"]
+        reference:
+          type: [string, "null"]
+        created_at:
+          type: string
+          format: date-time
+        country:
+          type: [string, "null"]
+        operator:
+          type: [string, "null"]
+        currency:
+          type: string
+        amount_minor:
+          type: string
+        charged_minor:
+          type: [string, "null"]
+        provider_fee_minor:
+          type: [string, "null"]
+        provider_tax_minor:
+          type: [string, "null"]
+        provider_fee_total_minor:
+          type: [string, "null"]
+        net_minor:
+          type: [string, "null"]
+      required:
+        - id
+        - user_id
+        - user_label
+        - user_email
+        - phone_number
+        - reference
+        - created_at
+        - country
+        - operator
+        - currency
+        - amount_minor
+        - charged_minor
+        - provider_fee_minor
+        - provider_tax_minor
+        - provider_fee_total_minor
+        - net_minor
+    AdminAfribapayCurrencySummary:
+      type: object
+      properties:
+        currency:
+          type: string
+        deposit_count:
+          type: integer
+        known_count:
+          type: integer
+        unknown_count:
+          type: integer
+        gross_minor:
+          type: string
+        fees_minor:
+          type: string
+        net_minor:
+          type: string
+      required:
+        - currency
+        - deposit_count
+        - known_count
+        - unknown_count
+        - gross_minor
+        - fees_minor
+        - net_minor
+    AdminAfribapayDepositsResponse:
+      type: object
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminAfribapayDeposit"
+        total_count:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        summary:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminAfribapayCurrencySummary"
+        filters:
+          type: object
+          properties:
+            currencies:
+              type: array
+              items:
+                type: string
+            countries:
+              type: array
+              items:
+                type: string
+            operators:
+              type: array
+              items:
+                type: string
+          required: [currencies, countries, operators]
+      required: [rows, total_count, limit, offset, summary, filters]
 

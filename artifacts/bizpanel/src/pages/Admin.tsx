@@ -43,6 +43,7 @@ import { syncOrdersStatus } from "@/lib/orderSync";
 import { adminForceOrderRefund } from "@/lib/smm";
 import { formatPaymentMethod } from "@/lib/paymentMethod";
 import { InvoiceModal, type InvoiceData } from "@/components/dashboard/InvoiceModal";
+import AdminAfribapay from "@/components/AdminAfribapay";
 import { Wallet, AlertTriangle, TrendingUp, Calendar, CalendarDays, CalendarRange, CalendarSearch, ArrowDownCircle, ArrowUpCircle, Receipt, Headphones, Send, Image as ImageIcon, LayoutDashboard, Gift, Filter, Ticket as TicketIcon, XCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -5545,6 +5546,7 @@ export default function Admin() {
             <TabsTrigger value="payments" className="flex flex-col gap-1 py-2 text-xs"><CreditCard size={15} />Paiements</TabsTrigger>
             <TabsTrigger value="bonus" className="flex flex-col gap-1 py-2 text-xs"><Gift size={15} />Bonus</TabsTrigger>
             <TabsTrigger value="transactions" className="flex flex-col gap-1 py-2 text-xs"><Receipt size={15} />Transactions</TabsTrigger>
+            <TabsTrigger value="afribapay" className="flex flex-col gap-1 py-2 text-xs"><Wallet size={15} />AfribaPAY</TabsTrigger>
             <TabsTrigger value="support" className="flex flex-col gap-1 py-2 text-xs relative">
               <Headphones size={15} />Support
               {supportUnread > 0 && (
@@ -5579,6 +5581,7 @@ export default function Admin() {
           <TabsContent value="payments"><AdminPayments /></TabsContent>
           <TabsContent value="bonus"><AdminBonus /></TabsContent>
           <TabsContent value="transactions"><AdminTransactions /></TabsContent>
+          <TabsContent value="afribapay"><AdminAfribapay /></TabsContent>
           <TabsContent value="support"><AdminSupport /></TabsContent>
           <TabsContent value="tickets"><AdminTickets onChanged={() => fetchAdminTicketsUnread().then(setTicketsUnread).catch(() => {})} /></TabsContent>
           <TabsContent value="services"><AdminServicesTab /></TabsContent>
