@@ -13,7 +13,11 @@ await build({
   format: "esm",
   logLevel: "silent",
 });
-const { extractAfribapayProviderFees, extractAfribapayProviderPreview } = await import(pathToFileURL(`${outdir}/afribapay-fees.mjs`).href);
+const {
+  extractAfribapayProviderFees,
+  extractAfribapayProviderPreview,
+  feeReconciliationRetryAfterSeconds,
+} = await import(pathToFileURL(`${outdir}/afribapay-fees.mjs`).href);
 
 test("reads provider fees and taxes from a nested AfribaPAY response", () => {
   assert.deepEqual(
@@ -36,6 +40,21 @@ test("derives a total only when both fee and tax amounts are present", () => {
 test("does not infer fees when the provider response has none or invalid values", () => {
   assert.equal(extractAfribapayProviderFees({ fees: "unknown", taxes: -1 }), null);
   assert.equal(extractAfribapayProviderFees({ data: { status: "SUCCESS" } }), null);
+});
+
+test("combines exact fee and tax fields spread across nested provider data", () => {
+  assert.deepEqual(
+    extractAfribapayProviderFees({ fees: 2, data: { taxes: 1 } }),
+    { fees: 2, taxes: 1, total: 3 },
+  );
+});
+
+test("backs off automatic fee lookups when values or provider responses are missing", () => {
+  assert.equal(feeReconciliationRetryAfterSeconds(1, "missing"), 3_600);
+  assert.equal(feeReconciliationRetryAfterSeconds(2, "missing"), 21_600);
+  assert.equal(feeReconciliationRetryAfterSeconds(99, "missing"), 2_592_000);
+  assert.equal(feeReconciliationRetryAfterSeconds(1, "error"), 900);
+  assert.equal(feeReconciliationRetryAfterSeconds(99, "error"), 604_800);
 });
 
 test("provider preview returns only amount fields from the documented status response", () => {

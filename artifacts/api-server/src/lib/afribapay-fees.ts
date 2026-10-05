@@ -13,6 +13,19 @@ export interface AfribapayProviderPreview {
   currency: string | null;
 }
 
+export type FeeReconciliationOutcome = "missing" | "error";
+
+export function feeReconciliationRetryAfterSeconds(
+  attemptCount: number,
+  outcome: FeeReconciliationOutcome,
+): number {
+  const schedule = outcome === "error"
+    ? [900, 3_600, 21_600, 86_400, 604_800]
+    : [3_600, 21_600, 86_400, 604_800, 2_592_000];
+  const attempt = Math.max(1, Number.isFinite(attemptCount) ? Math.floor(attemptCount) : 1);
+  return schedule[Math.min(attempt - 1, schedule.length - 1)]!;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -35,17 +48,16 @@ export function extractAfribapayProviderFees(payload: unknown): AfribapayProvide
     current = asRecord(current["data"]);
   }
 
-  for (const record of records.reverse()) {
-    const fees = amount(record["fees"]);
-    const taxes = amount(record["taxes"]);
-    const reportedTotal = amount(record["fees_taxes_ttc"]);
-    const total = reportedTotal ?? (fees !== null && taxes !== null ? fees + taxes : null);
-    if (fees !== null || taxes !== null || total !== null) {
-      return { fees, taxes, total };
-    }
-  }
-
-  return null;
+  const sources = records.reverse();
+  const providerAmount = (field: string) =>
+    sources.map((record) => amount(record[field])).find((value) => value !== null) ?? null;
+  const fees = providerAmount("fees");
+  const taxes = providerAmount("taxes");
+  const reportedTotal = providerAmount("fees_taxes_ttc");
+  const total = reportedTotal ?? (fees !== null && taxes !== null ? fees + taxes : null);
+  return fees !== null || taxes !== null || total !== null
+    ? { fees, taxes, total }
+    : null;
 }
 
 /** Return only the documented amount fields; never expose provider identifiers or payer data. */
