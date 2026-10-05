@@ -168,7 +168,7 @@ var require_common = __commonJS({
     function setup(env) {
       createDebug.debug = createDebug;
       createDebug.default = createDebug;
-      createDebug.coerce = coerce;
+      createDebug.coerce = coerce2;
       createDebug.disable = disable;
       createDebug.enable = enable;
       createDebug.enabled = enabled;
@@ -323,7 +323,7 @@ var require_common = __commonJS({
         }
         return false;
       }
-      function coerce(val) {
+      function coerce2(val) {
         if (val instanceof Error) {
           return val.stack || val.message;
         }
@@ -20502,27 +20502,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router12;
+    module.exports = Router13;
     module.exports.Route = Route;
-    function Router12(options) {
-      if (!(this instanceof Router12)) {
-        return new Router12(options);
+    function Router13(options) {
+      if (!(this instanceof Router13)) {
+        return new Router13(options);
       }
       const opts = options || {};
-      function router12(req, res, next) {
-        router12.handle(req, res, next);
+      function router13(req, res, next) {
+        router13.handle(req, res, next);
       }
-      Object.setPrototypeOf(router12, this);
-      router12.caseSensitive = opts.caseSensitive;
-      router12.mergeParams = opts.mergeParams;
-      router12.params = {};
-      router12.strict = opts.strict;
-      router12.stack = [];
-      return router12;
+      Object.setPrototypeOf(router13, this);
+      router13.caseSensitive = opts.caseSensitive;
+      router13.mergeParams = opts.mergeParams;
+      router13.params = {};
+      router13.strict = opts.strict;
+      router13.stack = [];
+      return router13;
     }
-    Router12.prototype = function() {
+    Router13.prototype = function() {
     };
-    Router12.prototype.param = function param(name, fn) {
+    Router13.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20542,7 +20542,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router12.prototype.handle = function handle(req, res, callback) {
+    Router13.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20669,7 +20669,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router12.prototype.use = function use(handler) {
+    Router13.prototype.use = function use(handler) {
       let offset = 0;
       let path7 = "/";
       if (typeof handler !== "function") {
@@ -20702,7 +20702,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router12.prototype.route = function route(path7) {
+    Router13.prototype.route = function route(path7) {
       const route2 = new Route(path7);
       const layer = new Layer(path7, {
         sensitive: this.caseSensitive,
@@ -20717,7 +20717,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router12.prototype[method] = function(path7) {
+      Router13.prototype[method] = function(path7) {
         const route = this.route(path7);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -20900,13 +20900,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router12 = require_router();
+    var Router13 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router12 = null;
+      var router13 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -20915,13 +20915,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router12 === null) {
-            router12 = new Router12({
+          if (router13 === null) {
+            router13 = new Router13({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router12;
+          return router13;
         }
       });
     };
@@ -20992,15 +20992,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router12 = this.router;
+      var router13 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router12.use(path7, fn2);
+          return router13.use(path7, fn2);
         }
         debug(".use app under %s", path7);
         fn2.mountpath = path7;
         fn2.parent = this;
-        router12.use(path7, function mounted_app(req, res, next) {
+        router13.use(path7, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23573,7 +23573,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router12 = require_router();
+    var Router13 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23595,8 +23595,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router12.Route;
-    exports.Router = Router12;
+    exports.Route = Router13.Route;
+    exports.Router = Router13;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -24703,7 +24703,7 @@ var require_ms2 = __commonJS({
 var require_debug = __commonJS({
   "../../node_modules/.pnpm/debug@2.6.9/node_modules/debug/src/debug.js"(exports, module) {
     exports = module.exports = createDebug.debug = createDebug["default"] = createDebug;
-    exports.coerce = coerce;
+    exports.coerce = coerce2;
     exports.disable = disable;
     exports.enable = enable;
     exports.enabled = enabled;
@@ -24797,7 +24797,7 @@ var require_debug = __commonJS({
       }
       return false;
     }
-    function coerce(val) {
+    function coerce2(val) {
       if (val instanceof Error) return val.stack || val.message;
       return val;
     }
@@ -87317,7 +87317,7 @@ var require_buffer_list = __commonJS({
     var Buffer3 = _require.Buffer;
     var _require2 = __require("util");
     var inspect = _require2.inspect;
-    var custom = inspect && inspect.custom || "inspect";
+    var custom2 = inspect && inspect.custom || "inspect";
     function copyBuffer(src, target, offset) {
       Buffer3.prototype.copy.call(src, target, offset);
     }
@@ -87472,7 +87472,7 @@ var require_buffer_list = __commonJS({
         }
         // Make sure the linked list only shows the minimal necessary information.
       }, {
-        key: custom,
+        key: custom2,
         value: function value(_, options) {
           return inspect(this, _objectSpread(_objectSpread({}, options), {}, {
             // Only inspect one level.
@@ -90690,7 +90690,7 @@ var require_multer = __commonJS({
 });
 
 // src/app.ts
-var import_express12 = __toESM(require_express2(), 1);
+var import_express13 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_compression = __toESM(require_compression(), 1);
@@ -91655,10 +91655,122 @@ import fs6 from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // src/routes/index.ts
-var import_express11 = __toESM(require_express2(), 1);
+var import_express12 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
+
+// ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js
+var external_exports = {};
+__export(external_exports, {
+  BRAND: () => BRAND,
+  DIRTY: () => DIRTY,
+  EMPTY_PATH: () => EMPTY_PATH,
+  INVALID: () => INVALID,
+  NEVER: () => NEVER,
+  OK: () => OK,
+  ParseStatus: () => ParseStatus,
+  Schema: () => ZodType,
+  ZodAny: () => ZodAny,
+  ZodArray: () => ZodArray,
+  ZodBigInt: () => ZodBigInt,
+  ZodBoolean: () => ZodBoolean,
+  ZodBranded: () => ZodBranded,
+  ZodCatch: () => ZodCatch,
+  ZodDate: () => ZodDate,
+  ZodDefault: () => ZodDefault,
+  ZodDiscriminatedUnion: () => ZodDiscriminatedUnion,
+  ZodEffects: () => ZodEffects,
+  ZodEnum: () => ZodEnum,
+  ZodError: () => ZodError,
+  ZodFirstPartyTypeKind: () => ZodFirstPartyTypeKind,
+  ZodFunction: () => ZodFunction,
+  ZodIntersection: () => ZodIntersection,
+  ZodIssueCode: () => ZodIssueCode,
+  ZodLazy: () => ZodLazy,
+  ZodLiteral: () => ZodLiteral,
+  ZodMap: () => ZodMap,
+  ZodNaN: () => ZodNaN,
+  ZodNativeEnum: () => ZodNativeEnum,
+  ZodNever: () => ZodNever,
+  ZodNull: () => ZodNull,
+  ZodNullable: () => ZodNullable,
+  ZodNumber: () => ZodNumber,
+  ZodObject: () => ZodObject,
+  ZodOptional: () => ZodOptional,
+  ZodParsedType: () => ZodParsedType,
+  ZodPipeline: () => ZodPipeline,
+  ZodPromise: () => ZodPromise,
+  ZodReadonly: () => ZodReadonly,
+  ZodRecord: () => ZodRecord,
+  ZodSchema: () => ZodType,
+  ZodSet: () => ZodSet,
+  ZodString: () => ZodString,
+  ZodSymbol: () => ZodSymbol,
+  ZodTransformer: () => ZodEffects,
+  ZodTuple: () => ZodTuple,
+  ZodType: () => ZodType,
+  ZodUndefined: () => ZodUndefined,
+  ZodUnion: () => ZodUnion,
+  ZodUnknown: () => ZodUnknown,
+  ZodVoid: () => ZodVoid,
+  addIssueToContext: () => addIssueToContext,
+  any: () => anyType,
+  array: () => arrayType,
+  bigint: () => bigIntType,
+  boolean: () => booleanType,
+  coerce: () => coerce,
+  custom: () => custom,
+  date: () => dateType,
+  datetimeRegex: () => datetimeRegex,
+  defaultErrorMap: () => en_default,
+  discriminatedUnion: () => discriminatedUnionType,
+  effect: () => effectsType,
+  enum: () => enumType,
+  function: () => functionType,
+  getErrorMap: () => getErrorMap,
+  getParsedType: () => getParsedType,
+  instanceof: () => instanceOfType,
+  intersection: () => intersectionType,
+  isAborted: () => isAborted,
+  isAsync: () => isAsync,
+  isDirty: () => isDirty,
+  isValid: () => isValid,
+  late: () => late,
+  lazy: () => lazyType,
+  literal: () => literalType,
+  makeIssue: () => makeIssue,
+  map: () => mapType,
+  nan: () => nanType,
+  nativeEnum: () => nativeEnumType,
+  never: () => neverType,
+  null: () => nullType,
+  nullable: () => nullableType,
+  number: () => numberType,
+  object: () => objectType,
+  objectUtil: () => objectUtil,
+  oboolean: () => oboolean,
+  onumber: () => onumber,
+  optional: () => optionalType,
+  ostring: () => ostring,
+  pipeline: () => pipelineType,
+  preprocess: () => preprocessType,
+  promise: () => promiseType,
+  quotelessJson: () => quotelessJson,
+  record: () => recordType,
+  set: () => setType,
+  setErrorMap: () => setErrorMap,
+  strictObject: () => strictObjectType,
+  string: () => stringType,
+  symbol: () => symbolType,
+  transformer: () => effectsType,
+  tuple: () => tupleType,
+  undefined: () => undefinedType,
+  union: () => unionType,
+  unknown: () => unknownType,
+  util: () => util,
+  void: () => voidType
+});
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/util.js
 var util;
@@ -91813,6 +91925,10 @@ var ZodIssueCode = util.arrayToEnum([
   "not_multiple_of",
   "not_finite"
 ]);
+var quotelessJson = (obj) => {
+  const json = JSON.stringify(obj, null, 2);
+  return json.replace(/"([^"]+)":/g, "$1:");
+};
 var ZodError = class _ZodError extends Error {
   get errors() {
     return this.issues;
@@ -92013,6 +92129,9 @@ var en_default = errorMap;
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
+function setErrorMap(map2) {
+  overrideErrorMap = map2;
+}
 function getErrorMap() {
   return overrideErrorMap;
 }
@@ -92043,6 +92162,7 @@ var makeIssue = (params) => {
     message: errorMessage
   };
 };
+var EMPTY_PATH = [];
 function addIssueToContext(ctx, issueData) {
   const overrideMap = getErrorMap();
   const issue = makeIssue({
@@ -95368,6 +95488,7 @@ ZodNaN.create = (params) => {
     ...processCreateParams(params)
   });
 };
+var BRAND = /* @__PURE__ */ Symbol("zod_brand");
 var ZodBranded = class extends ZodType {
   _parse(input) {
     const { ctx } = this._processInputParams(input);
@@ -95459,6 +95580,33 @@ ZodReadonly.create = (type, params) => {
     ...processCreateParams(params)
   });
 };
+function cleanParams(params, data) {
+  const p = typeof params === "function" ? params(data) : typeof params === "string" ? { message: params } : params;
+  const p2 = typeof p === "string" ? { message: p } : p;
+  return p2;
+}
+function custom(check, _params = {}, fatal) {
+  if (check)
+    return ZodAny.create().superRefine((data, ctx) => {
+      const r = check(data);
+      if (r instanceof Promise) {
+        return r.then((r2) => {
+          if (!r2) {
+            const params = cleanParams(_params, data);
+            const _fatal = params.fatal ?? fatal ?? true;
+            ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
+          }
+        });
+      }
+      if (!r) {
+        const params = cleanParams(_params, data);
+        const _fatal = params.fatal ?? fatal ?? true;
+        ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
+      }
+      return;
+    });
+  return ZodAny.create();
+}
 var late = {
   object: ZodObject.lazycreate
 };
@@ -95501,6 +95649,9 @@ var ZodFirstPartyTypeKind;
   ZodFirstPartyTypeKind2["ZodPipeline"] = "ZodPipeline";
   ZodFirstPartyTypeKind2["ZodReadonly"] = "ZodReadonly";
 })(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
+var instanceOfType = (cls, params = {
+  message: `Input not instance of ${cls.name}`
+}) => custom((data) => data instanceof cls, params);
 var stringType = ZodString.create;
 var numberType = ZodNumber.create;
 var nanType = ZodNaN.create;
@@ -95535,10 +95686,93 @@ var optionalType = ZodOptional.create;
 var nullableType = ZodNullable.create;
 var preprocessType = ZodEffects.createWithPreprocess;
 var pipelineType = ZodPipeline.create;
+var ostring = () => stringType().optional();
+var onumber = () => numberType().optional();
+var oboolean = () => booleanType().optional();
+var coerce = {
+  string: ((arg) => ZodString.create({ ...arg, coerce: true })),
+  number: ((arg) => ZodNumber.create({ ...arg, coerce: true })),
+  boolean: ((arg) => ZodBoolean.create({
+    ...arg,
+    coerce: true
+  })),
+  bigint: ((arg) => ZodBigInt.create({ ...arg, coerce: true })),
+  date: ((arg) => ZodDate.create({ ...arg, coerce: true }))
+};
+var NEVER = INVALID;
 
 // ../../lib/api-zod/src/generated/api.ts
 var HealthCheckResponse = objectType({
   status: stringType()
+});
+
+// ../../lib/api-zod/src/afribapay-report.ts
+var dateOnly = external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
+  const date = /* @__PURE__ */ new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}, "Date invalide");
+var AfriPayReportQuerySchema = external_exports.object({
+  from: dateOnly.optional(),
+  to: dateOnly.optional(),
+  currency: external_exports.string().regex(/^[A-Za-z]{3,8}$/).transform((value) => value.toUpperCase()).optional(),
+  country: external_exports.string().regex(/^[A-Za-z]{2}$/).transform((value) => value.toUpperCase()).optional(),
+  operator: external_exports.string().trim().max(80).optional(),
+  search: external_exports.string().trim().max(120).optional(),
+  limit: external_exports.coerce.number().int().min(1).max(100).default(50),
+  offset: external_exports.coerce.number().int().min(0).max(1e6).default(0)
+}).superRefine((value, context) => {
+  if (value.from && value.to && value.from > value.to) {
+    context.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["to"],
+      message: "La date de fin doit \xEAtre post\xE9rieure ou \xE9gale \xE0 la date de d\xE9but"
+    });
+  }
+}).transform((value) => ({
+  ...value,
+  operator: value.operator || void 0,
+  search: value.search || void 0
+}));
+var minorUnits = external_exports.string().regex(/^-?\d+$/);
+var nullableMinorUnits = minorUnits.nullable();
+var AfriPayReportDepositSchema = external_exports.object({
+  id: external_exports.string(),
+  user_id: external_exports.string(),
+  user_label: external_exports.string(),
+  user_email: external_exports.string().nullable(),
+  phone_number: external_exports.string().nullable(),
+  reference: external_exports.string().nullable(),
+  created_at: external_exports.string().datetime(),
+  country: external_exports.string().nullable(),
+  operator: external_exports.string().nullable(),
+  currency: external_exports.string().min(1),
+  amount_minor: minorUnits,
+  charged_minor: nullableMinorUnits,
+  provider_fee_minor: nullableMinorUnits,
+  provider_tax_minor: nullableMinorUnits,
+  provider_fee_total_minor: nullableMinorUnits,
+  net_minor: nullableMinorUnits
+});
+var AfriPayReportCurrencySummarySchema = external_exports.object({
+  currency: external_exports.string().min(1),
+  deposit_count: external_exports.number().int().nonnegative(),
+  known_count: external_exports.number().int().nonnegative(),
+  unknown_count: external_exports.number().int().nonnegative(),
+  gross_minor: minorUnits,
+  fees_minor: minorUnits,
+  net_minor: minorUnits
+});
+var AfriPayReportResponseSchema = external_exports.object({
+  rows: external_exports.array(AfriPayReportDepositSchema),
+  total_count: external_exports.number().int().nonnegative(),
+  limit: external_exports.number().int().positive(),
+  offset: external_exports.number().int().nonnegative(),
+  summary: external_exports.array(AfriPayReportCurrencySummarySchema),
+  filters: external_exports.object({
+    currencies: external_exports.array(external_exports.string()),
+    countries: external_exports.array(external_exports.string()),
+    operators: external_exports.array(external_exports.string())
+  })
 });
 
 // src/lib/mysql.ts
@@ -95566,7 +95800,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-09-30T10:36:09.039Z";
+var BUILD_TIME = "2026-10-05T08:59:12.082Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -96068,14 +96302,14 @@ function securityHtml(input) {
 }
 function transactionHtml(input) {
   const details = input.details;
-  const amount = details?.["Montant cr\xE9dit\xE9"] || details?.["Commission re\xE7ue"];
+  const amount2 = details?.["Montant cr\xE9dit\xE9"] || details?.["Commission re\xE7ue"];
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
     <body style="margin:0;padding:24px 12px;background:#f3f5f9;font-family:Arial,Helvetica,sans-serif;color:#101725;">
       <div style="display:none;max-height:0;overflow:hidden;">${escapeHtml(input.preheader || input.title)}</div>
       <table role="presentation" align="center" width="100%" cellspacing="0" cellpadding="0" style="max-width:580px;background:#ffffff;border-radius:14px;overflow:hidden;">
         <tr><td style="padding:32px 34px 8px;">${logo}</td></tr>
         <tr><td style="padding:22px 34px 34px;">
-          <h1 style="font-size:30px;line-height:1.2;letter-spacing:-.6px;margin:0 0 22px;color:#101725;">${escapeHtml(input.title)}${amount ? `<br><span style="color:#246dff;">${escapeHtml(amount)}</span>` : ""}</h1>
+          <h1 style="font-size:30px;line-height:1.2;letter-spacing:-.6px;margin:0 0 22px;color:#101725;">${escapeHtml(input.title)}${amount2 ? `<br><span style="color:#246dff;">${escapeHtml(amount2)}</span>` : ""}</h1>
           <p style="font-size:16px;line-height:1.65;color:#273142;margin:0;">${escapeHtml(input.message)}</p>
           ${detailsTable(details, false)}
           ${input.note ? `<p style="font-size:14px;color:#596274;line-height:1.6;">${escapeHtml(input.note)}</p>` : ""}
@@ -96452,8 +96686,8 @@ async function refundOrderAtomic(orderId, requestedMinor) {
       await conn.commit();
       return { refunded: false, amountMinor: 0 };
     }
-    const amount = Math.max(0, Math.min(Math.round(requestedMinor ?? Number(order.charge_minor)), Number(order.charge_minor)));
-    if (!amount) {
+    const amount2 = Math.max(0, Math.min(Math.round(requestedMinor ?? Number(order.charge_minor)), Number(order.charge_minor)));
+    if (!amount2) {
       await conn.rollback();
       return { refunded: false, amountMinor: 0 };
     }
@@ -96461,19 +96695,19 @@ async function refundOrderAtomic(orderId, requestedMinor) {
     const column = wallet === "usd" ? "balance_usd_minor" : "balance_minor";
     const [profiles] = await conn.execute(`SELECT ${column} FROM profiles WHERE user_id = ? FOR UPDATE`, [order.user_id]);
     if (!profiles[0]) throw new Error("Profile introuvable");
-    const before = Number(profiles[0][column]), after = before + amount, now = /* @__PURE__ */ new Date();
+    const before = Number(profiles[0][column]), after = before + amount2, now = /* @__PURE__ */ new Date();
     await conn.execute(`UPDATE profiles SET ${column} = ? WHERE user_id = ?`, [after, order.user_id]);
-    await conn.execute("UPDATE orders SET refunded_at = ?, refunded_amount_minor = ? WHERE id = ?", [now, amount, order.id]);
+    await conn.execute("UPDATE orders SET refunded_at = ?, refunded_amount_minor = ? WHERE id = ?", [now, amount2, order.id]);
     await conn.execute(
       `UPDATE notification_outbox SET status='expired',payload_encrypted=NULL,
        lock_token=NULL,locked_until=NULL,finished_at=NOW(3)
        WHERE event_key=? AND status='pending'`,
       [`smm-order-completed-${order.id}`]
     );
-    await conn.execute("INSERT INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?,?,'refund','order',?)", [crypto3.randomUUID(), order.user_id, amount, after, order.currency, order.id]);
+    await conn.execute("INSERT INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?,?,'refund','order',?)", [crypto3.randomUUID(), order.user_id, amount2, after, order.currency, order.id]);
     await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason) VALUES (?,?,?,'smm_order_refund')", [order.user_id, before, after]);
     await conn.commit();
-    return { refunded: true, amountMinor: amount, newBalanceMinor: after, userId: String(order.user_id) };
+    return { refunded: true, amountMinor: amount2, newBalanceMinor: after, userId: String(order.user_id) };
   } catch (err) {
     await conn.rollback();
     throw err;
@@ -96708,12 +96942,12 @@ router2.get("/smm/quote", requireUser, async (req, res) => {
     const ov = (await loadPricing(provider))[String(service)];
     if (ov?.hidden) return res.status(403).json({ error: "Service non disponible" });
     const p = await profile(req.userId);
-    const custom = typeof ov?.price_fcfa === "number";
-    const per = custom ? ov.price_fcfa : defaultPriceFcfaForCurrency(svc.rate, provider, currency(p?.country ?? null, p?.currency ?? null));
+    const custom2 = typeof ov?.price_fcfa === "number";
+    const per = custom2 ? ov.price_fcfa : defaultPriceFcfaForCurrency(svc.rate, provider, currency(p?.country ?? null, p?.currency ?? null));
     const total = Math.ceil(quantity / 1e3 * per);
     const cur = currency(p?.country ?? null, p?.currency ?? null);
     const unit = { XAF: 1, XOF: 0.9, GMD: 6.6667, CDF: 0.1111, GNF: 0.0625 };
-    return res.json({ service, provider, quantity, price_per_1000_fcfa: per, total_fcfa: total, total_usd: Math.ceil(total / (usdToLocalRate(provider, cur) * (unit[cur] ?? 1)) * 100) / 100, price_is_custom: custom });
+    return res.json({ service, provider, quantity, price_per_1000_fcfa: per, total_fcfa: total, total_usd: Math.ceil(total / (usdToLocalRate(provider, cur) * (unit[cur] ?? 1)) * 100) / 100, price_is_custom: custom2 });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
@@ -96769,9 +97003,9 @@ async function syncOrderInternal(opts) {
   }
   let refund = { refunded: false, amountMinor: 0 };
   if ((FINAL_REFUND_STATUSES.has(status) || status === "partial" || opts.forceRefund) && !order.refunded_at) {
-    let amount = Number(order.charge_minor);
-    if (status === "partial" && !opts.forceRefund) amount = remains && Number(order.quantity) > 0 ? Math.round(remains / Number(order.quantity) * amount) : 0;
-    if (amount > 0) refund = await refundOrderAtomic(String(order.id), amount);
+    let amount2 = Number(order.charge_minor);
+    if (status === "partial" && !opts.forceRefund) amount2 = remains && Number(order.quantity) > 0 ? Math.round(remains / Number(order.quantity) * amount2) : 0;
+    if (amount2 > 0) refund = await refundOrderAtomic(String(order.id), amount2);
   }
   const conn = await getMysqlPool().getConnection();
   let previousStatus = String(order.status);
@@ -98932,17 +99166,17 @@ async function maybeAwardReferralBonus(referredUserId, paymentId, amountFcfa) {
       ["referred", String(r.referred_user_id), Number(r.referred_bonus_minor), "referral_referred_bonus"]
     ];
     let referrerCredited = false;
-    for (const [leg, userId, amount, type] of legs) {
+    for (const [leg, userId, amount2, type] of legs) {
       const flag = `${leg}_credited_at`;
       if (r[flag]) continue;
       const before = balances.get(userId);
-      const after = before + amount;
+      const after = before + amount2;
       const [insert] = await conn.execute(
         "INSERT IGNORE INTO wallet_transactions (id,user_id,amount_minor,balance_after_minor,currency,type,reference_type,reference_id) VALUES (?,?,?,?, 'XOF',?,'referral',?)",
-        [crypto5.randomUUID(), userId, amount, after, type, r.id]
+        [crypto5.randomUUID(), userId, amount2, after, type, r.id]
       );
       if (insert.affectedRows) {
-        await conn.execute("UPDATE profiles SET balance_minor=?, affiliate_earnings_minor=affiliate_earnings_minor + ? WHERE user_id=?", [after, leg === "referrer" ? amount : 0, userId]);
+        await conn.execute("UPDATE profiles SET balance_minor=?, affiliate_earnings_minor=affiliate_earnings_minor + ? WHERE user_id=?", [after, leg === "referrer" ? amount2 : 0, userId]);
         await conn.execute("INSERT INTO balance_audit_log (user_id,previous_balance_minor,new_balance_minor,reason,actor_user_id) VALUES (?,?,?,?,NULL)", [userId, before, after, type]);
         balances.set(userId, after);
         if (leg === "referrer") referrerCredited = true;
@@ -99051,12 +99285,12 @@ var import_pdf_lib = __toESM(require_cjs(), 1);
 function printable(value) {
   return value.replace(/[\u00a0\u202f]/g, " ").replace(/[^\u0000-\u00ff]/g, "?");
 }
-function money(amount, currency2) {
+function money(amount2, currency2) {
   const digits = currency2 === "USD" ? 2 : 0;
   return `${new Intl.NumberFormat("fr-FR", {
     minimumFractionDigits: digits,
     maximumFractionDigits: 2
-  }).format(amount)} ${currency2}`;
+  }).format(amount2)} ${currency2}`;
 }
 function dateLabel(value) {
   const date = new Date(value);
@@ -99223,12 +99457,40 @@ async function createDepositInvoiceAttachment(input) {
   };
 }
 
+// src/lib/afribapay-fees.ts
+function asRecord(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+function amount(value) {
+  if (value === null || value === void 0 || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+function extractAfribapayProviderFees(payload) {
+  const records = [];
+  let current = asRecord(payload);
+  for (let depth = 0; current && depth < 4; depth++) {
+    records.push(current);
+    current = asRecord(current["data"]);
+  }
+  for (const record2 of records.reverse()) {
+    const fees = amount(record2["fees"]);
+    const taxes = amount(record2["taxes"]);
+    const reportedTotal = amount(record2["fees_taxes_ttc"]);
+    const total = reportedTotal ?? (fees !== null && taxes !== null ? fees + taxes : null);
+    if (fees !== null || taxes !== null || total !== null) {
+      return { fees, taxes, total };
+    }
+  }
+  return null;
+}
+
 // src/lib/deposits.ts
 var BONUS_THRESHOLD_FCFA = 5e3;
 var BONUS_AMOUNT_FCFA = 200;
-var isEligibleForBonus = (amount) => Number.isFinite(amount) && amount >= BONUS_THRESHOLD_FCFA;
+var isEligibleForBonus = (amount2) => Number.isFinite(amount2) && amount2 >= BONUS_THRESHOLD_FCFA;
 var fcfa = (minor3) => Number(minor3) / 100;
-var minor2 = (amount) => Math.round(amount * 100);
+var minor2 = (amount2) => Math.round(amount2 * 100);
 function mapPayment(r) {
   return {
     id: String(r.id),
@@ -99280,6 +99542,21 @@ async function createPayment(input) {
 async function updatePaymentTransaction(paymentId, transactionId) {
   await getMysqlPool().execute("UPDATE payments SET transaction_id = COALESCE(transaction_id, ?) WHERE id = ?", [transactionId, paymentId]);
 }
+async function recordAfribapayProviderFees(paymentId, payload) {
+  const costs = extractAfribapayProviderFees(payload);
+  if (!costs) return;
+  const toMinor = (value) => value === null ? null : Math.round(value * 100);
+  const total = costs.total ?? (costs.fees !== null && costs.taxes !== null ? costs.fees + costs.taxes : null);
+  if (costs.fees === null && costs.taxes === null && total === null) return;
+  await getMysqlPool().execute(
+    `UPDATE payments
+     SET provider_fee_minor = COALESCE(?, provider_fee_minor),
+         provider_tax_minor = COALESCE(?, provider_tax_minor),
+         provider_fee_total_minor = COALESCE(?, provider_fee_total_minor)
+     WHERE id = ? AND (provider = 'afribapay' OR method = 'afribapay')`,
+    [toMinor(costs.fees), toMinor(costs.taxes), toMinor(total), paymentId]
+  );
+}
 async function ensureRatesLoaded() {
   if (isRateCacheValid()) return;
   const [rows] = await getMysqlPool().execute("SELECT `key`, `value` FROM settings WHERE `key` LIKE 'currency_rate_%'");
@@ -99310,16 +99587,16 @@ async function creditDeposit(paymentId, opts) {
       return { ok: false, error: "Le d\xE9p\xF4t crypto doit \xEAtre confirm\xE9 par le service de paiement avant cr\xE9dit", status: 409 };
     }
     const localAmount = fcfa(row.amount_minor);
-    let amount = payment.currency ? toFcfaByCurrency(localAmount, payment.currency) : toFcfa(localAmount, payment.country ?? null);
-    amount = Math.round(amount);
-    const eligible = isEligibleForBonus(amount);
+    let amount2 = payment.currency ? toFcfaByCurrency(localAmount, payment.currency) : toFcfa(localAmount, payment.country ?? null);
+    amount2 = Math.round(amount2);
+    const eligible = isEligibleForBonus(amount2);
     const bonus = eligible ? BONUS_AMOUNT_FCFA : 0;
     const onlyBonus = Boolean(opts?.forceBonusCredit && row.credited_at && eligible && row.bonus_status !== "credited");
     if (row.credited_at && !onlyBonus) {
       await conn.commit();
       return { ok: true, alreadyCredited: true, amountCredited: 0, bonusCredited: 0, newBalance: null, payment };
     }
-    const totalMinor = minor2(onlyBonus ? bonus : amount + bonus);
+    const totalMinor = minor2(onlyBonus ? bonus : amount2 + bonus);
     const [profiles] = await conn.execute("SELECT balance_minor,username FROM profiles WHERE user_id = ? FOR UPDATE", [row.user_id]);
     if (!profiles[0]) throw new Error("Profil introuvable");
     const before = Number(profiles[0].balance_minor);
@@ -99347,7 +99624,7 @@ async function creditDeposit(paymentId, opts) {
         [row.user_id]
       );
       if (!accounts[0]?.email) throw new Error("Adresse e-mail du client introuvable");
-      const creditedAmount = amount + bonus;
+      const creditedAmount = amount2 + bonus;
       const invoice = await createDepositInvoiceAttachment({
         id: paymentId,
         createdAt: payment.created_at,
@@ -99380,8 +99657,8 @@ async function creditDeposit(paymentId, opts) {
       });
     }
     await conn.commit();
-    outcome = { ok: true, alreadyCredited: false, amountCredited: onlyBonus ? 0 : amount, bonusCredited: bonus, newBalance: fcfa(after), payment: await fetchPayment(paymentId) };
-    if (!onlyBonus) await maybeAwardReferralBonus(payment.user_id, paymentId, amount);
+    outcome = { ok: true, alreadyCredited: false, amountCredited: onlyBonus ? 0 : amount2, bonusCredited: bonus, newBalance: fcfa(after), payment: await fetchPayment(paymentId) };
+    if (!onlyBonus) await maybeAwardReferralBonus(payment.user_id, paymentId, amount2);
     return outcome;
   } catch (err) {
     await conn.rollback();
@@ -100356,7 +100633,8 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
           o.provider,p.country,o.currency,
           NULL payment_provider,NULL payment_method,
           COALESCE(o.external_order_id,o.provider_order_id) external_order_id,
-          o.service_category,o.service_name
+           o.service_category,o.service_name,
+           NULL charge_minor,NULL provider_fee_total_minor
         FROM orders o
         LEFT JOIN profiles p ON p.user_id=o.user_id
 
@@ -100372,7 +100650,8 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
           o.provider,p.country,o.currency,
           NULL payment_provider,NULL payment_method,
           COALESCE(o.external_order_id,o.provider_order_id) external_order_id,
-          o.service_category,o.service_name
+           o.service_category,o.service_name,
+           NULL charge_minor,NULL provider_fee_total_minor
         FROM orders o
         LEFT JOIN profiles p ON p.user_id=o.user_id
         WHERE o.refunded_at IS NOT NULL AND o.refunded_amount_minor > 0
@@ -100387,7 +100666,8 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
           COALESCE(x.transaction_id,x.order_id,x.provider_reference) reference,
           COALESCE(x.transaction_id,x.order_id,x.provider_reference) order_number,
           NULL provider,x.country,x.currency,x.provider payment_provider,x.method payment_method,NULL external_order_id,
-          NULL service_category,NULL service_name
+           NULL service_category,NULL service_name,
+           x.charge_minor,x.provider_fee_total_minor
         FROM payments x
         LEFT JOIN profiles p ON p.user_id=x.user_id
       ) t ${where}
@@ -100398,7 +100678,9 @@ router3.get("/admin/transactions", requireUser, requireAdmin, async (req, res) =
       rows: rows.map((r) => ({
         ...r,
         amount: Number(r.amount) / 100,
-        refunded_amount: r.refunded_amount_minor == null ? null : Number(r.refunded_amount_minor) / 100
+        refunded_amount: r.refunded_amount_minor == null ? null : Number(r.refunded_amount_minor) / 100,
+        charge_amount: r.charge_minor == null ? null : Number(r.charge_minor) / 100,
+        provider_fee_total: r.provider_fee_total_minor == null ? null : Number(r.provider_fee_total_minor) / 100
       })),
       total_count: null,
       has_more: rows.length === limit
@@ -100828,6 +101110,13 @@ async function patchPayment(paymentId, patch) {
   if (typeof patch.transaction_id === "string") await updatePaymentTransaction(paymentId, patch.transaction_id);
   if (patch.status === "failed" || patch.status === "rejected" || patch.status === "pending") await markPaymentStatus(paymentId, patch.status);
 }
+async function persistAfribapayProviderFees(paymentId, payload, source) {
+  try {
+    await recordAfribapayProviderFees(paymentId, payload);
+  } catch (err) {
+    logger.error({ err, paymentId, source }, "Failed to persist AfribaPAY provider fees");
+  }
+}
 var findPaymentByOrderId = fetchPaymentByOrderId;
 function generateOrderId(userId) {
   const ts = Date.now().toString(36);
@@ -100906,15 +101195,15 @@ router5.post("/payments/otp", requireUser, async (req, res) => {
   }
 });
 router5.post("/payments/initiate", requireUser, async (req, res) => {
-  const amount = Number(req.body?.amount);
+  const amount2 = Number(req.body?.amount);
   const country = String(req.body?.country || "").toUpperCase();
   const operator = String(req.body?.operator || "");
   const phone = String(req.body?.phone_number || "").replace(/\s+/g, "");
   const otpCode = req.body?.otp_code ? String(req.body.otp_code) : void 0;
-  if (!Number.isFinite(amount) || amount < 500) {
+  if (!Number.isFinite(amount2) || amount2 < 500) {
     return res.status(400).json({ error: "Montant minimum : 500 FCFA" });
   }
-  if (amount > 1e7) {
+  if (amount2 > 1e7) {
     return res.status(400).json({ error: "Montant trop \xE9lev\xE9" });
   }
   if (!country || !operator || !phone) {
@@ -100952,13 +101241,13 @@ router5.post("/payments/initiate", requireUser, async (req, res) => {
   }
   const orderId = generateOrderId(req.userId);
   const FEE_RATE = 0.02;
-  const chargeAmount = Math.ceil(amount * (1 + FEE_RATE));
-  const feeAmount = chargeAmount - amount;
+  const chargeAmount = Math.ceil(amount2 * (1 + FEE_RATE));
+  const feeAmount = chargeAmount - amount2;
   let paymentId;
   try {
     paymentId = await insertPayment({
       userId: req.userId,
-      amount,
+      amount: amount2,
       // credit amount — what gets added to the user's balance
       orderId,
       country,
@@ -100984,6 +101273,7 @@ router5.post("/payments/initiate", requireUser, async (req, res) => {
       notify_url: notifyUrl(),
       otp_code: otpCode
     });
+    await persistAfribapayProviderFees(paymentId, result.raw, "payin");
     if (result.transaction_id) {
       await patchPayment(paymentId, { transaction_id: result.transaction_id });
     }
@@ -100997,7 +101287,7 @@ router5.post("/payments/initiate", requireUser, async (req, res) => {
       // Wave operators: URL to open in the Wave app for payment confirmation
       wave_redirect_url: result.redirect_url || void 0,
       // Fee info for the frontend to display
-      credit_amount: amount,
+      credit_amount: amount2,
       fee_amount: feeAmount,
       charge_amount: chargeAmount
     });
@@ -101025,6 +101315,7 @@ router5.get("/payments/status/:orderId", requireUser, async (req, res) => {
   }
   try {
     const remote = await getStatus(orderId);
+    await persistAfribapayProviderFees(local.id, remote.raw, "status");
     if (remote.transaction_id && !local.transaction_id) {
       await patchPayment(local.id, { transaction_id: remote.transaction_id }).catch(() => void 0);
     }
@@ -101076,6 +101367,7 @@ router5.post("/payments/webhook", async (req, res) => {
     logger.warn({ orderId }, "AfribaPay webhook: payment not found");
     return res.status(200).json({ ok: false, error: "Paiement introuvable" });
   }
+  await persistAfribapayProviderFees(local.id, body, "webhook");
   const txId = inner["transaction_id"] || inner["transactionId"];
   if (txId) {
     await patchPayment(local.id, { transaction_id: String(txId) }).catch(() => void 0);
@@ -101318,7 +101610,7 @@ async function reconcileCryptoPayment(paymentId) {
           [row.user_id]
         );
         if (!accounts[0]?.email) throw new Error("Adresse e-mail du client introuvable");
-        const amount = Number(row.amount_minor) / 100;
+        const amount2 = Number(row.amount_minor) / 100;
         const method = String(row.method || "crypto");
         const reference = String(row.reference || paymentId);
         const invoice = await createDepositInvoiceAttachment({
@@ -101330,12 +101622,12 @@ async function reconcileCryptoPayment(paymentId) {
           reference,
           transactionId: row.transaction_id,
           orderId: row.order_id,
-          depositedAmount: amount,
+          depositedAmount: amount2,
           depositedCurrency: "USD",
-          creditedAmount: amount,
+          creditedAmount: amount2,
           creditedCurrency: "USD"
         });
-        const formattedAmount = `${amount.toLocaleString("fr-FR", {
+        const formattedAmount = `${amount2.toLocaleString("fr-FR", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         })} USD`;
@@ -101966,26 +102258,26 @@ router9.get("/referrals/transactions", requireUser, async (req, res) => {
     const out = [];
     const short = (id) => id.replace(/-/g, "").slice(0, 8).toUpperCase();
     for (const row of asReferrerRows) {
-      const amount = Number(row.referrer_bonus_minor || 0) / 100;
-      if (amount <= 0 || !row.referrer_credited_at) continue;
+      const amount2 = Number(row.referrer_bonus_minor || 0) / 100;
+      if (amount2 <= 0 || !row.referrer_credited_at) continue;
       const who = row.counterparty_name ? String(row.counterparty_name) : "";
       out.push({
         id: `${row.id}-referrer`,
         kind: "commission",
-        amount_fcfa: amount,
+        amount_fcfa: amount2,
         created_at: asIso(row.referrer_credited_at),
         detail: `Commission de parrainage${who ? ` \xB7 filleul ${who}` : ""}`,
         reference: `PAR-${short(String(row.id))}`
       });
     }
     for (const row of asReferredRows) {
-      const amount = Number(row.referred_bonus_minor || 0) / 100;
-      if (amount <= 0 || !row.referred_credited_at) continue;
+      const amount2 = Number(row.referred_bonus_minor || 0) / 100;
+      if (amount2 <= 0 || !row.referred_credited_at) continue;
       const who = row.counterparty_name ? String(row.counterparty_name) : "";
       out.push({
         id: `${row.id}-referred`,
         kind: "commission",
-        amount_fcfa: amount,
+        amount_fcfa: amount2,
         created_at: asIso(row.referred_credited_at),
         detail: `Bonus de bienvenue parrainage${who ? ` \xB7 via ${who}` : ""}`,
         reference: `PAR-${short(String(row.id))}`
@@ -102452,19 +102744,220 @@ router10.get("/auth/me", requireUser, async (req, res) => {
 });
 var auth_default = router10;
 
-// src/routes/index.ts
+// src/routes/afribapay-admin.ts
+var import_express11 = __toESM(require_express2(), 1);
 var router11 = (0, import_express11.Router)();
-router11.use(health_default);
-router11.use(auth_default);
-router11.use(smm_default);
-router11.use(admin_default);
-router11.use(support_default);
-router11.use(payments_default);
-router11.use(izipay_default);
-router11.use(tickets_default);
-router11.use(profile_default);
-router11.use(referrals_default);
-var routes_default = router11;
+var BASE_CONDITIONS = [
+  "p.status = 'completed'",
+  "(p.provider = 'afribapay' OR p.method = 'afribapay')"
+];
+function buildWhere(filters) {
+  const conditions = [...BASE_CONDITIONS];
+  const values = [];
+  if (filters.from) {
+    conditions.push("p.created_at >= ?");
+    values.push(filters.from);
+  }
+  if (filters.to) {
+    conditions.push("p.created_at < DATE_ADD(?, INTERVAL 1 DAY)");
+    values.push(filters.to);
+  }
+  if (filters.currency) {
+    conditions.push("COALESCE(NULLIF(UPPER(p.currency), ''), 'XAF') = ?");
+    values.push(filters.currency);
+  }
+  if (filters.country) {
+    conditions.push("UPPER(p.country) = ?");
+    values.push(filters.country);
+  }
+  if (filters.operator) {
+    conditions.push("TRIM(p.operator) = ?");
+    values.push(filters.operator);
+  }
+  if (filters.search) {
+    conditions.push(`(
+      p.user_id LIKE ?
+      OR pr.username LIKE ?
+      OR pr.email LIKE ?
+      OR p.phone_number LIKE ?
+      OR p.transaction_id LIKE ?
+      OR p.order_id LIKE ?
+      OR p.provider_reference LIKE ?
+    )`);
+    const search = `%${filters.search}%`;
+    values.push(search, search, search, search, search, search, search);
+  }
+  return { sql: conditions.join(" AND "), values };
+}
+function asNullableString(value) {
+  return value == null ? null : String(value);
+}
+router11.get(
+  "/admin/afribapay/deposits",
+  requireUser,
+  requireAdmin,
+  async (req, res) => {
+    const parsedFilters = AfriPayReportQuerySchema.safeParse(req.query);
+    if (!parsedFilters.success) {
+      res.status(400).json({ error: parsedFilters.error.message });
+      return;
+    }
+    const filters = parsedFilters.data;
+    const where = buildWhere(filters);
+    const pool2 = getMysqlPool();
+    try {
+      const [countRows] = await pool2.execute(
+        `SELECT COUNT(*) AS total_count
+         FROM payments p
+         LEFT JOIN profiles pr ON pr.user_id = p.user_id
+         WHERE ${where.sql}`,
+        where.values
+      );
+      const [summaryRows] = await pool2.execute(
+        `SELECT
+           COALESCE(NULLIF(UPPER(p.currency), ''), 'XAF') AS currency,
+           COUNT(*) AS deposit_count,
+           SUM(CASE
+             WHEN p.charge_minor IS NOT NULL AND p.provider_fee_total_minor IS NOT NULL
+             THEN 1 ELSE 0
+           END) AS known_count,
+           SUM(CASE
+             WHEN p.charge_minor IS NULL OR p.provider_fee_total_minor IS NULL
+             THEN 1 ELSE 0
+           END) AS unknown_count,
+           CAST(COALESCE(SUM(CASE
+             WHEN p.charge_minor IS NOT NULL AND p.provider_fee_total_minor IS NOT NULL
+             THEN p.charge_minor ELSE 0
+           END), 0) AS CHAR) AS gross_minor,
+           CAST(COALESCE(SUM(CASE
+             WHEN p.charge_minor IS NOT NULL AND p.provider_fee_total_minor IS NOT NULL
+             THEN p.provider_fee_total_minor ELSE 0
+           END), 0) AS CHAR) AS fees_minor,
+           CAST(COALESCE(SUM(CASE
+             WHEN p.charge_minor IS NOT NULL AND p.provider_fee_total_minor IS NOT NULL
+             THEN p.charge_minor - p.provider_fee_total_minor ELSE 0
+           END), 0) AS CHAR) AS net_minor
+         FROM payments p
+         LEFT JOIN profiles pr ON pr.user_id = p.user_id
+         WHERE ${where.sql}
+         GROUP BY COALESCE(NULLIF(UPPER(p.currency), ''), 'XAF')
+         ORDER BY currency`,
+        where.values
+      );
+      const [depositRows] = await pool2.execute(
+        `SELECT
+           p.id,
+           p.user_id,
+           COALESCE(NULLIF(TRIM(pr.username), ''), NULLIF(TRIM(pr.email), ''), p.user_id) AS user_label,
+           pr.email AS user_email,
+           p.phone_number,
+           COALESCE(
+             NULLIF(p.transaction_id, ''),
+             NULLIF(p.order_id, ''),
+             NULLIF(p.provider_reference, '')
+           ) AS reference,
+           p.created_at,
+           p.country,
+           NULLIF(TRIM(p.operator), '') AS operator,
+           COALESCE(NULLIF(UPPER(p.currency), ''), 'XAF') AS currency,
+           CAST(p.amount_minor AS CHAR) AS amount_minor,
+           CASE WHEN p.charge_minor IS NULL THEN NULL
+             ELSE CAST(p.charge_minor AS CHAR) END AS charged_minor,
+           CASE WHEN p.provider_fee_minor IS NULL THEN NULL
+             ELSE CAST(p.provider_fee_minor AS CHAR) END AS provider_fee_minor,
+           CASE WHEN p.provider_tax_minor IS NULL THEN NULL
+             ELSE CAST(p.provider_tax_minor AS CHAR) END AS provider_tax_minor,
+           CASE WHEN p.provider_fee_total_minor IS NULL THEN NULL
+             ELSE CAST(p.provider_fee_total_minor AS CHAR) END AS provider_fee_total_minor,
+           CASE
+             WHEN p.charge_minor IS NULL OR p.provider_fee_total_minor IS NULL THEN NULL
+             ELSE CAST(p.charge_minor - p.provider_fee_total_minor AS CHAR)
+           END AS net_minor
+         FROM payments p
+         LEFT JOIN profiles pr ON pr.user_id = p.user_id
+         WHERE ${where.sql}
+         ORDER BY p.created_at DESC, p.id DESC
+         LIMIT ? OFFSET ?`,
+        [...where.values, filters.limit, filters.offset]
+      );
+      const [facetRows] = await pool2.execute(
+        `SELECT DISTINCT
+           COALESCE(NULLIF(UPPER(p.currency), ''), 'XAF') AS currency,
+           UPPER(NULLIF(p.country, '')) AS country,
+           NULLIF(TRIM(p.operator), '') AS operator
+         FROM payments p
+         WHERE p.status = 'completed'
+           AND (p.provider = 'afribapay' OR p.method = 'afribapay')
+         ORDER BY currency, country, operator`
+      );
+      const response = AfriPayReportResponseSchema.parse({
+        rows: depositRows.map((row) => ({
+          id: String(row.id),
+          user_id: String(row.user_id),
+          user_label: String(row.user_label),
+          user_email: asNullableString(row.user_email),
+          phone_number: asNullableString(row.phone_number),
+          reference: asNullableString(row.reference),
+          created_at: new Date(row.created_at).toISOString(),
+          country: asNullableString(row.country),
+          operator: asNullableString(row.operator),
+          currency: String(row.currency),
+          amount_minor: String(row.amount_minor),
+          charged_minor: asNullableString(row.charged_minor),
+          provider_fee_minor: asNullableString(row.provider_fee_minor),
+          provider_tax_minor: asNullableString(row.provider_tax_minor),
+          provider_fee_total_minor: asNullableString(row.provider_fee_total_minor),
+          net_minor: asNullableString(row.net_minor)
+        })),
+        total_count: Number(countRows[0]?.["total_count"] ?? 0),
+        limit: filters.limit,
+        offset: filters.offset,
+        summary: summaryRows.map((row) => ({
+          currency: String(row.currency),
+          deposit_count: Number(row.deposit_count),
+          known_count: Number(row.known_count),
+          unknown_count: Number(row.unknown_count),
+          gross_minor: String(row.gross_minor),
+          fees_minor: String(row.fees_minor),
+          net_minor: String(row.net_minor)
+        })),
+        filters: {
+          currencies: [...new Set(facetRows.map((row) => String(row.currency)))],
+          countries: [
+            ...new Set(
+              facetRows.map((row) => asNullableString(row.country)).filter((value) => value !== null)
+            )
+          ],
+          operators: [
+            ...new Set(
+              facetRows.map((row) => asNullableString(row.operator)).filter((value) => value !== null)
+            )
+          ]
+        }
+      });
+      res.json(response);
+    } catch (err) {
+      req.log.error({ err }, "admin AfribaPAY deposit report failed");
+      res.status(500).json({ error: "Impossible de charger le rapport AfribaPAY" });
+    }
+  }
+);
+var afribapay_admin_default = router11;
+
+// src/routes/index.ts
+var router12 = (0, import_express12.Router)();
+router12.use(health_default);
+router12.use(auth_default);
+router12.use(smm_default);
+router12.use(admin_default);
+router12.use(afribapay_admin_default);
+router12.use(support_default);
+router12.use(payments_default);
+router12.use(izipay_default);
+router12.use(tickets_default);
+router12.use(profile_default);
+router12.use(referrals_default);
+var routes_default = router12;
 
 // src/app.ts
 init_logger();
@@ -102531,7 +103024,7 @@ var developmentApiProxy = (req, res) => {
 };
 
 // src/app.ts
-var app = (0, import_express12.default)();
+var app = (0, import_express13.default)();
 app.set("trust proxy", ["loopback", "linklocal", "uniquelocal"]);
 app.use(
   (0, import_pino_http.default)({
@@ -102573,8 +103066,8 @@ function captureRawBody(req, _res, buf) {
     req.rawBody = buf.toString("utf8");
   }
 }
-app.use(import_express12.default.json({ limit: "8mb", verify: captureRawBody }));
-app.use(import_express12.default.urlencoded({ extended: true, limit: "8mb" }));
+app.use(import_express13.default.json({ limit: "8mb", verify: captureRawBody }));
+app.use(import_express13.default.urlencoded({ extended: true, limit: "8mb" }));
 app.use((0, import_cookie_parser.default)());
 app.get("/api/health/mysql", async (_req, res) => {
   try {
@@ -102612,7 +103105,7 @@ if (process.env["NODE_ENV"] === "production") {
   if (frontendDist) {
     logger.info({ frontendDist }, "serving frontend static files");
     app.use(
-      import_express12.default.static(frontendDist, {
+      import_express13.default.static(frontendDist, {
         index: false,
         maxAge: "1y",
         setHeaders: (res, filePath) => {
@@ -102840,6 +103333,11 @@ async function reconcileOne(p) {
   if (!p.order_id) return "skip";
   try {
     const remote = await getStatus(p.order_id);
+    try {
+      await recordAfribapayProviderFees(p.id, remote.raw);
+    } catch (err) {
+      logger.error({ paymentId: p.id, err: err?.message }, "pending-payment-scanner: failed to persist AfribaPAY fees");
+    }
     if (isSuccessStatus(remote.status)) {
       const result = await creditDeposit(p.id);
       if (result.ok) {
