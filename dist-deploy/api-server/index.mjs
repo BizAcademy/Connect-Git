@@ -95774,6 +95774,16 @@ var AfriPayReportResponseSchema = external_exports.object({
     operators: external_exports.array(external_exports.string())
   })
 });
+var AdminAfribapayProviderPreviewSchema = external_exports.object({
+  status: external_exports.string(),
+  amount: external_exports.number().nonnegative().nullable(),
+  fees: external_exports.number().nonnegative().nullable(),
+  taxes: external_exports.number().nonnegative().nullable(),
+  fees_taxes_ttc: external_exports.number().nonnegative().nullable(),
+  amount_total: external_exports.number().nonnegative().nullable(),
+  currency: external_exports.string().nullable(),
+  lookup_method: external_exports.enum(["order_id", "transaction_id"])
+});
 
 // src/lib/mysql.ts
 var import_promise = __toESM(require_promise(), 1);
@@ -95800,7 +95810,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-10-05T08:59:12.082Z";
+var BUILD_TIME = "2026-10-05T10:44:18.117Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -99458,6 +99468,11 @@ async function createDepositInvoiceAttachment(input) {
 }
 
 // src/lib/afribapay-fees.ts
+function feeReconciliationRetryAfterSeconds(attemptCount, outcome) {
+  const schedule = outcome === "error" ? [900, 3600, 21600, 86400, 604800] : [3600, 21600, 86400, 604800, 2592e3];
+  const attempt = Math.max(1, Number.isFinite(attemptCount) ? Math.floor(attemptCount) : 1);
+  return schedule[Math.min(attempt - 1, schedule.length - 1)];
+}
 function asRecord(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
@@ -99473,16 +99488,32 @@ function extractAfribapayProviderFees(payload) {
     records.push(current);
     current = asRecord(current["data"]);
   }
-  for (const record2 of records.reverse()) {
-    const fees = amount(record2["fees"]);
-    const taxes = amount(record2["taxes"]);
-    const reportedTotal = amount(record2["fees_taxes_ttc"]);
-    const total = reportedTotal ?? (fees !== null && taxes !== null ? fees + taxes : null);
-    if (fees !== null || taxes !== null || total !== null) {
-      return { fees, taxes, total };
-    }
+  const sources = records.reverse();
+  const providerAmount = (field) => sources.map((record2) => amount(record2[field])).find((value) => value !== null) ?? null;
+  const fees = providerAmount("fees");
+  const taxes = providerAmount("taxes");
+  const reportedTotal = providerAmount("fees_taxes_ttc");
+  const total = reportedTotal ?? (fees !== null && taxes !== null ? fees + taxes : null);
+  return fees !== null || taxes !== null || total !== null ? { fees, taxes, total } : null;
+}
+function extractAfribapayProviderPreview(payload) {
+  const records = [];
+  let current = asRecord(payload);
+  for (let depth = 0; current && depth < 4; depth++) {
+    records.push(current);
+    current = asRecord(current["data"]);
   }
-  return null;
+  const sources = records.reverse();
+  const value = (field) => sources.find((candidate) => candidate[field] !== void 0 && candidate[field] !== null)?.[field];
+  const currency2 = value("currency");
+  return {
+    amount: amount(value("amount")),
+    fees: amount(value("fees")),
+    taxes: amount(value("taxes")),
+    fees_taxes_ttc: amount(value("fees_taxes_ttc")),
+    amount_total: amount(value("amount_total")),
+    currency: typeof currency2 === "string" && currency2.trim() ? currency2.trim().toUpperCase() : null
+  };
 }
 
 // src/lib/deposits.ts
@@ -99544,10 +99575,10 @@ async function updatePaymentTransaction(paymentId, transactionId) {
 }
 async function recordAfribapayProviderFees(paymentId, payload) {
   const costs = extractAfribapayProviderFees(payload);
-  if (!costs) return;
+  if (!costs) return false;
   const toMinor = (value) => value === null ? null : Math.round(value * 100);
   const total = costs.total ?? (costs.fees !== null && costs.taxes !== null ? costs.fees + costs.taxes : null);
-  if (costs.fees === null && costs.taxes === null && total === null) return;
+  if (costs.fees === null && costs.taxes === null && total === null) return false;
   await getMysqlPool().execute(
     `UPDATE payments
      SET provider_fee_minor = COALESCE(?, provider_fee_minor),
@@ -99556,6 +99587,7 @@ async function recordAfribapayProviderFees(paymentId, payload) {
      WHERE id = ? AND (provider = 'afribapay' OR method = 'afribapay')`,
     [toMinor(costs.fees), toMinor(costs.taxes), toMinor(total), paymentId]
   );
+  return total !== null;
 }
 async function ensureRatesLoaded() {
   if (isRateCacheValid()) return;
@@ -100064,10 +100096,12 @@ async function requestOtp(params) {
     throw err;
   }
 }
-async function getStatus(orderId) {
+async function getStatus(identifier, lookupBy = "order_id") {
   let data;
+  const fallbackOrderId = lookupBy === "order_id" ? identifier : void 0;
+  const fallbackTransactionId = lookupBy === "transaction_id" ? identifier : void 0;
   try {
-    data = await authedFetch(`/v1/status?order_id=${encodeURIComponent(orderId)}`, { method: "GET" });
+    data = await authedFetch(`/v1/status?${lookupBy}=${encodeURIComponent(identifier)}`, { method: "GET" });
   } catch (err) {
     if (err instanceof AfribapayApiError && err.status === 429) {
       const p = err.payload;
@@ -100077,8 +100111,8 @@ async function getStatus(orderId) {
         if (s) {
           return {
             status: s,
-            transaction_id: inner2.transaction_id || inner2.transactionId || void 0,
-            order_id: inner2.order_id || orderId,
+            transaction_id: inner2.transaction_id || inner2.transactionId || fallbackTransactionId,
+            order_id: inner2.order_id || fallbackOrderId,
             amount: inner2.amount != null ? Number(inner2.amount) : void 0,
             raw: p
           };
@@ -100090,8 +100124,8 @@ async function getStatus(orderId) {
   const inner = data?.data ?? data;
   return {
     status: String(inner?.status || data?.status || "").toUpperCase(),
-    transaction_id: inner?.transaction_id || inner?.transactionId || void 0,
-    order_id: inner?.order_id || orderId,
+    transaction_id: inner?.transaction_id || inner?.transactionId || fallbackTransactionId,
+    order_id: inner?.order_id || fallbackOrderId,
     amount: inner?.amount != null ? Number(inner.amount) : void 0,
     raw: data
   };
@@ -102747,6 +102781,9 @@ var auth_default = router10;
 // src/routes/afribapay-admin.ts
 var import_express11 = __toESM(require_express2(), 1);
 var router11 = (0, import_express11.Router)();
+var previewInFlightAdmins = /* @__PURE__ */ new Set();
+var previewLastRequestByAdmin = /* @__PURE__ */ new Map();
+var PROVIDER_PREVIEW_COOLDOWN_MS = 3e3;
 var BASE_CONDITIONS = [
   "p.status = 'completed'",
   "(p.provider = 'afribapay' OR p.method = 'afribapay')"
@@ -102939,6 +102976,83 @@ router11.get(
     } catch (err) {
       req.log.error({ err }, "admin AfribaPAY deposit report failed");
       res.status(500).json({ error: "Impossible de charger le rapport AfribaPAY" });
+    }
+  }
+);
+router11.get(
+  "/admin/afribapay/deposits/:payment_id/provider-preview",
+  requireUser,
+  requireAdmin,
+  async (req, res) => {
+    const rawPaymentId = req.params["payment_id"];
+    const paymentId = Array.isArray(rawPaymentId) ? rawPaymentId[0] : rawPaymentId;
+    if (!paymentId || paymentId.length > 100) {
+      res.status(400).json({ error: "Identifiant de d\xE9p\xF4t invalide" });
+      return;
+    }
+    if (!isAfribapayConfigured()) {
+      res.status(503).json({ error: "AfribaPAY n\u2019est pas configur\xE9 sur ce serveur" });
+      return;
+    }
+    const adminId = req.userId ?? "";
+    const now = Date.now();
+    if (!adminId || previewInFlightAdmins.has(adminId) || now - (previewLastRequestByAdmin.get(adminId) ?? 0) < PROVIDER_PREVIEW_COOLDOWN_MS) {
+      res.status(429).json({ error: "Attendez quelques secondes avant une nouvelle v\xE9rification." });
+      return;
+    }
+    previewInFlightAdmins.add(adminId);
+    previewLastRequestByAdmin.set(adminId, now);
+    const pool2 = getMysqlPool();
+    try {
+      const [rows] = await pool2.execute(
+        `SELECT status, provider, method, order_id, transaction_id
+         FROM payments
+         WHERE id = ?
+         LIMIT 1`,
+        [paymentId]
+      );
+      const payment = rows[0];
+      if (!payment) {
+        res.status(404).json({ error: "D\xE9p\xF4t AfribaPAY introuvable" });
+        return;
+      }
+      if (String(payment["status"]).toLowerCase() !== "completed" || payment["provider"] !== "afribapay" && payment["method"] !== "afribapay") {
+        res.status(409).json({ error: "Seuls les d\xE9p\xF4ts AfribaPAY termin\xE9s peuvent \xEAtre v\xE9rifi\xE9s." });
+        return;
+      }
+      const orderId = payment["order_id"] == null ? "" : String(payment["order_id"]).trim();
+      const transactionId = payment["transaction_id"] == null ? "" : String(payment["transaction_id"]).trim();
+      const lookupBy = orderId ? "order_id" : "transaction_id";
+      const lookupValue = orderId || transactionId;
+      if (!lookupValue) {
+        res.status(409).json({ error: "Aucune r\xE9f\xE9rence AfribaPAY n\u2019est enregistr\xE9e pour ce d\xE9p\xF4t." });
+        return;
+      }
+      try {
+        const remote = await getStatus(lookupValue, lookupBy);
+        const response = AdminAfribapayProviderPreviewSchema.parse({
+          status: remote.status || "UNKNOWN",
+          ...extractAfribapayProviderPreview(remote.raw),
+          lookup_method: lookupBy
+        });
+        res.json(response);
+      } catch (err) {
+        const providerStatus = typeof err === "object" && err !== null && "status" in err ? Number(err.status) : void 0;
+        if (providerStatus === 429) {
+          res.status(429).json({ error: "AfribaPAY limite temporairement les v\xE9rifications. R\xE9essayez plus tard." });
+          return;
+        }
+        req.log.warn(
+          { provider_status: providerStatus ?? null },
+          "AfribaPAY admin read-only status lookup failed"
+        );
+        res.status(502).json({ error: "AfribaPAY n\u2019a pas pu fournir le statut de ce d\xE9p\xF4t." });
+      }
+    } catch (err) {
+      req.log.error({ err }, "AfribaPAY admin preview database lookup failed");
+      res.status(500).json({ error: "Impossible de v\xE9rifier ce d\xE9p\xF4t AfribaPAY." });
+    } finally {
+      previewInFlightAdmins.delete(adminId);
     }
   }
 );
@@ -103295,9 +103409,18 @@ var MIN_AGE_MS = 2 * 6e4;
 var AUTO_FAIL_MS = 35 * 6e4;
 var DEFINITIVE_FAIL_MS = 2 * 60 * 6e4;
 var PAGE_SIZE2 = 50;
+var MAX_COMPLETED_FEE_LOOKUPS_PER_SCAN = 6;
+var PROVIDER_STATUS_INTERVAL_MS = 12e3;
+var FEE_LOOKUP_CLAIM_SECONDS = 15 * 60;
 var timer3 = null;
 var inFlight = false;
 var started4 = false;
+var lastProviderStatusRequestAt = 0;
+async function waitForProviderStatusSlot() {
+  const waitMs = lastProviderStatusRequestAt + PROVIDER_STATUS_INTERVAL_MS - Date.now();
+  if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
+  lastProviderStatusRequestAt = Date.now();
+}
 async function fetchPendingPayments() {
   try {
     const [rows] = await getMysqlPool().execute(
@@ -103332,6 +103455,7 @@ async function reconcileOne(p) {
   if (!current || current.status !== "pending" || current.credited_at) return "skip";
   if (!p.order_id) return "skip";
   try {
+    await waitForProviderStatusSlot();
     const remote = await getStatus(p.order_id);
     try {
       await recordAfribapayProviderFees(p.id, remote.raw);
@@ -103369,18 +103493,149 @@ async function reconcileOne(p) {
 async function scanOnce2() {
   if (!isAfribapayConfigured()) return;
   const pending = await fetchPendingPayments();
-  if (pending.length === 0) return;
-  logger.info({ count: pending.length }, "pending-payment-scanner: checking pending payments");
-  let credited = 0, failed = 0, skipped = 0, errors = 0;
-  for (let i = 0; i < pending.length; i++) {
-    if (i > 0) await new Promise((r) => setTimeout(r, 12e3));
-    const result = await reconcileOne(pending[i]);
-    if (result === "credited") credited++;
-    else if (result === "failed") failed++;
-    else if (result === "skip") skipped++;
-    else errors++;
+  if (pending.length > 0) {
+    logger.info({ count: pending.length }, "pending-payment-scanner: checking pending payments");
+    let credited = 0, failed = 0, skipped = 0, errors = 0;
+    for (const payment of pending) {
+      const result = await reconcileOne(payment);
+      if (result === "credited") credited++;
+      else if (result === "failed") failed++;
+      else if (result === "skip") skipped++;
+      else errors++;
+    }
+    logger.info({ credited, failed, skipped, errors }, "pending-payment-scanner: scan complete");
   }
-  logger.info({ credited, failed, skipped, errors }, "pending-payment-scanner: scan complete");
+  await reconcileCompletedFeeBatch();
+}
+async function queueCompletedPaymentsMissingFees() {
+  const pool2 = getMysqlPool();
+  await pool2.execute(
+    `DELETE r
+     FROM afribapay_fee_reconciliation AS r
+     LEFT JOIN payments AS p ON p.id = r.payment_id
+     WHERE p.id IS NULL
+        OR p.status <> 'completed'
+        OR p.provider_fee_total_minor IS NOT NULL
+        OR NOT (
+          COALESCE(p.provider, '') = 'afribapay'
+          OR COALESCE(p.method, '') = 'afribapay'
+        )`
+  );
+  await pool2.execute(
+    `INSERT IGNORE INTO afribapay_fee_reconciliation (payment_id, next_attempt_at)
+     SELECT p.id, NOW()
+     FROM payments AS p
+     WHERE p.status = 'completed'
+       AND (p.provider = 'afribapay' OR p.method = 'afribapay')
+       AND p.provider_fee_total_minor IS NULL
+       AND (
+         NULLIF(TRIM(p.order_id), '') IS NOT NULL
+         OR NULLIF(TRIM(p.transaction_id), '') IS NOT NULL
+       )`
+  );
+}
+async function fetchDueCompletedFeeCandidates() {
+  const [rows] = await getMysqlPool().execute(
+    `SELECT r.payment_id, r.attempts, p.order_id, p.transaction_id
+     FROM afribapay_fee_reconciliation AS r
+     INNER JOIN payments AS p ON p.id = r.payment_id
+     WHERE r.next_attempt_at <= NOW()
+       AND p.status = 'completed'
+       AND (p.provider = 'afribapay' OR p.method = 'afribapay')
+       AND p.provider_fee_total_minor IS NULL
+     ORDER BY r.next_attempt_at ASC, COALESCE(p.completed_at, p.created_at) ASC
+     LIMIT ?`,
+    [MAX_COMPLETED_FEE_LOOKUPS_PER_SCAN]
+  );
+  return rows;
+}
+async function claimCompletedFeeCandidate(paymentId) {
+  const [result] = await getMysqlPool().execute(
+    `UPDATE afribapay_fee_reconciliation
+     SET attempts = attempts + 1,
+         last_attempt_at = NOW(),
+         next_attempt_at = TIMESTAMPADD(SECOND, ?, NOW()),
+         last_result = 'checking'
+     WHERE payment_id = ? AND next_attempt_at <= NOW()`,
+    [FEE_LOOKUP_CLAIM_SECONDS, paymentId]
+  );
+  return result.affectedRows === 1;
+}
+async function finishCompletedFeeCandidate(paymentId, outcome, result, attemptCount) {
+  const delaySeconds = feeReconciliationRetryAfterSeconds(attemptCount, outcome);
+  await getMysqlPool().execute(
+    `UPDATE afribapay_fee_reconciliation
+     SET next_attempt_at = TIMESTAMPADD(SECOND, ?, NOW()),
+         last_result = ?
+     WHERE payment_id = ?`,
+    [delaySeconds, result, paymentId]
+  );
+}
+async function reconcileCompletedFeeBatch() {
+  await queueCompletedPaymentsMissingFees();
+  const candidates = await fetchDueCompletedFeeCandidates();
+  let attempted = 0;
+  let enriched = 0;
+  let missing = 0;
+  let errors = 0;
+  for (const candidate of candidates) {
+    if (!await claimCompletedFeeCandidate(candidate.payment_id)) continue;
+    attempted++;
+    const orderId = candidate.order_id?.trim() ?? "";
+    const transactionId = candidate.transaction_id?.trim() ?? "";
+    const lookupBy = orderId ? "order_id" : "transaction_id";
+    const identifier = orderId || transactionId;
+    const attemptCount = Number(candidate.attempts) + 1;
+    try {
+      await waitForProviderStatusSlot();
+      const remote = await getStatus(identifier, lookupBy);
+      if (!isSuccessStatus(remote.status)) {
+        await finishCompletedFeeCandidate(
+          candidate.payment_id,
+          "missing",
+          "provider_status_not_success",
+          attemptCount
+        );
+        missing++;
+        continue;
+      }
+      const completeFeeData = await recordAfribapayProviderFees(candidate.payment_id, remote.raw);
+      if (completeFeeData) {
+        await getMysqlPool().execute(
+          "DELETE FROM afribapay_fee_reconciliation WHERE payment_id = ?",
+          [candidate.payment_id]
+        );
+        enriched++;
+      } else {
+        await finishCompletedFeeCandidate(
+          candidate.payment_id,
+          "missing",
+          "provider_fees_not_returned",
+          attemptCount
+        );
+        missing++;
+      }
+    } catch (err) {
+      const providerStatus = err instanceof AfribapayApiError ? err.status : null;
+      await finishCompletedFeeCandidate(
+        candidate.payment_id,
+        "error",
+        providerStatus === 429 ? "provider_rate_limited" : "provider_lookup_failed",
+        attemptCount
+      );
+      logger.warn(
+        { provider_status: providerStatus },
+        "completed AfribaPAY fee lookup failed; scheduled a retry"
+      );
+      errors++;
+    }
+  }
+  if (attempted > 0) {
+    logger.info(
+      { attempted, enriched, missing, errors },
+      "completed AfribaPAY fee reconciliation batch finished"
+    );
+  }
 }
 function startPendingPaymentScanner() {
   if (started4) return;
