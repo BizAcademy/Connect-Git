@@ -458,10 +458,17 @@ export interface StatusResponse {
   raw?: unknown;
 }
 
-export async function getStatus(orderId: string): Promise<StatusResponse> {
+export type StatusLookupBy = "order_id" | "transaction_id";
+
+export async function getStatus(
+  identifier: string,
+  lookupBy: StatusLookupBy = "order_id",
+): Promise<StatusResponse> {
   let data: any;
+  const fallbackOrderId = lookupBy === "order_id" ? identifier : undefined;
+  const fallbackTransactionId = lookupBy === "transaction_id" ? identifier : undefined;
   try {
-    data = await authedFetch(`/v1/status?order_id=${encodeURIComponent(orderId)}`, { method: "GET" });
+    data = await authedFetch(`/v1/status?${lookupBy}=${encodeURIComponent(identifier)}`, { method: "GET" });
   } catch (err) {
     // AfribaPay sandbox returns HTTP 429 for finalized transactions but
     // still embeds the real status inside payload.data — extract it.
@@ -473,8 +480,8 @@ export async function getStatus(orderId: string): Promise<StatusResponse> {
         if (s) {
           return {
             status: s,
-            transaction_id: (inner as any).transaction_id || (inner as any).transactionId || undefined,
-            order_id: (inner as any).order_id || orderId,
+            transaction_id: (inner as any).transaction_id || (inner as any).transactionId || fallbackTransactionId,
+            order_id: (inner as any).order_id || fallbackOrderId,
             amount: (inner as any).amount != null ? Number((inner as any).amount) : undefined,
             raw: p,
           };
@@ -486,8 +493,8 @@ export async function getStatus(orderId: string): Promise<StatusResponse> {
   const inner = data?.data ?? data;
   return {
     status: String(inner?.status || data?.status || "").toUpperCase(),
-    transaction_id: inner?.transaction_id || inner?.transactionId || undefined,
-    order_id: inner?.order_id || orderId,
+    transaction_id: inner?.transaction_id || inner?.transactionId || fallbackTransactionId,
+    order_id: inner?.order_id || fallbackOrderId,
     amount: inner?.amount != null ? Number(inner.amount) : undefined,
     raw: data,
   };

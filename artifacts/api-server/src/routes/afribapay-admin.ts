@@ -1,14 +1,20 @@
 import { Router, type IRouter } from "express";
 import type { RowDataPacket } from "mysql2/promise";
 import {
+  AdminAfribapayProviderPreviewSchema,
   AfriPayReportQuerySchema,
   AfriPayReportResponseSchema,
   type AfriPayReportQuery,
 } from "@workspace/api-zod";
-import { requireAdmin, requireUser } from "../lib/auth";
+import { requireAdmin, requireUser, type AuthedRequest } from "../lib/auth";
+import { getStatus, isAfribapayConfigured, type StatusLookupBy } from "../lib/afribapay";
 import { getMysqlPool } from "../lib/mysql";
+import { extractAfribapayProviderPreview } from "../lib/afribapay-fees";
 
 const router: IRouter = Router();
+const previewInFlightAdmins = new Set<string>();
+const previewLastRequestByAdmin = new Map<string, number>();
+const PROVIDER_PREVIEW_COOLDOWN_MS = 3_000;
 const BASE_CONDITIONS = [
   "p.status = 'completed'",
   "(p.provider = 'afribapay' OR p.method = 'afribapay')",
@@ -220,6 +226,98 @@ router.get(
     } catch (err) {
       req.log.error({ err }, "admin AfribaPAY deposit report failed");
       res.status(500).json({ error: "Impossible de charger le rapport AfribaPAY" });
+    }
+  },
+);
+
+router.get(
+  "/admin/afribapay/deposits/:payment_id/provider-preview",
+  requireUser,
+  requireAdmin,
+  async (req: AuthedRequest, res): Promise<void> => {
+    const rawPaymentId = req.params["payment_id"];
+    const paymentId = Array.isArray(rawPaymentId) ? rawPaymentId[0] : rawPaymentId;
+    if (!paymentId || paymentId.length > 100) {
+      res.status(400).json({ error: "Identifiant de dépôt invalide" });
+      return;
+    }
+
+    if (!isAfribapayConfigured()) {
+      res.status(503).json({ error: "AfribaPAY n’est pas configuré sur ce serveur" });
+      return;
+    }
+
+    const adminId = req.userId ?? "";
+    const now = Date.now();
+    if (
+      !adminId
+      || previewInFlightAdmins.has(adminId)
+      || now - (previewLastRequestByAdmin.get(adminId) ?? 0) < PROVIDER_PREVIEW_COOLDOWN_MS
+    ) {
+      res.status(429).json({ error: "Attendez quelques secondes avant une nouvelle vérification." });
+      return;
+    }
+
+    previewInFlightAdmins.add(adminId);
+    previewLastRequestByAdmin.set(adminId, now);
+    const pool = getMysqlPool();
+    try {
+      const [rows] = await pool.execute<RowDataPacket[]>(
+        `SELECT status, provider, method, order_id, transaction_id
+         FROM payments
+         WHERE id = ?
+         LIMIT 1`,
+        [paymentId],
+      );
+      const payment = rows[0];
+      if (!payment) {
+        res.status(404).json({ error: "Dépôt AfribaPAY introuvable" });
+        return;
+      }
+      if (
+        String(payment["status"]).toLowerCase() !== "completed"
+        || (payment["provider"] !== "afribapay" && payment["method"] !== "afribapay")
+      ) {
+        res.status(409).json({ error: "Seuls les dépôts AfribaPAY terminés peuvent être vérifiés." });
+        return;
+      }
+
+      const orderId = payment["order_id"] == null ? "" : String(payment["order_id"]).trim();
+      const transactionId = payment["transaction_id"] == null ? "" : String(payment["transaction_id"]).trim();
+      const lookupBy: StatusLookupBy = orderId ? "order_id" : "transaction_id";
+      const lookupValue = orderId || transactionId;
+      if (!lookupValue) {
+        res.status(409).json({ error: "Aucune référence AfribaPAY n’est enregistrée pour ce dépôt." });
+        return;
+      }
+
+      try {
+        const remote = await getStatus(lookupValue, lookupBy);
+        const response = AdminAfribapayProviderPreviewSchema.parse({
+          status: remote.status || "UNKNOWN",
+          ...extractAfribapayProviderPreview(remote.raw),
+          lookup_method: lookupBy,
+        });
+        res.json(response);
+      } catch (err) {
+        const providerStatus = typeof err === "object" && err !== null && "status" in err
+          ? Number((err as { status?: unknown }).status)
+          : undefined;
+        if (providerStatus === 429) {
+          res.status(429).json({ error: "AfribaPAY limite temporairement les vérifications. Réessayez plus tard." });
+          return;
+        }
+        req.log.warn(
+          { provider_status: providerStatus ?? null },
+          "AfribaPAY admin read-only status lookup failed",
+        );
+        res.status(502).json({ error: "AfribaPAY n’a pas pu fournir le statut de ce dépôt." });
+      }
+    } catch (err) {
+      req.log.error({ err }, "AfribaPAY admin preview database lookup failed");
+      res.status(500).json({ error: "Impossible de vérifier ce dépôt AfribaPAY." });
+    } finally {
+      previewInFlightAdmins.delete(adminId);
     }
   },
 );

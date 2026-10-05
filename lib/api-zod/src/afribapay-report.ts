@@ -79,6 +79,18 @@ export const AfriPayReportResponseSchema = z.object({
   }),
 });
 
+export const AdminAfribapayProviderPreviewSchema = z.object({
+  status: z.string(),
+  amount: z.number().nonnegative().nullable(),
+  fees: z.number().nonnegative().nullable(),
+  taxes: z.number().nonnegative().nullable(),
+  fees_taxes_ttc: z.number().nonnegative().nullable(),
+  amount_total: z.number().nonnegative().nullable(),
+  currency: z.string().nullable(),
+  lookup_method: z.enum(["order_id", "transaction_id"]),
+});
+
 export type AfriPayReportQuery = z.infer<typeof AfriPayReportQuerySchema>;
 export type AfriPayReportDeposit = z.infer<typeof AfriPayReportDepositSchema>;
 export type AfriPayReportResponse = z.infer<typeof AfriPayReportResponseSchema>;
+export type AdminAfribapayProviderPreview = z.infer<typeof AdminAfribapayProviderPreviewSchema>;

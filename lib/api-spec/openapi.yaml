@@ -137,6 +137,43 @@ paths:
           description: Authentication required
         "403":
           description: Administrator access required
+  /admin/afribapay/deposits/{payment_id}/provider-preview:
+    get:
+      operationId: getAdminAfribapayProviderPreview
+      tags: [admin]
+      summary: Read actual provider fields for one completed AfribaPAY deposit
+      description: Queries AfribaPAY without changing the local payment record and returns only status and amount fields.
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      responses:
+        "200":
+          description: Sanitized amount fields returned by AfribaPAY
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAfribapayProviderPreview"
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
+        "400":
+          description: Invalid payment identifier
+        "404":
+          description: AfribaPAY payment not found
+        "409":
+          description: Payment is not completed or has no provider reference
+        "429":
+          description: AfribaPAY or the local safeguard is rate limiting the lookup
+        "502":
+          description: AfribaPAY lookup failed
+        "503":
+          description: AfribaPAY is not configured
 components:
   schemas:
     HealthStatus:
@@ -248,6 +285,35 @@ components:
         - gross_minor
         - fees_minor
         - net_minor
+    AdminAfribapayProviderPreview:
+      type: object
+      properties:
+        status:
+          type: string
+        amount:
+          type: [number, "null"]
+        fees:
+          type: [number, "null"]
+        taxes:
+          type: [number, "null"]
+        fees_taxes_ttc:
+          type: [number, "null"]
+        amount_total:
+          type: [number, "null"]
+        currency:
+          type: [string, "null"]
+        lookup_method:
+          type: string
+          enum: [order_id, transaction_id]
+      required:
+        - status
+        - amount
+        - fees
+        - taxes
+        - fees_taxes_ttc
+        - amount_total
+        - currency
+        - lookup_method
     AdminAfribapayDepositsResponse:
       type: object
       properties:

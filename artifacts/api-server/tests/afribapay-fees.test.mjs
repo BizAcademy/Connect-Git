@@ -13,7 +13,7 @@ await build({
   format: "esm",
   logLevel: "silent",
 });
-const { extractAfribapayProviderFees } = await import(pathToFileURL(`${outdir}/afribapay-fees.mjs`).href);
+const { extractAfribapayProviderFees, extractAfribapayProviderPreview } = await import(pathToFileURL(`${outdir}/afribapay-fees.mjs`).href);
 
 test("reads provider fees and taxes from a nested AfribaPAY response", () => {
   assert.deepEqual(
@@ -36,4 +36,68 @@ test("derives a total only when both fee and tax amounts are present", () => {
 test("does not infer fees when the provider response has none or invalid values", () => {
   assert.equal(extractAfribapayProviderFees({ fees: "unknown", taxes: -1 }), null);
   assert.equal(extractAfribapayProviderFees({ data: { status: "SUCCESS" } }), null);
+});
+
+test("provider preview returns only amount fields from the documented status response", () => {
+  assert.deepEqual(
+    extractAfribapayProviderPreview({
+      request_id: "not returned",
+      data: {
+        transaction_id: "not returned",
+        order_id: "not returned",
+        phone_number: "not returned",
+        amount: "100",
+        fees: 2,
+        taxes: 1,
+        fees_taxes_ttc: 3,
+        amount_total: 103,
+        currency: "xaf",
+      },
+    }),
+    {
+      amount: 100,
+      fees: 2,
+      taxes: 1,
+      fees_taxes_ttc: 3,
+      amount_total: 103,
+      currency: "XAF",
+    },
+  );
+});
+
+test("provider preview keeps missing or invalid amount fields unknown", () => {
+  assert.deepEqual(
+    extractAfribapayProviderPreview({ data: { status: "SUCCESS", fees: "unknown", taxes: -1 } }),
+    {
+      amount: null,
+      fees: null,
+      taxes: null,
+      fees_taxes_ttc: null,
+      amount_total: null,
+      currency: null,
+    },
+  );
+});
+
+test("provider preview can read fields spread across nested response objects", () => {
+  assert.deepEqual(
+    extractAfribapayProviderPreview({
+      currency: "XAF",
+      amount: 500,
+      data: {
+        fees: 12,
+        taxes: 2,
+        fees_taxes_ttc: 14,
+        amount_total: 514,
+      },
+    }),
+    {
+      amount: 500,
+      fees: 12,
+      taxes: 2,
+      fees_taxes_ttc: 14,
+      amount_total: 514,
+      currency: "XAF",
+    },
+  );
 });

@@ -9,13 +9,17 @@ import {
   CircleDollarSign,
   Clock3,
   Download,
+  Eye,
   RefreshCw,
   Search,
   ShieldCheck,
   SlidersHorizontal,
+  X,
 } from "lucide-react";
 import {
+  AdminAfribapayProviderPreviewSchema,
   AfriPayReportResponseSchema,
+  type AdminAfribapayProviderPreview,
   type AfriPayReportDeposit,
 } from "@workspace/api-zod";
 import { authedFetch } from "@/lib/authFetch";
@@ -80,9 +84,38 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function formatProviderAmount(value: number | null, currency: string | null) {
+  if (value == null) return "Non fourni";
+  const formatted = new Intl.NumberFormat("fr-FR", {
+    maximumFractionDigits: 2,
+  }).format(value);
+  return currency ? `${formatted} ${currency}` : formatted;
+}
+
 function getNet(row: AfriPayReportDeposit): string | null {
   if (row.charged_minor == null || row.provider_fee_total_minor == null) return null;
   return (BigInt(row.charged_minor) - BigInt(row.provider_fee_total_minor)).toString();
+}
+
+async function fetchProviderPreview(paymentId: string): Promise<AdminAfribapayProviderPreview> {
+  const response = await authedFetch(
+    `/api/admin/afribapay/deposits/${encodeURIComponent(paymentId)}/provider-preview`,
+    { method: "GET" },
+  );
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    // Non-JSON error responses are reported with a stable message below.
+  }
+  if (!response.ok) {
+    const message =
+      payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string"
+        ? payload.error
+        : `La vérification a échoué (erreur ${response.status}).`;
+    throw new Error(message);
+  }
+  return AdminAfribapayProviderPreviewSchema.parse(payload);
 }
 
 async function fetchAfribaReport(filters: Filters, offset: number, signal?: AbortSignal) {
@@ -135,6 +168,9 @@ function UnknownFlag({ id }: { id: string }) {
 export default function AdminAfribapay() {
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [offset, setOffset] = useState(0);
+  const [previewingPaymentId, setPreviewingPaymentId] = useState<string | null>(null);
+  const [providerPreview, setProviderPreview] = useState<AdminAfribapayProviderPreview | null>(null);
+  const [providerPreviewError, setProviderPreviewError] = useState<string | null>(null);
   const query = useQuery({
     queryKey: ["admin", "afribapay-deposits", filters, offset, PAGE_SIZE],
     queryFn: ({ signal }) => fetchAfribaReport(filters, offset, signal),
@@ -164,6 +200,27 @@ export default function AdminAfribapay() {
   const clearFilters = () => {
     setFilters(initialFilters);
     setOffset(0);
+  };
+
+  const checkProviderStatus = async (paymentId: string) => {
+    if (previewingPaymentId) return;
+    setPreviewingPaymentId(paymentId);
+    setProviderPreview(null);
+    setProviderPreviewError(null);
+    try {
+      setProviderPreview(await fetchProviderPreview(paymentId));
+    } catch (error) {
+      setProviderPreviewError(
+        error instanceof Error ? error.message : "La vérification AfribaPAY a échoué.",
+      );
+    } finally {
+      setPreviewingPaymentId(null);
+    }
+  };
+
+  const clearProviderPreview = () => {
+    setProviderPreview(null);
+    setProviderPreviewError(null);
   };
 
   return (
@@ -206,6 +263,86 @@ export default function AdminAfribapay() {
           Source de vérité : montants transmis par le fournisseur · actualisation automatique chaque minute
         </div>
       </header>
+
+      {(previewingPaymentId || providerPreview || providerPreviewError) && (
+        <section
+          aria-label="Résultat de la vérification AfribaPAY"
+          aria-live="polite"
+          className="rounded-2xl border border-[#d8dfd3] bg-[#f8faf5] p-4 sm:p-5"
+          data-testid="panel-afribapay-provider-preview"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-heading text-base font-semibold text-[#243b32]">
+                Vérification directe AfribaPAY
+              </h2>
+              <p className="mt-1 text-xs text-[#68776e]">
+                Lecture seule : aucune donnée n’a été enregistrée dans le rapport.
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label="Fermer le résultat"
+              onClick={clearProviderPreview}
+              disabled={previewingPaymentId !== null}
+              className="rounded-lg p-2 text-[#68776e] hover:bg-[#e9eee5] disabled:opacity-50"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          {previewingPaymentId && (
+            <p className="mt-3 text-sm text-[#53665b]">Consultation d’une transaction auprès d’AfribaPAY…</p>
+          )}
+          {providerPreviewError && (
+            <p role="alert" className="mt-3 text-sm font-medium text-[#984a39]">
+              {providerPreviewError}
+            </p>
+          )}
+          {providerPreview && (
+            <>
+              <p className="mt-3 text-xs text-[#68776e]">
+                Recherche par {providerPreview.lookup_method === "order_id" ? "référence de commande" : "identifiant de transaction"}.
+              </p>
+              <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-xl bg-white p-3">
+                  <dt className="text-xs text-[#77847c]">Statut fournisseur</dt>
+                  <dd className="mt-1 font-semibold text-[#29483a]">{providerPreview.status}</dd>
+                </div>
+                <div className="rounded-xl bg-white p-3">
+                  <dt className="text-xs text-[#77847c]">Montant API (`amount`)</dt>
+                  <dd className="mt-1 font-mono text-[#29483a]">
+                    {formatProviderAmount(providerPreview.amount, providerPreview.currency)}
+                  </dd>
+                </div>
+                <div className="rounded-xl bg-white p-3">
+                  <dt className="text-xs text-[#77847c]">Frais API (`fees`)</dt>
+                  <dd className="mt-1 font-mono text-[#29483a]">
+                    {formatProviderAmount(providerPreview.fees, providerPreview.currency)}
+                  </dd>
+                </div>
+                <div className="rounded-xl bg-white p-3">
+                  <dt className="text-xs text-[#77847c]">Taxes API (`taxes`)</dt>
+                  <dd className="mt-1 font-mono text-[#29483a]">
+                    {formatProviderAmount(providerPreview.taxes, providerPreview.currency)}
+                  </dd>
+                </div>
+                <div className="rounded-xl bg-white p-3">
+                  <dt className="text-xs text-[#77847c]">Frais et taxes TTC (`fees_taxes_ttc`)</dt>
+                  <dd className="mt-1 font-mono text-[#29483a]">
+                    {formatProviderAmount(providerPreview.fees_taxes_ttc, providerPreview.currency)}
+                  </dd>
+                </div>
+                <div className="rounded-xl bg-white p-3">
+                  <dt className="text-xs text-[#77847c]">Total communiqué (`amount_total`; sens à confirmer)</dt>
+                  <dd className="mt-1 font-mono text-[#29483a]">
+                    {formatProviderAmount(providerPreview.amount_total, providerPreview.currency)}
+                  </dd>
+                </div>
+              </dl>
+            </>
+          )}
+        </section>
+      )}
 
       {query.isError && !report ? (
         <section className="rounded-2xl border border-[#e6c5bd] bg-[#fff7f4] p-6 sm:p-8" role="alert">
@@ -456,6 +593,18 @@ export default function AdminAfribapay() {
                                 {row.reference && <><span aria-hidden="true">·</span><span className="font-mono">{row.reference}</span></>}
                               </div>
                               {unknown && <div className="mt-2"><UnknownFlag id={row.id} /></div>}
+                              {row.provider_fee_total_minor == null && (
+                                <button
+                                  type="button"
+                                  data-testid={`button-afribapay-provider-preview-${row.id}`}
+                                  disabled={previewingPaymentId !== null}
+                                  onClick={() => void checkProviderStatus(row.id)}
+                                  className="mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[#cbd8cc] bg-white px-2.5 text-[11px] font-semibold text-[#315c49] hover:bg-[#edf3ea] disabled:cursor-wait disabled:opacity-50"
+                                >
+                                  <Eye size={13} />
+                                  {previewingPaymentId === row.id ? "Vérification…" : "Vérifier chez AfribaPAY"}
+                                </button>
+                              )}
                             </td>
                             <td className="px-4 py-4">
                               <div className="text-sm font-medium text-[#3e5148]">{row.country || "—"}</div>
@@ -514,6 +663,18 @@ export default function AdminAfribapay() {
                           <div><span className="block text-[#839087]">Date</span><span className="mt-1 block text-[#43564c]">{formatDate(row.created_at)}</span></div>
                         </div>
                         {row.reference && <div className="truncate font-mono text-[11px] text-[#839087]">Réf. {row.reference}</div>}
+                        {row.provider_fee_total_minor == null && (
+                          <button
+                            type="button"
+                            data-testid={`button-afribapay-provider-preview-mobile-${row.id}`}
+                            disabled={previewingPaymentId !== null}
+                            onClick={() => void checkProviderStatus(row.id)}
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#cbd8cc] bg-white px-3 text-xs font-semibold text-[#315c49] hover:bg-[#edf3ea] disabled:cursor-wait disabled:opacity-50"
+                          >
+                            <Eye size={14} />
+                            {previewingPaymentId === row.id ? "Vérification…" : "Vérifier chez AfribaPAY"}
+                          </button>
+                        )}
                       </article>
                     );
                   })}
