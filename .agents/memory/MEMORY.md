@@ -18,3 +18,4 @@
 - [Vite port drift after merges](workflow-reconciliation-orphans.md) — reconciliation can leave old listeners alive, making new workflows serve on fallback ports while the preview shows old code.
 - [Preview auth interception](preview-auth-interception.md) — normalize default-port URL origins when mocking auth, or unmatched calls may reach the real local API.
 - [GitHub connector Git sync](github-connector-git-sync.md) — connector OAuth can write via API when CLI auth fails; preserve commit SHAs and update refs without force.
+- [AfribaPAY historical fee recovery](afribapay-fee-recovery.md) — status/history can return real fees; history ranges are limited to six months, and amount_total semantics need confirmation.
