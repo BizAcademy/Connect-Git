@@ -22,6 +22,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
+import { serializePublicDocument } from "./prerender-sanitize.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, "dist/public");
@@ -124,6 +125,11 @@ async function main() {
   try {
     for (const route of ROUTES) {
       const page = await browser.newPage();
+      // Sabito is client-only and must wait for the actual visitor/member.
+      // This JS property is not a DOM node and is never serialized into HTML.
+      await page.evaluateOnNewDocument(() => {
+        window.__BUZZBOOSTER_PRERENDER__ = true;
+      });
       await page.goto(`${base}${route}`, {
         waitUntil: "networkidle2",
         timeout: 45000,
@@ -135,7 +141,9 @@ async function main() {
       // Laisser les animations (framer-motion) se stabiliser
       await new Promise((r) => setTimeout(r, 1200));
 
-      const html = await page.content();
+      // Also strip runtime widgets from an older already-prerendered input.
+      // Do not persist a guest script that would execute before React/auth.
+      const html = await page.evaluate(serializePublicDocument, await page.evaluateHandle(() => document));
 
       const outPath =
         route === "/"

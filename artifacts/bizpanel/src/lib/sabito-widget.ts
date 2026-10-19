@@ -13,6 +13,7 @@ interface SabitoWidgetApi {
 
 declare global {
   interface Window {
+    __BUZZBOOSTER_PRERENDER__?: boolean;
     SabitoWidget?: SabitoWidgetApi;
     SabitoWidgetSession?: (options: { signal: AbortSignal }) => Promise<Response>;
   }
@@ -75,6 +76,7 @@ async function memberSession({ signal }: { signal: AbortSignal }): Promise<Respo
  * event listeners, pending response, or private conversation crosses accounts.
  */
 export function syncSabitoWidget(userId: string | null): void {
+  if (window.__BUZZBOOSTER_PRERENDER__) return;
   const nextIdentity = userId === null ? "visitor" : `member:${userId}`;
   if (reloading) return;
   if (identity !== undefined && (identity !== nextIdentity || ending)) {

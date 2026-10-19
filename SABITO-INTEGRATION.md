@@ -19,6 +19,12 @@ référence, question suggérée ou interface de chat n'est reproduite ici.
 Le widget est chargé une fois par document, hors des routes et de Suspense.
 Une navigation interne ne crée pas un second widget.
 
+Le pré-rendu SEO désactive le chargement du widget puis retire tout script,
+hôte ou iframe Sabito de sa copie HTML publique. Sinon, un script visiteur
+pré-rendu pourrait démarrer avant l'authentification du vrai navigateur, et
+empêcher le mode membre de s'initialiser. Le widget reste entièrement client.
+Le test `artifacts/bizpanel/tests/prerender-sabito.test.mjs` protège cette règle.
+
 La déconnexion et les erreurs d'authentification ferment la session Sabito et
 retirent immédiatement son iframe. Au changement d'identité, le document est
 rechargé : le chargeur actuel capture son mode au démarrage et ne propose pas de

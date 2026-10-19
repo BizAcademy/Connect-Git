@@ -31309,7 +31309,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path7 = __require("path");
-        const outputDir = "/tmp/buzzbooster-sabito-push.DM8YdY/Connect-Git/artifacts/api-server/dist";
+        const outputDir = "/tmp/buzzbooster-sabito-push.KT28rE/Connect-Git/artifacts/api-server/dist";
         return path7.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -95810,7 +95810,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-10-19T19:14:03.043Z";
+var BUILD_TIME = "2026-10-19T19:36:28.550Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
