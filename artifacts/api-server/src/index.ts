@@ -26,6 +26,8 @@ import { syncOrderInternal, warmServicesCache } from "./routes/smm";
 import { loadUsdRatesAtStartup } from "./routes/admin";
 import { validateMailtrapConfig } from "./lib/mailtrap-notification-client";
 import { startNotificationWorker } from "./lib/notification-outbox";
+import { startSabitoSupervisor } from "./lib/sabito-supervisor";
+import { fileURLToPath } from "node:url";
 
 // PORT detection :
 // - Replit/dev : PORT est toujours fourni par l'env -> on l'utilise.
@@ -37,6 +39,9 @@ import { startNotificationWorker } from "./lib/notification-outbox";
 // incompletely. A completely absent integration does not prevent BizPanel
 // from serving its unrelated payment and account flows.
 validateMailtrapConfig();
+if (!livePreviewProxyEnabled && process.env.NODE_ENV === "production") {
+  startSabitoSupervisor(fileURLToPath(new URL("./scripts/sabito-worker.mjs", import.meta.url)));
+}
 
 const rawPort = process.env["PORT"];
 let port: number;

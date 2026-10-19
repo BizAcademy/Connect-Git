@@ -57,9 +57,10 @@ configurées dans le serveur Cybrancy également. `SABITO_URL` est facultative e
 vaut par défaut `https://sabito.bizconnectacademy.com`. Une valeur explicite
 incorrecte est refusée ; elle ne doit contenir qu'une origine HTTPS.
 
-Le module `startSabitoBackend` fourni concerne les vérifications métier :
-il n'est pas nécessaire à la création de session. Aucun worker d'activation de
-compte, de dépôt ou de parrainage n'a été démarré. Aucun changement SQL n'est requis.
+Le module `startSabitoBackend` concerne les vérifications métier, distinctes de
+la création de session. Le connecteur en lecture seule et son lancement supervisé
+sont décrits dans `SABITO-BACKEND.md`. Il ne réalise aucune activation de compte
+ni modification financière. Aucun changement SQL n'est requis.
 
 ## Aperçu et publication manuelle
 
