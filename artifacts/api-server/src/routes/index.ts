@@ -10,11 +10,13 @@ import profileRouter from "./profile";
 import referralsRouter from "./referrals";
 import authRouter from "./auth";
 import afribapayAdminRouter from "./afribapay-admin";
+import sabitoRouter from "./sabito";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(sabitoRouter);
 router.use(smmRouter);
 router.use(adminRouter);
 router.use(afribapayAdminRouter);

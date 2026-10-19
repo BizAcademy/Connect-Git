@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { authedFetch } from "@/lib/authFetch";
+import { authedFetch, notifyAuthEnding, notifyAuthChanged } from "@/lib/authFetch";
 
 export interface AuthUser { id: string; email: string; }
 export interface AuthSession { user: AuthUser; }
@@ -63,11 +63,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-    setUser(null);
-    setSession(null);
-    setProfile(null);
-    setIsAdmin(false);
+    notifyAuthEnding();
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } finally {
+      notifyAuthChanged();
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setIsAdmin(false);
+    }
   };
 
   // Auto-déconnexion après 60 minutes d'inactivité

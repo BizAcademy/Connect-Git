@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { LogoLoader } from "@/components/ui/LogoLoader";
 import { EmailAvailabilityBanner } from "@/components/EmailAvailabilityBanner";
+import { SabitoWidget } from "@/components/SabitoWidget";
 
 import Index from "./pages/Index";
 
@@ -46,6 +47,7 @@ const App = () => (
 
       <BrowserRouter>
         <AuthProvider>
+          <SabitoWidget />
           <Suspense fallback={<LogoLoader fullPage />}>
             <Routes>
               <Route path="/" element={<Index />} />

@@ -20502,11 +20502,11 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router13;
+    module.exports = Router14;
     module.exports.Route = Route;
-    function Router13(options) {
-      if (!(this instanceof Router13)) {
-        return new Router13(options);
+    function Router14(options) {
+      if (!(this instanceof Router14)) {
+        return new Router14(options);
       }
       const opts = options || {};
       function router13(req, res, next) {
@@ -20520,9 +20520,9 @@ var require_router = __commonJS({
       router13.stack = [];
       return router13;
     }
-    Router13.prototype = function() {
+    Router14.prototype = function() {
     };
-    Router13.prototype.param = function param(name, fn) {
+    Router14.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20542,7 +20542,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router13.prototype.handle = function handle(req, res, callback) {
+    Router14.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20669,7 +20669,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router13.prototype.use = function use(handler) {
+    Router14.prototype.use = function use(handler) {
       let offset = 0;
       let path7 = "/";
       if (typeof handler !== "function") {
@@ -20702,7 +20702,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router13.prototype.route = function route(path7) {
+    Router14.prototype.route = function route(path7) {
       const route2 = new Route(path7);
       const layer = new Layer(path7, {
         sensitive: this.caseSensitive,
@@ -20717,7 +20717,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router13.prototype[method] = function(path7) {
+      Router14.prototype[method] = function(path7) {
         const route = this.route(path7);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -20900,7 +20900,7 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router13 = require_router();
+    var Router14 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
@@ -20916,7 +20916,7 @@ var require_application = __commonJS({
         enumerable: true,
         get: function getrouter() {
           if (router13 === null) {
-            router13 = new Router13({
+            router13 = new Router14({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
@@ -23573,7 +23573,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router13 = require_router();
+    var Router14 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23595,8 +23595,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router13.Route;
-    exports.Router = Router13;
+    exports.Route = Router14.Route;
+    exports.Router = Router14;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -31309,7 +31309,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path7 = __require("path");
-        const outputDir = "/home/runner/workspace/artifacts/api-server/dist";
+        const outputDir = "/tmp/buzzbooster-sabito-push.ZsvMsI/Connect-Git/artifacts/api-server/dist";
         return path7.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -90690,7 +90690,7 @@ var require_multer = __commonJS({
 });
 
 // src/app.ts
-var import_express13 = __toESM(require_express2(), 1);
+var import_express14 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
 var import_compression = __toESM(require_compression(), 1);
@@ -91655,7 +91655,7 @@ import fs6 from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // src/routes/index.ts
-var import_express12 = __toESM(require_express2(), 1);
+var import_express13 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -95810,7 +95810,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-10-05T10:44:18.117Z";
+var BUILD_TIME = "2026-10-19T16:35:42.398Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -103058,10 +103058,155 @@ router11.get(
 );
 var afribapay_admin_default = router11;
 
+// src/routes/sabito.ts
+var import_express12 = __toESM(require_express2(), 1);
+init_logger();
+
+// src/lib/sabito-session.ts
+var DEFAULT_SABITO_URL = "https://sabito.bizconnectacademy.com";
+var SabitoSessionError = class extends Error {
+  constructor(code, status) {
+    super(`SABITO_${code}`);
+    this.code = code;
+    this.status = status;
+  }
+};
+async function exchangeSabitoSession(userId, signal, config2 = {
+  url: process.env.SABITO_URL,
+  clientId: process.env.SABITO_CLIENT_ID,
+  clientSecret: process.env.SABITO_CLIENT_SECRET
+}, fetcher = fetch) {
+  if (!userId || userId !== userId.trim() || userId.length > 191 || userId === "sabito-admin-preview" || userId.startsWith("guest:")) {
+    throw new SabitoSessionError("IDENTITY", 502);
+  }
+  if (!config2.clientId?.trim() || !config2.clientSecret) {
+    throw new SabitoSessionError("CONFIGURATION", 503);
+  }
+  let origin;
+  try {
+    origin = new URL(config2.url === void 0 ? DEFAULT_SABITO_URL : config2.url);
+    if (origin.protocol !== "https:" || origin.username || origin.password || origin.pathname !== "/" || origin.search || origin.hash) throw new Error("Invalid server origin");
+  } catch {
+    throw new SabitoSessionError("CONFIGURATION", 503);
+  }
+  const timeout = AbortSignal.timeout(1e4);
+  const abortSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  let response;
+  let result;
+  try {
+    response = await fetcher(new URL("/v1/auth/token", origin), {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${config2.clientId}:${config2.clientSecret}`, "utf8").toString("base64")}`,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      credentials: "omit",
+      redirect: "error",
+      cache: "no-store",
+      body: JSON.stringify({ external_user_id: userId }),
+      signal: abortSignal
+    });
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new SabitoSessionError(
+        "UPSTREAM",
+        [429, 503].includes(response.status) ? 503 : 502
+      );
+    }
+    result = await response.json();
+  } catch (error) {
+    if (error instanceof SabitoSessionError) throw error;
+    throw new SabitoSessionError(timeout.aborted ? "TIMEOUT" : "UPSTREAM", timeout.aborted ? 504 : 502);
+  }
+  if (!result || typeof result !== "object") throw new SabitoSessionError("RESPONSE", 502);
+  const envelope = result;
+  const data = envelope.data;
+  if (envelope.success !== true || !data || typeof data !== "object" || typeof data.access_token !== "string" || !data.access_token.trim() || data.identity_type !== "platform_user" || data.external_user_id !== userId || typeof data.expires_in !== "number" || !Number.isInteger(data.expires_in) || data.expires_in < 1 || data.expires_in > 900 || typeof data.socket_path !== "string" || !data.socket_path.startsWith("/") || data.socket_path.startsWith("//") || /[\\?#\s]/.test(data.socket_path)) {
+    throw new SabitoSessionError("RESPONSE", 502);
+  }
+  return {
+    access_token: data.access_token,
+    expires_in: data.expires_in,
+    socket_path: data.socket_path,
+    external_user_id: userId
+  };
+}
+
+// src/routes/sabito.ts
+function createSabitoRouter(exchange = exchangeSabitoSession) {
+  const router13 = (0, import_express12.Router)();
+  const limiter = rate_limit_default({
+    windowMs: 6e4,
+    limit: 20,
+    keyGenerator: (req) => `sabito:${req.userId}`,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (_req, res) => {
+      res.status(429).json({ error: "Trop de tentatives Sabito. R\xE9essayez dans une minute." });
+    }
+  });
+  router13.post("/sabito/session", (_req, res, next) => {
+    res.set({ "Cache-Control": "no-store", Pragma: "no-cache" });
+    next();
+  }, requireUser, (req, res, next) => {
+    let expectedOrigin;
+    try {
+      if (!req.get("host")) throw new Error("Missing host");
+      expectedOrigin = new URL(`${req.protocol}://${req.get("host")}`).origin;
+    } catch {
+      res.status(403).json({ error: "Origine non autoris\xE9e" });
+      return;
+    }
+    if (req.get("origin") !== expectedOrigin || req.get("sec-fetch-site") === "cross-site") {
+      res.status(403).json({ error: "Origine non autoris\xE9e" });
+      return;
+    }
+    if (!req.is("application/json")) {
+      res.status(415).json({ error: "Format JSON requis" });
+      return;
+    }
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body) || Object.keys(req.body).length > 0) {
+      res.status(400).json({ error: "La requ\xEAte de session doit contenir uniquement un objet JSON vide." });
+      return;
+    }
+    next();
+  }, limiter, async (req, res) => {
+    if (!req.userId) {
+      res.status(401).json({ error: "Authentification requise" });
+      return;
+    }
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    req.once("aborted", abort);
+    const onClose = () => {
+      if (!res.writableEnded) abort();
+    };
+    res.once("close", onClose);
+    try {
+      const session = await exchange(String(req.userId), controller.signal);
+      if (!controller.signal.aborted) res.json(session);
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      const known = error instanceof SabitoSessionError;
+      logger.warn({ code: known ? error.code : "UNEXPECTED" }, "Sabito session unavailable");
+      res.status(known ? error.status : 502).json({
+        error: "Sabito est temporairement indisponible. R\xE9essayez plus tard."
+      });
+    } finally {
+      req.removeListener("aborted", abort);
+      res.removeListener("close", onClose);
+    }
+  });
+  return router13;
+}
+var sabito_default = createSabitoRouter();
+
 // src/routes/index.ts
-var router12 = (0, import_express12.Router)();
+var router12 = (0, import_express13.Router)();
 router12.use(health_default);
 router12.use(auth_default);
+router12.use(sabito_default);
 router12.use(smm_default);
 router12.use(admin_default);
 router12.use(afribapay_admin_default);
@@ -103138,7 +103283,7 @@ var developmentApiProxy = (req, res) => {
 };
 
 // src/app.ts
-var app = (0, import_express13.default)();
+var app = (0, import_express14.default)();
 app.set("trust proxy", ["loopback", "linklocal", "uniquelocal"]);
 app.use(
   (0, import_pino_http.default)({
@@ -103180,8 +103325,8 @@ function captureRawBody(req, _res, buf) {
     req.rawBody = buf.toString("utf8");
   }
 }
-app.use(import_express13.default.json({ limit: "8mb", verify: captureRawBody }));
-app.use(import_express13.default.urlencoded({ extended: true, limit: "8mb" }));
+app.use(import_express14.default.json({ limit: "8mb", verify: captureRawBody }));
+app.use(import_express14.default.urlencoded({ extended: true, limit: "8mb" }));
 app.use((0, import_cookie_parser.default)());
 app.get("/api/health/mysql", async (_req, res) => {
   try {
@@ -103219,7 +103364,7 @@ if (process.env["NODE_ENV"] === "production") {
   if (frontendDist) {
     logger.info({ frontendDist }, "serving frontend static files");
     app.use(
-      import_express13.default.static(frontendDist, {
+      import_express14.default.static(frontendDist, {
         index: false,
         maxAge: "1y",
         setHeaders: (res, filePath) => {
