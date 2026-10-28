@@ -23,6 +23,8 @@ declare global {
 let identity: string | undefined;
 let ending = false;
 let reloading = false;
+let widgetEnabled = true;
+let widgetPaused = false;
 const authChannel = typeof window !== "undefined" && "BroadcastChannel" in window
   ? new BroadcastChannel("buzzbooster-sabito-auth")
   : undefined;
@@ -38,6 +40,34 @@ function blockSession(): Promise<Response> {
   return Promise.resolve(new Response(null, { status: 401 }));
 }
 
+function applyWidgetVisibility(): void {
+  document.querySelectorAll<HTMLElement>("[data-sabito-widget]").forEach(host => {
+    host.hidden = !widgetEnabled;
+    if (widgetEnabled) host.style.removeProperty("display");
+    else host.style.setProperty("display", "none", "important");
+  });
+}
+
+/** Pause without removing the SDK host: reactivation must not reload user forms. */
+export function disableSabitoWidget(): void {
+  const changed = widgetEnabled;
+  widgetEnabled = false;
+  widgetPaused = true;
+  try {
+    if (changed) window.SabitoWidget?.logout();
+  } finally {
+    applyWidgetVisibility();
+  }
+}
+
+function resumeWidget(): void {
+  if (widgetPaused && window.SabitoWidget) {
+    window.SabitoWidget.login();
+    widgetPaused = false;
+  }
+  applyWidgetVisibility();
+}
+
 /** Remove the private iframe immediately, including while sign-out is pending. */
 export function endSabitoSession(): void {
   ending = true;
@@ -50,6 +80,7 @@ export function endSabitoSession(): void {
 }
 
 async function memberSession({ signal }: { signal: AbortSignal }): Promise<Response> {
+  if (!widgetEnabled) return new Response(null, { status: 503 });
   if (ending) return blockSession();
   const headers: Record<string, string> = {
     Accept: "application/json",
@@ -84,7 +115,11 @@ export function syncSabitoWidget(userId: string | null): void {
     reloadForIdentityChange();
     return;
   }
-  if (document.getElementById(SCRIPT_ID)) return;
+  widgetEnabled = true;
+  if (document.getElementById(SCRIPT_ID)) {
+    resumeWidget();
+    return;
+  }
 
   identity = nextIdentity;
   ending = false;
@@ -109,6 +144,10 @@ export function syncSabitoWidget(userId: string | null): void {
   }
   script.addEventListener("load", () => {
     if (ending || reloading) endSabitoSession();
+    else if (!widgetEnabled) {
+      window.SabitoWidget?.logout();
+      applyWidgetVisibility();
+    } else resumeWidget();
   }, { once: true });
   script.addEventListener("error", () => {
     // Explicit failure without exposing credentials or replacing Sabito's UI.

@@ -18,6 +18,7 @@ import { LogoLoader } from "@/components/ui/LogoLoader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AdminSabitoSettings } from "@/components/admin/AdminSabitoSettings";
 import {
   Users, ShoppingCart, CreditCard, Settings, Layers, Mail,
   FileText, LogOut, Shield, Edit2, Save, X, ToggleLeft, ToggleRight, Megaphone,
@@ -4558,6 +4559,7 @@ const AdminSettings = () => {
 
   return (
     <div className="space-y-4 max-w-xl">
+      <AdminSabitoSettings />
       {loading ? <LogoLoader /> : (
         <>
           <Card>

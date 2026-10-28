@@ -31309,7 +31309,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path7 = __require("path");
-        const outputDir = "/tmp/buzzbooster-sabito-push.KT28rE/Connect-Git/artifacts/api-server/dist";
+        const outputDir = "/tmp/buzzbooster-sabito-push.S5wZd9/Connect-Git/artifacts/api-server/dist";
         return path7.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -95810,7 +95810,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-10-19T19:36:28.550Z";
+var BUILD_TIME = "2026-10-28T10:48:22.808Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -103133,9 +103133,74 @@ async function exchangeSabitoSession(userId, signal, config2 = {
   };
 }
 
+// src/lib/sabito-settings.ts
+var KEY = "sabito_widget_settings";
+async function isSabitoEnabled() {
+  const [rows] = await getMysqlPool().execute(
+    "SELECT `value` FROM settings WHERE `key`=? LIMIT 1",
+    [KEY]
+  );
+  if (!rows[0]) return true;
+  const saved = JSON.parse(String(rows[0].value));
+  if (!saved || typeof saved !== "object" || typeof saved.enabled !== "boolean") {
+    throw new Error("Invalid Sabito visibility setting");
+  }
+  return saved.enabled;
+}
+async function saveSabitoEnabled(enabled, adminId) {
+  await getMysqlPool().execute(
+    "INSERT INTO settings (`key`,`value`,updated_by) VALUES (?,?,?) ON DUPLICATE KEY UPDATE `value`=VALUES(`value`),updated_by=VALUES(updated_by)",
+    [KEY, JSON.stringify({ enabled }), adminId]
+  );
+}
+
 // src/routes/sabito.ts
-function createSabitoRouter(exchange = exchangeSabitoSession) {
+var sameOriginJson = (req, res, next) => {
+  let expected;
+  try {
+    if (!req.get("host")) throw new Error("Missing host");
+    expected = new URL(`${req.protocol}://${req.get("host")}`).origin;
+  } catch {
+    res.status(403).json({ error: "Origine non autoris\xE9e" });
+    return;
+  }
+  if (req.get("origin") !== expected || req.get("sec-fetch-site") === "cross-site") {
+    res.status(403).json({ error: "Origine non autoris\xE9e" });
+    return;
+  }
+  if (!req.is("application/json")) {
+    res.status(415).json({ error: "Format JSON requis" });
+    return;
+  }
+  next();
+};
+function createSabitoRouter(exchange = exchangeSabitoSession, settings = {}) {
   const router13 = (0, import_express12.Router)();
+  const readEnabled = settings.read ?? isSabitoEnabled;
+  const writeEnabled = settings.write ?? saveSabitoEnabled;
+  router13.use(["/sabito/settings", "/admin/sabito/settings", "/sabito/session"], (_req, res, next) => {
+    res.set({ "Cache-Control": "no-store", Pragma: "no-cache" });
+    next();
+  });
+  router13.get("/sabito/settings", async (_req, res) => {
+    try {
+      res.json({ enabled: await readEnabled() });
+    } catch {
+      res.status(503).json({ error: "\xC9tat de Sabito indisponible" });
+    }
+  });
+  router13.put("/admin/sabito/settings", requireUser, requireAdmin, sameOriginJson, async (req, res) => {
+    if (!req.body || Array.isArray(req.body) || typeof req.body.enabled !== "boolean" || Object.keys(req.body).length !== 1) {
+      res.status(400).json({ error: "Un \xE9tat Sabito activ\xE9 ou d\xE9sactiv\xE9 est requis." });
+      return;
+    }
+    try {
+      await writeEnabled(req.body.enabled, String(req.userId));
+      res.json({ enabled: req.body.enabled });
+    } catch {
+      res.status(503).json({ error: "Impossible d\u2019enregistrer l\u2019\xE9tat de Sabito." });
+    }
+  });
   const limiter = rate_limit_default({
     windowMs: 6e4,
     limit: 20,
@@ -103146,26 +103211,7 @@ function createSabitoRouter(exchange = exchangeSabitoSession) {
       res.status(429).json({ error: "Trop de tentatives Sabito. R\xE9essayez dans une minute." });
     }
   });
-  router13.post("/sabito/session", (_req, res, next) => {
-    res.set({ "Cache-Control": "no-store", Pragma: "no-cache" });
-    next();
-  }, requireUser, (req, res, next) => {
-    let expectedOrigin;
-    try {
-      if (!req.get("host")) throw new Error("Missing host");
-      expectedOrigin = new URL(`${req.protocol}://${req.get("host")}`).origin;
-    } catch {
-      res.status(403).json({ error: "Origine non autoris\xE9e" });
-      return;
-    }
-    if (req.get("origin") !== expectedOrigin || req.get("sec-fetch-site") === "cross-site") {
-      res.status(403).json({ error: "Origine non autoris\xE9e" });
-      return;
-    }
-    if (!req.is("application/json")) {
-      res.status(415).json({ error: "Format JSON requis" });
-      return;
-    }
+  router13.post("/sabito/session", requireUser, sameOriginJson, (req, res, next) => {
     if (!req.body || typeof req.body !== "object" || Array.isArray(req.body) || Object.keys(req.body).length > 0) {
       res.status(400).json({ error: "La requ\xEAte de session doit contenir uniquement un objet JSON vide." });
       return;
@@ -103184,6 +103230,10 @@ function createSabitoRouter(exchange = exchangeSabitoSession) {
     };
     res.once("close", onClose);
     try {
+      if (!await readEnabled()) {
+        res.status(503).json({ error: "Sabito est d\xE9sactiv\xE9." });
+        return;
+      }
       const session = await exchange(String(req.userId), controller.signal);
       if (!controller.signal.aborted) res.json(session);
     } catch (error) {

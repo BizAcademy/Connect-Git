@@ -13,6 +13,58 @@ tags:
   - name: admin
     description: Administrator operations
 paths:
+  /sabito/settings:
+    get:
+      operationId: getSabitoVisibility
+      summary: Public Sabito visibility flag, never cached
+      responses:
+        "200":
+          description: Visibility for visitors and members
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled]
+                properties:
+                  enabled:
+                    type: boolean
+        "503":
+          description: Settings unavailable; widget must remain hidden
+  /admin/sabito/settings:
+    put:
+      operationId: setSabitoVisibility
+      summary: Enable or disable Sabito, authenticated administrators only
+      description: Requires the existing session cookie, same Origin and JSON.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        "200":
+          description: Persisted visibility flag
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled]
+                properties:
+                  enabled:
+                    type: boolean
+        "400":
+          description: Invalid flag
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator required or origin rejected
+        "503":
+          description: Could not persist settings
   /sabito/session:
     post:
       operationId: createSabitoMemberSession

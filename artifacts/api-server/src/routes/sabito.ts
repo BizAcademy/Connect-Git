@@ -1,11 +1,63 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type RequestHandler } from "express";
 import rateLimit from "express-rate-limit";
-import { requireUser, type AuthedRequest } from "../lib/auth";
+import { requireUser, requireAdmin, type AuthedRequest } from "../lib/auth";
 import { logger } from "../lib/logger";
 import { exchangeSabitoSession, SabitoSessionError } from "../lib/sabito-session";
+import { isSabitoEnabled, saveSabitoEnabled } from "../lib/sabito-settings";
 
-export function createSabitoRouter(exchange = exchangeSabitoSession): IRouter {
+const sameOriginJson: RequestHandler = (req, res, next) => {
+  let expected: string;
+  try {
+    if (!req.get("host")) throw new Error("Missing host");
+    expected = new URL(`${req.protocol}://${req.get("host")}`).origin;
+  } catch {
+    res.status(403).json({ error: "Origine non autorisée" });
+    return;
+  }
+  if (req.get("origin") !== expected || req.get("sec-fetch-site") === "cross-site") {
+    res.status(403).json({ error: "Origine non autorisée" });
+    return;
+  }
+  if (!req.is("application/json")) {
+    res.status(415).json({ error: "Format JSON requis" });
+    return;
+  }
+  next();
+};
+
+export function createSabitoRouter(
+  exchange = exchangeSabitoSession,
+  settings: { read?: typeof isSabitoEnabled; write?: typeof saveSabitoEnabled } = {},
+): IRouter {
   const router: IRouter = Router();
+  const readEnabled = settings.read ?? isSabitoEnabled;
+  const writeEnabled = settings.write ?? saveSabitoEnabled;
+  router.use(["/sabito/settings", "/admin/sabito/settings", "/sabito/session"], (_req, res, next) => {
+    res.set({ "Cache-Control": "no-store", Pragma: "no-cache" });
+    next();
+  });
+  router.get("/sabito/settings", async (_req, res) => {
+    try {
+      res.json({ enabled: await readEnabled() });
+    } catch {
+      res.status(503).json({ error: "État de Sabito indisponible" });
+    }
+  });
+  router.put("/admin/sabito/settings", requireUser, requireAdmin, sameOriginJson, async (req: AuthedRequest, res) => {
+    if (
+      !req.body || Array.isArray(req.body) || typeof req.body.enabled !== "boolean" ||
+      Object.keys(req.body).length !== 1
+    ) {
+      res.status(400).json({ error: "Un état Sabito activé ou désactivé est requis." });
+      return;
+    }
+    try {
+      await writeEnabled(req.body.enabled, String(req.userId));
+      res.json({ enabled: req.body.enabled });
+    } catch {
+      res.status(503).json({ error: "Impossible d’enregistrer l’état de Sabito." });
+    }
+  });
   const limiter = rateLimit({
     windowMs: 60_000,
     limit: 20,
@@ -17,30 +69,7 @@ export function createSabitoRouter(exchange = exchangeSabitoSession): IRouter {
     },
   });
 
-  router.post("/sabito/session", (_req, res, next) => {
-    res.set({ "Cache-Control": "no-store", Pragma: "no-cache" });
-    next();
-  }, requireUser, (req: AuthedRequest, res, next) => {
-    // CSRF protection for the existing HttpOnly, SameSite cookie: only accept
-    // a browser POST from this exact origin, never a reflected CORS origin.
-    // Use Host, not attacker-controlled X-Forwarded-Host. app.ts configures
-    // trusted reverse-proxy networks for req.protocol.
-    let expectedOrigin: string;
-    try {
-      if (!req.get("host")) throw new Error("Missing host");
-      expectedOrigin = new URL(`${req.protocol}://${req.get("host")}`).origin;
-    } catch {
-      res.status(403).json({ error: "Origine non autorisée" });
-      return;
-    }
-    if (req.get("origin") !== expectedOrigin || req.get("sec-fetch-site") === "cross-site") {
-      res.status(403).json({ error: "Origine non autorisée" });
-      return;
-    }
-    if (!req.is("application/json")) {
-      res.status(415).json({ error: "Format JSON requis" });
-      return;
-    }
+  router.post("/sabito/session", requireUser, sameOriginJson, (req: AuthedRequest, res, next) => {
     if (
       !req.body || typeof req.body !== "object" || Array.isArray(req.body) ||
       Object.keys(req.body).length > 0
@@ -60,6 +89,10 @@ export function createSabitoRouter(exchange = exchangeSabitoSession): IRouter {
     const onClose = () => { if (!res.writableEnded) abort(); };
     res.once("close", onClose);
     try {
+      if (!await readEnabled()) {
+        res.status(503).json({ error: "Sabito est désactivé." });
+        return;
+      }
       const session = await exchange(String(req.userId), controller.signal);
       if (!controller.signal.aborted) res.json(session);
     } catch (error) {

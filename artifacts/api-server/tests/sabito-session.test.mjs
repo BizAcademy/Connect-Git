@@ -31,6 +31,8 @@ await build({
         contents: path.endsWith("mysql") ? `
           export function getMysqlPool() { return {
             async execute(sql, [hash]) {
+              if (sql.includes("SELECT role FROM user_roles"))
+                return [[hash === "admin-toggle" ? {role:"admin"} : undefined].filter(Boolean)];
               if (!sql.includes("s.revoked_at IS NULL") || !sql.includes("s.expires_at > NOW()"))
                 throw new Error("Authentication must check revocation and expiration");
               const session = globalThis.__sabitoTestSessions.get(hash);
@@ -155,7 +157,7 @@ test("member route checks real auth middleware, origin, body, renewal, errors an
       access_token: `test-token-${calls}`, expires_in: 900,
       socket_path: "/socket.io", external_user_id: userId,
     };
-  }));
+  }, { read: async () => true }));
   const server = app.listen(0, "127.0.0.1");
   await new Promise(resolve => server.once("listening", resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
@@ -252,7 +254,7 @@ test("disconnecting the browser aborts the pending server exchange", async () =>
       reject(new Error("Cancelled"));
     }, { once: true });
     entered();
-  })));
+  }), { read: async () => true }));
   const token = "cancellation-test";
   sessions.set(createHash("sha256").update(token).digest("hex"), { userId: "cancelled-member" });
   const server = app.listen(0, "127.0.0.1");
@@ -274,6 +276,85 @@ test("disconnecting the browser aborts the pending server exchange", async () =>
     ]);
   } finally {
     controller.abort();
+    server.closeAllConnections();
+    await new Promise(resolve => server.close(resolve));
+  }
+});
+
+test("visibility is persisted only by admins; disabled state blocks member sessions", async () => {
+  const app = express();
+  app.use(cookieParser(), express.json());
+  let enabled = true;
+  let unavailable = false;
+  let exchanges = 0;
+  const writes = [];
+  app.use("/api", createSabitoRouter(async userId => {
+    exchanges++;
+    return { access_token: "test-token", expires_in: 900, socket_path: "/socket.io", external_user_id: userId };
+  }, {
+    read: async () => { if (unavailable) throw new Error("offline"); return enabled; },
+    write: async (value, adminId) => {
+      if (unavailable) throw new Error("offline");
+      writes.push([value, adminId]);
+      enabled = value;
+    },
+  }));
+  for (const [token, userId] of [["admin-toggle-token", "admin-toggle"], ["member-toggle-token", "member-toggle"]]) {
+    sessions.set(createHash("sha256").update(token).digest("hex"), { userId });
+  }
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise(resolve => server.once("listening", resolve));
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const write = (body, token = "admin-toggle-token", requestOrigin = origin) => fetch(`${origin}/api/admin/sabito/settings`, {
+    method: "PUT", headers: {
+      "Content-Type": "application/json", Origin: requestOrigin,
+      ...(token ? { Cookie: `bb_session=${token}` } : {}),
+    }, body: JSON.stringify(body),
+  });
+  try {
+    let response = await fetch(`${origin}/api/sabito/settings`);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.deepEqual(await response.json(), { enabled: true });
+    for (const [body, token, requestOrigin, status] of [
+      [{ enabled: false }, null, origin, 401],
+      [{ enabled: false }, "member-toggle-token", origin, 403],
+      [{ enabled: false }, "admin-toggle-token", "https://evil.example", 403],
+      [{ enabled: "false" }, "admin-toggle-token", origin, 400],
+      [{ enabled: false, userId: "fake" }, "admin-toggle-token", origin, 400],
+      [[], "admin-toggle-token", origin, 400],
+    ]) {
+      response = await write(body, token, requestOrigin);
+      assert.equal(response.status, status);
+      await response.text();
+    }
+    assert.equal(writes.length, 0);
+    response = await write({ enabled: false });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { enabled: false });
+    assert.deepEqual(writes, [[false, "admin-toggle"]]);
+    response = await fetch(`${origin}/api/sabito/settings`);
+    assert.deepEqual(await response.json(), { enabled: false });
+    response = await fetch(`${origin}/api/sabito/session`, {
+      method: "POST", body: "{}", headers: {
+        Origin: origin, "Content-Type": "application/json", Cookie: "bb_session=member-toggle-token",
+      },
+    });
+    assert.equal(response.status, 503);
+    await response.text();
+    assert.equal(exchanges, 0);
+    response = await write({ enabled: true });
+    assert.deepEqual(await response.json(), { enabled: true });
+    response = await fetch(`${origin}/api/sabito/settings`);
+    assert.deepEqual(await response.json(), { enabled: true });
+    unavailable = true;
+    response = await write({ enabled: false });
+    assert.equal(response.status, 503);
+    await response.text();
+    assert.equal(enabled, true, "A failed save must not change the setting");
+    response = await fetch(`${origin}/api/sabito/settings`);
+    assert.equal(response.status, 503);
+    await response.text();
+  } finally {
     server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));
   }
