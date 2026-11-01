@@ -1,10 +1,24 @@
 import { createRequire as __bannerCrReq } from 'node:module';
 import __bannerPath from 'node:path';
 import __bannerUrl from 'node:url';
+import { existsSync as __bannerExists } from 'node:fs';
 
 globalThis.require = __bannerCrReq(import.meta.url);
 globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
+
+// Both root entrypoints and scripts/* must resolve workers from the deployed
+// bundle, not process.cwd() or the temporary directory used for the build.
+const __pinoRoot = [new URL('./', import.meta.url), new URL('../', import.meta.url)]
+  .find(root => __bannerExists(new URL('thread-stream-worker.mjs', root)));
+if (!__pinoRoot) throw new Error('Bundled logging worker assets are missing');
+globalThis.__bundlerPathsOverrides = {
+  ...(globalThis.__bundlerPathsOverrides || {}),
+  'thread-stream-worker': __bannerUrl.fileURLToPath(new URL('thread-stream-worker.mjs', __pinoRoot)),
+  'pino-worker': __bannerUrl.fileURLToPath(new URL('pino-worker.mjs', __pinoRoot)),
+  'pino/file': __bannerUrl.fileURLToPath(new URL('pino-file.mjs', __pinoRoot)),
+  'pino-pretty': __bannerUrl.fileURLToPath(new URL('pino-pretty.mjs', __pinoRoot)),
+};
     
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {

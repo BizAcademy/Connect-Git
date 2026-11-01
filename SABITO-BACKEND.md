@@ -41,6 +41,25 @@ Un échec conserve son étape et un code sûr, par exemple `ECONNREFUSED`,
 `CHECKS_OK_MEMBER_TEST_REQUIRED` ne signifie **pas** qu’une vérification métier
 réelle a réussi.
 
+Si une ancienne version affiche `MODULE_NOT_FOUND` pour
+`thread-stream-worker.mjs` dans un chemin `/tmp/buzzbooster-sabito-push...`,
+il s’agit d’un défaut du bundle de journalisation, pas d’une clé Sabito :
+le diagnostic s’est interrompu avant de terminer ses vérifications.
+Le build résout désormais les fichiers de journalisation depuis le dossier
+réellement déployé, y compris pour les scripts dans `scripts/`.
+Reconstruire avec la commande de push habituelle, puis Pull Now → Deploy Now →
+Restart Now dans Cybrancy, avant de relancer `sabito:check`.
+
+Le test de portabilité compile dans un dossier temporaire, copie le bundle,
+supprime le dossier de compilation puis lance le diagnostic et le superviseur
+sans aucune variable métier ni accès à une base réelle. Il couvre le mode
+production, le mode sans `NODE_ENV`, les chemins avec espaces et un autre
+dossier courant :
+
+```bash
+node --test artifacts/api-server/tests/api-bundle-relocation.test.mjs
+```
+
 ### Processus persistant si l’hébergement met Passenger en veille
 
 Un serveur HTTP suspendu par l’hébergeur ne peut pas garantir un connecteur

@@ -2,16 +2,22 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
-import esbuildPluginPino from "esbuild-plugin-pino";
 import { rm } from "node:fs/promises";
 
-// Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
-globalThis.require = createRequire(import.meta.url);
+const require = createRequire(import.meta.url);
+globalThis.require = require;
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
+const pinoDir = path.dirname(require.resolve("pino"));
+const pinoRequire = createRequire(require.resolve("pino"));
+const loggingEntries = {
+  "thread-stream-worker": pinoRequire.resolve("thread-stream/lib/worker.js"),
+  "pino-worker": path.join(pinoDir, "lib/worker.js"),
+  "pino-file": path.join(pinoDir, "file.js"),
+  "pino-pretty": require.resolve("pino-pretty"),
+};
 
-async function buildAll() {
-  const distDir = path.resolve(artifactDir, "dist");
+export async function buildAll({ distDir = path.resolve(artifactDir, "dist") } = {}) {
   await rm(distDir, { recursive: true, force: true });
 
   const buildTime = new Date().toISOString();
@@ -24,6 +30,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/scripts/sabito-worker.ts"),
       path.resolve(artifactDir, "src/scripts/sabito-supervisor.ts"),
       path.resolve(artifactDir, "src/scripts/check-sabito-connection.ts"),
+      ...Object.entries(loggingEntries).map(([out, input]) => ({ in: input, out })),
     ],
     outbase: path.resolve(artifactDir, "src"),
     platform: "node",
@@ -115,19 +122,31 @@ async function buildAll() {
       "electron",
     ],
     sourcemap: "linked",
-    plugins: [
-      // pino relies on workers to handle logging, instead of externalizing it we use a plugin to handle it
-      esbuildPluginPino({ transports: ["pino-pretty"] })
-    ],
+    // Bundle the logging workers explicitly. esbuild-plugin-pino 2.3.3 embeds
+    // its absolute build directory, which breaks after copying dist to Plesk.
     // Make sure packages that are cjs only (e.g. express) but are bundled continue to work in our esm output file
     banner: {
       js: `import { createRequire as __bannerCrReq } from 'node:module';
 import __bannerPath from 'node:path';
 import __bannerUrl from 'node:url';
+import { existsSync as __bannerExists } from 'node:fs';
 
 globalThis.require = __bannerCrReq(import.meta.url);
 globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
+
+// Both root entrypoints and scripts/* must resolve workers from the deployed
+// bundle, not process.cwd() or the temporary directory used for the build.
+const __pinoRoot = [new URL('./', import.meta.url), new URL('../', import.meta.url)]
+  .find(root => __bannerExists(new URL('thread-stream-worker.mjs', root)));
+if (!__pinoRoot) throw new Error('Bundled logging worker assets are missing');
+globalThis.__bundlerPathsOverrides = {
+  ...(globalThis.__bundlerPathsOverrides || {}),
+  'thread-stream-worker': __bannerUrl.fileURLToPath(new URL('thread-stream-worker.mjs', __pinoRoot)),
+  'pino-worker': __bannerUrl.fileURLToPath(new URL('pino-worker.mjs', __pinoRoot)),
+  'pino/file': __bannerUrl.fileURLToPath(new URL('pino-file.mjs', __pinoRoot)),
+  'pino-pretty': __bannerUrl.fileURLToPath(new URL('pino-pretty.mjs', __pinoRoot)),
+};
     `,
     },
   });
@@ -153,7 +172,9 @@ globalThis.require = __bannerCrReq(import.meta.url);`,
   });
 }
 
-buildAll().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  buildAll().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
