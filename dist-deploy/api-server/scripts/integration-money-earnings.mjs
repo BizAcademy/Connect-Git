@@ -24390,7 +24390,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path = __require("path");
-        const outputDir = "/tmp/buzzbooster-sabito-push.DumPvJ/Connect-Git/artifacts/api-server/dist";
+        const outputDir = "/tmp/buzzbooster-sabito-push.xtlVES/Connect-Git/artifacts/api-server/dist";
         return path.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
