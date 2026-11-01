@@ -44,8 +44,12 @@ export default function DashboardHome() {
 
   useEffect(() => {
     if (!user) return;
+    let disposed = false;
+    let running = false;
+    setLoading(true);
     const load = async () => {
-      setLoading(true);
+      if (running || disposed) return;
+      running = true;
       try {
         const response = await authedFetch("/api/smm/dashboard-summary");
         if (!response.ok) throw new Error("Impossible de charger le tableau de bord");
@@ -53,6 +57,7 @@ export default function DashboardHome() {
           stats?: { total?: number; pending?: number; completed?: number };
           recent_orders?: any[];
         };
+        if (disposed) return;
         setStats({
           total: Number(data.stats?.total || 0),
           pending: Number(data.stats?.pending || 0),
@@ -62,13 +67,16 @@ export default function DashboardHome() {
       } catch (error) {
         console.error("[DashboardHome] summary load error", error);
       } finally {
-        setLoading(false);
+        running = false;
+        if (!disposed) setLoading(false);
       }
     };
     load();
-    const id = setInterval(load, 20000);
-    return () => clearInterval(id);
-  }, [user]);
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") void load();
+    }, 20000);
+    return () => { disposed = true; clearInterval(id); };
+  }, [user?.id]);
 
   const username = profile?.username || user?.email?.split("@")[0] || "utilisateur";
   const balance  = Number(profile?.balance || 0);

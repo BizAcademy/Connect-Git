@@ -19,7 +19,7 @@ import {
   listAllowedCountries,
   payin,
   requestOtp,
-  getStatus,
+  getPaymentStatus,
   verifyWebhookSignature,
   isSuccessStatus,
   isFailureStatus,
@@ -171,7 +171,18 @@ router.post("/payments/otp", requireUser, async (req: AuthedRequest, res) => {
     return res.status(400).json({ error: "Pays non supporté" });
   }
   try {
-    await requestOtp({ country, operator, phone_number: phone });
+    const amount = Number(req.body?.amount);
+    const countries = await listAllowedCountries();
+    const entry = countries.find((c) => c.code === country);
+    const op = entry?.operators.find((o) => o.code === operator);
+    if (!entry || !op || !Number.isFinite(amount) || amount < 500 || amount > 10_000_000) {
+      return res.status(400).json({ error: "Pays, opérateur ou montant invalide" });
+    }
+    await requestOtp({
+      country, operator, phone_number: phone,
+      amount: Math.ceil(amount * 1.02),
+      currency: op.currency || pickCurrencyForCountry(entry),
+    });
     return res.json({ ok: true });
   } catch (err) {
     return handleAfribapayError(err, res);
@@ -259,6 +270,8 @@ router.post("/payments/initiate", requireUser, async (req: AuthedRequest, res) =
   }
 
   try {
+    const returnUrl = new URL("/dashboard/deposit", PUBLIC_URL);
+    returnUrl.searchParams.set("payment", orderId);
     const result = await payin({
       operator,
       country,
@@ -268,10 +281,15 @@ router.post("/payments/initiate", requireUser, async (req: AuthedRequest, res) =
       order_id: orderId,
       notify_url: notifyUrl(),
       otp_code: otpCode,
+      return_url: returnUrl.href,
+      cancel_url: returnUrl.href,
     });
     await persistAfribapayProviderFees(paymentId, result.raw, "payin");
     if (result.transaction_id) {
       await patchPayment(paymentId, { transaction_id: result.transaction_id });
+    }
+    if (isFailureStatus(result.status)) {
+      await patchPayment(paymentId, { status: "failed" });
     }
     return res.json({
       ok: true,
@@ -283,14 +301,27 @@ router.post("/payments/initiate", requireUser, async (req: AuthedRequest, res) =
         || "Confirmez la transaction sur votre téléphone (code USSD ou notification mobile money).",
       // Wave operators: URL to open in the Wave app for payment confirmation
       wave_redirect_url: result.redirect_url || undefined,
+      payment_redirect_url: result.redirect_url || undefined,
       // Fee info for the frontend to display
       credit_amount: amount,
       fee_amount: feeAmount,
       charge_amount: chargeAmount,
     });
   } catch (err) {
-    await patchPayment(paymentId, { status: "failed" }).catch(() => undefined);
-    return handleAfribapayError(err, res);
+    // A rejected request is not an accepted payment. But a transport failure,
+    // rate limit or server error may arrive AFTER AfribaPAY accepted the PAYIN.
+    // Never invite a second charge by losing its merchant reference.
+    const rejected = err instanceof AfribapayNotConfiguredError
+      || (err instanceof AfribapayApiError && [400, 401, 403, 404, 422].includes(err.status));
+    if (rejected) {
+      await patchPayment(paymentId, { status: "failed" }).catch(() => undefined);
+      return handleAfribapayError(err, res);
+    }
+    logger.warn({ paymentId, event: "PAYIN_RESULT_UNCONFIRMED" }, "AfribaPAY initiation requires reconciliation");
+    return res.status(202).json({
+      ok: true, payment_id: paymentId, order_id: orderId, status: "UNKNOWN",
+      message: "La réponse du prestataire n’a pas pu être confirmée. Votre dépôt est en cours de vérification ; ne lancez pas un second paiement.",
+    });
   }
 });
 
@@ -320,7 +351,7 @@ router.get("/payments/status/:orderId", requireUser, async (req: AuthedRequest, 
     return res.json({ status: "pending", credited: false });
   }
   try {
-    const remote = await getStatus(orderId);
+    const remote = await getPaymentStatus(local);
     await persistAfribapayProviderFees(local.id, remote.raw, "status");
     // Persist transaction_id whenever we learn it (idempotent)
     if (remote.transaction_id && !local.transaction_id) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -100,14 +100,23 @@ export default function Transactions() {
     return providerLabels[n] || `Fournisseur #${n}`;
   };
 
-  const load = async () => {
-    if (!user) return;
-    setLoading(true);
+  const loadingRef = useRef(false);
+  const load = async (silent = false) => {
+    if (!user || loadingRef.current) return;
+    loadingRef.current = true;
+    if (!silent) setLoading(true);
     try {
+      const readList = async (url: string): Promise<any[]> => {
+        const response = await authedFetch(url);
+        if (!response.ok) throw new Error("Historique temporairement indisponible");
+        const data = await response.json();
+        if (!Array.isArray(data)) throw new Error("Réponse d’historique invalide");
+        return data;
+      };
       const [ordRes, payRes, comRes] = await Promise.all([
-        authedFetch("/api/smm/user-orders").then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
-        authedFetch("/api/smm/user-payments").then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
-        authedFetch("/api/referrals/transactions").then(r => r.ok ? r.json() as Promise<any[]> : Promise.resolve([])),
+        readList("/api/smm/user-orders"),
+        readList("/api/smm/user-payments"),
+        readList("/api/referrals/transactions"),
       ]);
       const initial: any[] = Array.isArray(ordRes) ? ordRes : [];
       setOrders(initial);
@@ -126,18 +135,21 @@ export default function Transactions() {
       }
     } catch (err) {
       setLoading(false);
+    } finally {
+      loadingRef.current = false;
     }
   };
 
   useEffect(() => {
     if (!user) return;
     load();
-    const onVisible = () => { if (document.visibilityState === "visible") void load(); };
+    const onFocus = () => { void load(true); };
+    const onVisible = () => { if (document.visibilityState === "visible") onFocus(); };
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", load);
+    window.addEventListener("focus", onFocus);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", load);
+      window.removeEventListener("focus", onFocus);
     };
   /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [user]);
@@ -355,7 +367,7 @@ export default function Transactions() {
           <h2 className="text-xl font-bold font-heading">Transactions</h2>
           <p className="text-sm text-muted-foreground">Journal unifié de vos dépôts, commandes et remboursements</p>
         </div>
-        <Button variant="outline" size="sm" onClick={load}>
+        <Button variant="outline" size="sm" onClick={() => void load()}>
           <RefreshCw size={14} className="mr-1" /> Actualiser
         </Button>
       </div>

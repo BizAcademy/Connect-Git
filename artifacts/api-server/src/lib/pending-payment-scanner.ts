@@ -5,10 +5,10 @@
 // unreachable) and frontend polling timeouts.
 //
 // Flow for each pending payment:
-//   1. Query AfribaPay /v1/status?order_id=...
+//   1. Query AfribaPay by transaction_id (PIM/POM), or merchant order_id.
 //   2. SUCCESS  → creditDeposit (idempotent)
 //   3. FAILED   → markPaymentStatus("failed")
-//   4. Older than AUTO_FAIL_MINUTES with no terminal status → mark failed
+//   4. PENDING or an unavailable status stays pending: elapsed time is not failure.
 
 import { logger } from "./logger";
 import {
@@ -16,10 +16,12 @@ import {
   markPaymentStatus,
   fetchPayment,
   recordAfribapayProviderFees,
+  updatePaymentTransaction,
 } from "./deposits";
 import { recoverStuckReferrals } from "./referrals";
 import {
   getStatus,
+  getPaymentStatus,
   isSuccessStatus,
   isFailureStatus,
   isAfribapayConfigured,
@@ -32,10 +34,6 @@ import { feeReconciliationRetryAfterSeconds } from "./afribapay-fees";
 
 const SCAN_INTERVAL_MS    = 3 * 60_000;  // every 3 minutes
 const MIN_AGE_MS          = 2 * 60_000;  // skip payments younger than 2 min (still polling)
-const AUTO_FAIL_MS        = 35 * 60_000; // mark failed after 35 min still pending on AfribaPay
-// Payments older than this are auto-failed WITHOUT any AfribaPay API call.
-// This prevents stale/sandbox-era payments from flooding the token endpoint.
-const DEFINITIVE_FAIL_MS  = 2 * 60 * 60_000; // 2 hours — definitively stale
 const PAGE_SIZE           = 50;
 const MAX_COMPLETED_FEE_LOOKUPS_PER_SCAN = 6;
 const PROVIDER_STATUS_INTERVAL_MS = 12_000;
@@ -45,6 +43,7 @@ let timer: NodeJS.Timeout | null = null;
 let inFlight = false;
 let started  = false;
 let lastProviderStatusRequestAt = 0;
+let pendingCursor: { createdAt: string | Date; id: string } | null = null;
 
 interface PendingPayment { id: string; user_id: string; order_id: string; created_at: string; amount: number }
 interface CompletedFeeCandidate extends RowDataPacket {
@@ -62,32 +61,27 @@ async function waitForProviderStatusSlot(): Promise<void> {
 
 async function fetchPendingPayments(): Promise<PendingPayment[]> {
   try {
+    const after = pendingCursor
+      ? " AND (created_at > ? OR (created_at = ? AND id > ?))" : "";
+    const params = pendingCursor
+      ? [pendingCursor.createdAt, pendingCursor.createdAt, pendingCursor.id, PAGE_SIZE] : [PAGE_SIZE];
     const [rows] = await getMysqlPool().execute<RowDataPacket[]>(
       `SELECT id,user_id,order_id,created_at,amount_minor FROM payments
        WHERE status='pending' AND credited_at IS NULL AND order_id IS NOT NULL
        AND (provider IS NULL OR provider <> 'izipay')
-       AND created_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE) ORDER BY created_at ASC LIMIT ?`, [PAGE_SIZE],
+       AND created_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE)${after}
+       ORDER BY created_at ASC, id ASC LIMIT ?`, params,
     );
+    // Rotate across unresolved rows so old PENDING entries never starve newer deposits.
+    const last = rows.at(-1);
+    pendingCursor = rows.length === PAGE_SIZE && last
+      ? { createdAt: last.created_at, id: String(last.id) } : null;
     return rows.map(r => ({ id: String(r.id), user_id: String(r.user_id), order_id: String(r.order_id),
       created_at: new Date(r.created_at).toISOString(), amount: Number(r.amount_minor) / 100 }));
   } catch { return []; }
 }
 
 async function reconcileOne(p: PendingPayment): Promise<"credited" | "failed" | "skip" | "error"> {
-  const ageMs = Date.now() - new Date(p.created_at).getTime();
-
-  // Definitively auto-fail payments older than DEFINITIVE_FAIL_MS WITHOUT calling
-  // AfribaPay at all. These are either sandbox-era or permanently lost payments.
-  // Skipping the API call prevents stale payments from flooding the token endpoint.
-  if (ageMs > DEFINITIVE_FAIL_MS) {
-    await markPaymentStatus(p.id, "failed");
-    logger.warn(
-      { paymentId: p.id, orderId: p.order_id, ageMin: Math.round(ageMs / 60000) },
-      "pending-payment-scanner: definitively auto-failed stale payment (no AfribaPay call)",
-    );
-    return "failed";
-  }
-
   // Re-fetch to make sure it's still pending (another process may have credited it)
   const current = await fetchPayment(p.id);
   if (!current || current.status !== "pending" || current.credited_at) return "skip";
@@ -97,7 +91,10 @@ async function reconcileOne(p: PendingPayment): Promise<"credited" | "failed" | 
 
   try {
     await waitForProviderStatusSlot();
-    const remote = await getStatus(p.order_id);
+    const remote = await getPaymentStatus(current);
+    if (remote.transaction_id && !current.transaction_id) {
+      await updatePaymentTransaction(p.id, remote.transaction_id);
+    }
     try {
       await recordAfribapayProviderFees(p.id, remote.raw);
     } catch (err: any) {
@@ -120,13 +117,6 @@ async function reconcileOne(p: PendingPayment): Promise<"credited" | "failed" | 
     if (isFailureStatus(remote.status)) {
       await markPaymentStatus(p.id, "failed");
       logger.info({ paymentId: p.id, orderId: p.order_id, status: remote.status }, "pending-payment-scanner: payment marked failed");
-      return "failed";
-    }
-
-    // Still pending from AfribaPay — auto-fail if too old
-    if (ageMs > AUTO_FAIL_MS) {
-      await markPaymentStatus(p.id, "failed");
-      logger.warn({ paymentId: p.id, orderId: p.order_id, ageMin: Math.round(ageMs / 60000) }, "pending-payment-scanner: auto-failed stale payment");
       return "failed";
     }
 
@@ -246,8 +236,8 @@ async function reconcileCompletedFeeBatch(): Promise<void> {
     attempted++;
     const orderId = candidate.order_id?.trim() ?? "";
     const transactionId = candidate.transaction_id?.trim() ?? "";
-    const lookupBy: StatusLookupBy = orderId ? "order_id" : "transaction_id";
-    const identifier = orderId || transactionId;
+    const lookupBy: StatusLookupBy = /^(PIM|POM)[A-Za-z0-9_-]+$/.test(transactionId) ? "transaction_id" : "order_id";
+    const identifier = lookupBy === "transaction_id" ? transactionId : orderId;
     const attemptCount = Number(candidate.attempts) + 1;
 
     try {

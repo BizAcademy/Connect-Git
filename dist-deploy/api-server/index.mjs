@@ -31309,7 +31309,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path7 = __require("path");
-        const outputDir = "/tmp/buzzbooster-sabito-push.eP1Oko/Connect-Git/artifacts/api-server/dist";
+        const outputDir = "/tmp/buzzbooster-sabito-push.4zKEem/Connect-Git/artifacts/api-server/dist";
         return path7.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -95810,7 +95810,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-11-01T01:50:26.812Z";
+var BUILD_TIME = "2026-11-01T02:48:34.233Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -99845,7 +99845,7 @@ async function fetchNewToken() {
   } catch {
   }
   if (!r.ok) {
-    logger.error({ status: r.status, body }, "AfribaPay token fetch failed");
+    logger.error({ status: r.status }, "AfribaPay token fetch failed");
     tokenBackoffUntil = Date.now() + TOKEN_BACKOFF_MS;
     throw new AfribapayApiError(r.status, body, "\xC9chec r\xE9cup\xE9ration du jeton de paiement");
   }
@@ -99934,6 +99934,7 @@ function isOperatorAvailable(op) {
   if (op.available !== void 0 && falsy(op.available)) return false;
   if (op.is_active !== void 0 && falsy(op.is_active)) return false;
   if (op.is_enabled !== void 0 && falsy(op.is_enabled)) return false;
+  if (op.payin !== void 0 && (falsy(op.payin) || String(op.payin).toLowerCase() === "no")) return false;
   if (truthy(op.enabled) || truthy(op.active) || truthy(op.available)) return true;
   const status = String(op.status ?? op.state ?? "").toLowerCase().trim();
   if (status) {
@@ -99973,16 +99974,19 @@ async function listCountries(forceRefresh = false) {
 }
 async function fetchCountriesFresh() {
   const data = await authedFetch("/v1/countries", { method: "GET" });
+  return normalizeCountries(data);
+}
+function normalizeCountries(data) {
   const inner = data?.data ?? data;
   let rows;
   if (Array.isArray(inner)) {
     rows = inner;
   } else if (inner && typeof inner === "object") {
-    rows = Object.values(inner);
+    rows = Object.entries(inner).map(([code, row]) => row && typeof row === "object" ? { country_code: code, ...row } : row);
   } else {
     rows = [];
   }
-  const normalized = rows.map((row) => {
+  const normalized = rows.filter(isOperatorAvailable).map((row) => {
     const code = String(row.code || row.country_code || row.iso2 || "").toUpperCase();
     let ops = [];
     if (Array.isArray(row.operators)) {
@@ -99992,12 +99996,26 @@ async function fetchCountriesFresh() {
       ops = Array.isArray(firstCur?.operators) ? firstCur.operators : [];
     } else if (Array.isArray(row.providers)) {
       ops = row.providers;
+    } else if (row.operators && typeof row.operators === "object") {
+      ops = Object.entries(row.operators).map(([operator_code, op]) => ({ operator_code, ...op }));
     }
     let currency2;
     if (row.currency) {
       currency2 = String(row.currency);
     } else if (row.currencies && typeof row.currencies === "object") {
       currency2 = Object.keys(row.currencies)[0];
+    }
+    const additions = {
+      CI: [{ code: "djamo", name: "Djamo", otp_required: false, currency: "XOF" }],
+      BF: [
+        { code: "wave", name: "Wave Money", otp_required: false, currency: "XOF" },
+        { code: "wligdicash", name: "Wallet LigdiCash", otp_required: true, currency: "XOF" }
+      ]
+    };
+    const advertised = new Set(ops.map((op) => String(op.code || op.operator_code || op.id || op.name || "").toLowerCase()));
+    for (const op of additions[code] || []) {
+      const walletAlias = op.code === "wligdicash" && [...advertised].some((value) => /ligdicash/.test(value));
+      if (!advertised.has(op.code) && !walletAlias) ops.push(op);
     }
     return {
       code,
@@ -100010,7 +100028,8 @@ async function fetchCountriesFresh() {
         otp_required: Boolean(
           op.otp_required === true || op.otp_required === 1 || op.otp_required === "1"
         ),
-        currency: currency2
+        currency: currency2,
+        ussd_code: typeof op.ussd_code === "string" ? op.ussd_code : void 0
       })).filter((op) => op.code)
     };
   }).filter((c) => c.code && c.operators.length > 0);
@@ -100042,6 +100061,9 @@ async function payin(params) {
     notify_url: params.notify_url
   };
   if (params.otp_code) body["otp_code"] = params.otp_code;
+  if (params.return_url) body["return_url"] = params.return_url;
+  if (params.cancel_url) body["cancel_url"] = params.cancel_url;
+  body["lang"] = "fr";
   let data;
   try {
     data = await authedFetch("/v1/pay/payin", {
@@ -100070,15 +100092,24 @@ async function payin(params) {
   } else {
     markOperatorOk(params.country, params.operator);
   }
-  const redirectUrl = inner?.payment_url || inner?.checkout_url || inner?.redirect_url || inner?.wave_url || inner?.paymentUrl || inner?.checkoutUrl || data?.payment_url || data?.checkout_url || data?.redirect_url || void 0;
+  const redirectUrl = inner?.provider_link || inner?.payment_link || inner?.payment_url || inner?.checkout_url || inner?.redirect_url || inner?.wave_url || inner?.paymentUrl || inner?.checkoutUrl || data?.provider_link || data?.payment_link || data?.payment_url || data?.checkout_url || data?.redirect_url || void 0;
   return {
     transaction_id: inner?.transaction_id || inner?.transactionId || void 0,
     order_id: inner?.order_id || params.order_id,
     status,
     message,
-    redirect_url: typeof redirectUrl === "string" && redirectUrl.startsWith("http") ? redirectUrl : void 0,
+    redirect_url: safeCheckoutUrl(redirectUrl),
     raw: data
   };
+}
+function safeCheckoutUrl(value) {
+  if (typeof value !== "string") return void 0;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password ? url.href : void 0;
+  } catch {
+    return void 0;
+  }
 }
 async function requestOtp(params) {
   ensureConfigured();
@@ -100092,6 +100123,8 @@ async function requestOtp(params) {
         operator: params.operator,
         country: String(params.country).toUpperCase(),
         phone_number: params.phone_number,
+        amount: params.amount,
+        currency: params.currency,
         merchant_key: MERCHANT_KEY
       })
     });
@@ -100109,7 +100142,10 @@ async function requestOtp(params) {
     throw err;
   }
 }
-async function getStatus(identifier, lookupBy = "order_id") {
+async function getStatus(identifier, lookupBy = /^(PIM|POM)[A-Za-z0-9_-]+$/.test(identifier) ? "transaction_id" : "order_id") {
+  if (!identifier || lookupBy === "transaction_id" && !/^(PIM|POM)[A-Za-z0-9_-]+$/.test(identifier)) {
+    throw new AfribapayApiError(400, null, "Identifiant de transaction AfribaPAY invalide");
+  }
   let data;
   const fallbackOrderId = lookupBy === "order_id" ? identifier : void 0;
   const fallbackTransactionId = lookupBy === "transaction_id" ? identifier : void 0;
@@ -100121,7 +100157,7 @@ async function getStatus(identifier, lookupBy = "order_id") {
       const inner2 = p?.data ?? p;
       if (inner2 && typeof inner2 === "object") {
         const s = String(inner2.status || "").toUpperCase();
-        if (s) {
+        if (["SUCCESS", "FAILED", "PENDING"].includes(s)) {
           return {
             status: s,
             transaction_id: inner2.transaction_id || inner2.transactionId || fallbackTransactionId,
@@ -100143,6 +100179,19 @@ async function getStatus(identifier, lookupBy = "order_id") {
     raw: data
   };
 }
+async function getPaymentStatus(payment) {
+  const transactionId = payment.transaction_id?.trim() || "";
+  const orderId = payment.order_id?.trim() || "";
+  const useTransaction = /^(PIM|POM)[A-Za-z0-9_-]+$/.test(transactionId);
+  const remote = await getStatus(
+    useTransaction ? transactionId : orderId,
+    useTransaction ? "transaction_id" : "order_id"
+  );
+  if (orderId && remote.order_id && remote.order_id !== orderId || useTransaction && remote.transaction_id && remote.transaction_id !== transactionId) {
+    throw new AfribapayApiError(502, null, "R\xE9f\xE9rences AfribaPAY incoh\xE9rentes");
+  }
+  return remote;
+}
 function verifyWebhookSignature(rawBody, headerSign) {
   if (!API_KEY) return false;
   if (!headerSign) return false;
@@ -100156,12 +100205,12 @@ function verifyWebhookSignature(rawBody, headerSign) {
 function isSuccessStatus(s) {
   if (!s) return false;
   const x = String(s).toUpperCase();
-  return ["SUCCESS", "SUCCESSFUL", "COMPLETED", "PAID", "OK", "APPROVED"].includes(x);
+  return x === "SUCCESS";
 }
 function isFailureStatus(s) {
   if (!s) return false;
   const x = String(s).toUpperCase();
-  return ["FAILED", "REJECTED", "CANCELLED", "CANCELED", "ERROR", "EXPIRED", "DECLINED"].includes(x);
+  return x === "FAILED";
 }
 
 // src/routes/admin.ts
@@ -101235,7 +101284,20 @@ router5.post("/payments/otp", requireUser, async (req, res) => {
     return res.status(400).json({ error: "Pays non support\xE9" });
   }
   try {
-    await requestOtp({ country, operator, phone_number: phone });
+    const amount2 = Number(req.body?.amount);
+    const countries = await listAllowedCountries();
+    const entry = countries.find((c) => c.code === country);
+    const op = entry?.operators.find((o) => o.code === operator);
+    if (!entry || !op || !Number.isFinite(amount2) || amount2 < 500 || amount2 > 1e7) {
+      return res.status(400).json({ error: "Pays, op\xE9rateur ou montant invalide" });
+    }
+    await requestOtp({
+      country,
+      operator,
+      phone_number: phone,
+      amount: Math.ceil(amount2 * 1.02),
+      currency: op.currency || pickCurrencyForCountry(entry)
+    });
     return res.json({ ok: true });
   } catch (err) {
     return handleAfribapayError(err, res);
@@ -101309,6 +101371,8 @@ router5.post("/payments/initiate", requireUser, async (req, res) => {
     return res.status(500).json({ error: "Impossible d'enregistrer le paiement" });
   }
   try {
+    const returnUrl = new URL("/dashboard/deposit", PUBLIC_URL);
+    returnUrl.searchParams.set("payment", orderId);
     const result = await payin({
       operator,
       country,
@@ -101318,11 +101382,16 @@ router5.post("/payments/initiate", requireUser, async (req, res) => {
       currency: currency2,
       order_id: orderId,
       notify_url: notifyUrl(),
-      otp_code: otpCode
+      otp_code: otpCode,
+      return_url: returnUrl.href,
+      cancel_url: returnUrl.href
     });
     await persistAfribapayProviderFees(paymentId, result.raw, "payin");
     if (result.transaction_id) {
       await patchPayment(paymentId, { transaction_id: result.transaction_id });
+    }
+    if (isFailureStatus(result.status)) {
+      await patchPayment(paymentId, { status: "failed" });
     }
     return res.json({
       ok: true,
@@ -101333,14 +101402,26 @@ router5.post("/payments/initiate", requireUser, async (req, res) => {
       message: result.message || "Confirmez la transaction sur votre t\xE9l\xE9phone (code USSD ou notification mobile money).",
       // Wave operators: URL to open in the Wave app for payment confirmation
       wave_redirect_url: result.redirect_url || void 0,
+      payment_redirect_url: result.redirect_url || void 0,
       // Fee info for the frontend to display
       credit_amount: amount2,
       fee_amount: feeAmount,
       charge_amount: chargeAmount
     });
   } catch (err) {
-    await patchPayment(paymentId, { status: "failed" }).catch(() => void 0);
-    return handleAfribapayError(err, res);
+    const rejected = err instanceof AfribapayNotConfiguredError || err instanceof AfribapayApiError && [400, 401, 403, 404, 422].includes(err.status);
+    if (rejected) {
+      await patchPayment(paymentId, { status: "failed" }).catch(() => void 0);
+      return handleAfribapayError(err, res);
+    }
+    logger.warn({ paymentId, event: "PAYIN_RESULT_UNCONFIRMED" }, "AfribaPAY initiation requires reconciliation");
+    return res.status(202).json({
+      ok: true,
+      payment_id: paymentId,
+      order_id: orderId,
+      status: "UNKNOWN",
+      message: "La r\xE9ponse du prestataire n\u2019a pas pu \xEAtre confirm\xE9e. Votre d\xE9p\xF4t est en cours de v\xE9rification ; ne lancez pas un second paiement."
+    });
   }
 });
 router5.get("/payments/status/:orderId", requireUser, async (req, res) => {
@@ -101361,7 +101442,7 @@ router5.get("/payments/status/:orderId", requireUser, async (req, res) => {
     return res.json({ status: "pending", credited: false });
   }
   try {
-    const remote = await getStatus(orderId);
+    const remote = await getPaymentStatus(local);
     await persistAfribapayProviderFees(local.id, remote.raw, "status");
     if (remote.transaction_id && !local.transaction_id) {
       await patchPayment(local.id, { transaction_id: remote.transaction_id }).catch(() => void 0);
@@ -103035,8 +103116,8 @@ router11.get(
       }
       const orderId = payment["order_id"] == null ? "" : String(payment["order_id"]).trim();
       const transactionId = payment["transaction_id"] == null ? "" : String(payment["transaction_id"]).trim();
-      const lookupBy = orderId ? "order_id" : "transaction_id";
-      const lookupValue = orderId || transactionId;
+      const lookupBy = /^(PIM|POM)[A-Za-z0-9_-]+$/.test(transactionId) ? "transaction_id" : "order_id";
+      const lookupValue = lookupBy === "transaction_id" ? transactionId : orderId;
       if (!lookupValue) {
         res.status(409).json({ error: "Aucune r\xE9f\xE9rence AfribaPAY n\u2019est enregistr\xE9e pour ce d\xE9p\xF4t." });
         return;
@@ -103614,8 +103695,6 @@ function startMissedRefundScanner() {
 init_logger();
 var SCAN_INTERVAL_MS2 = 3 * 6e4;
 var MIN_AGE_MS = 2 * 6e4;
-var AUTO_FAIL_MS = 35 * 6e4;
-var DEFINITIVE_FAIL_MS = 2 * 60 * 6e4;
 var PAGE_SIZE2 = 50;
 var MAX_COMPLETED_FEE_LOOKUPS_PER_SCAN = 6;
 var PROVIDER_STATUS_INTERVAL_MS = 12e3;
@@ -103624,6 +103703,7 @@ var timer3 = null;
 var inFlight = false;
 var started4 = false;
 var lastProviderStatusRequestAt = 0;
+var pendingCursor = null;
 async function waitForProviderStatusSlot() {
   const waitMs = lastProviderStatusRequestAt + PROVIDER_STATUS_INTERVAL_MS - Date.now();
   if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
@@ -103631,13 +103711,18 @@ async function waitForProviderStatusSlot() {
 }
 async function fetchPendingPayments() {
   try {
+    const after = pendingCursor ? " AND (created_at > ? OR (created_at = ? AND id > ?))" : "";
+    const params = pendingCursor ? [pendingCursor.createdAt, pendingCursor.createdAt, pendingCursor.id, PAGE_SIZE2] : [PAGE_SIZE2];
     const [rows] = await getMysqlPool().execute(
       `SELECT id,user_id,order_id,created_at,amount_minor FROM payments
        WHERE status='pending' AND credited_at IS NULL AND order_id IS NOT NULL
        AND (provider IS NULL OR provider <> 'izipay')
-       AND created_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE) ORDER BY created_at ASC LIMIT ?`,
-      [PAGE_SIZE2]
+       AND created_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE)${after}
+       ORDER BY created_at ASC, id ASC LIMIT ?`,
+      params
     );
+    const last = rows.at(-1);
+    pendingCursor = rows.length === PAGE_SIZE2 && last ? { createdAt: last.created_at, id: String(last.id) } : null;
     return rows.map((r) => ({
       id: String(r.id),
       user_id: String(r.user_id),
@@ -103650,21 +103735,15 @@ async function fetchPendingPayments() {
   }
 }
 async function reconcileOne(p) {
-  const ageMs = Date.now() - new Date(p.created_at).getTime();
-  if (ageMs > DEFINITIVE_FAIL_MS) {
-    await markPaymentStatus(p.id, "failed");
-    logger.warn(
-      { paymentId: p.id, orderId: p.order_id, ageMin: Math.round(ageMs / 6e4) },
-      "pending-payment-scanner: definitively auto-failed stale payment (no AfribaPay call)"
-    );
-    return "failed";
-  }
   const current = await fetchPayment(p.id);
   if (!current || current.status !== "pending" || current.credited_at) return "skip";
   if (!p.order_id) return "skip";
   try {
     await waitForProviderStatusSlot();
-    const remote = await getStatus(p.order_id);
+    const remote = await getPaymentStatus(current);
+    if (remote.transaction_id && !current.transaction_id) {
+      await updatePaymentTransaction(p.id, remote.transaction_id);
+    }
     try {
       await recordAfribapayProviderFees(p.id, remote.raw);
     } catch (err) {
@@ -103685,11 +103764,6 @@ async function reconcileOne(p) {
     if (isFailureStatus(remote.status)) {
       await markPaymentStatus(p.id, "failed");
       logger.info({ paymentId: p.id, orderId: p.order_id, status: remote.status }, "pending-payment-scanner: payment marked failed");
-      return "failed";
-    }
-    if (ageMs > AUTO_FAIL_MS) {
-      await markPaymentStatus(p.id, "failed");
-      logger.warn({ paymentId: p.id, orderId: p.order_id, ageMin: Math.round(ageMs / 6e4) }, "pending-payment-scanner: auto-failed stale payment");
       return "failed";
     }
     return "skip";
@@ -103791,8 +103865,8 @@ async function reconcileCompletedFeeBatch() {
     attempted++;
     const orderId = candidate.order_id?.trim() ?? "";
     const transactionId = candidate.transaction_id?.trim() ?? "";
-    const lookupBy = orderId ? "order_id" : "transaction_id";
-    const identifier = orderId || transactionId;
+    const lookupBy = /^(PIM|POM)[A-Za-z0-9_-]+$/.test(transactionId) ? "transaction_id" : "order_id";
+    const identifier = lookupBy === "transaction_id" ? transactionId : orderId;
     const attemptCount = Number(candidate.attempts) + 1;
     try {
       await waitForProviderStatusSlot();
@@ -103881,7 +103955,7 @@ var timer4 = null;
 var initialTimer = null;
 var running = false;
 var cycle = 0;
-var pendingCursor = null;
+var pendingCursor2 = null;
 var terminalCursor = null;
 async function listCandidates(kind, afterId) {
   const statuses = kind === "pending" ? "status='pending'" : "status IN ('irregular','failed','expired','canceled','cancelled','completed')";
@@ -103925,8 +103999,8 @@ function startCryptoDepositScanner() {
     if (running || !process.env["IZIPAY_API_KEY"]) return;
     running = true;
     try {
-      const pending = await scanCryptoDepositsOnce("pending", pendingCursor);
-      pendingCursor = pending.nextId;
+      const pending = await scanCryptoDepositsOnce("pending", pendingCursor2);
+      pendingCursor2 = pending.nextId;
       if (++cycle % 15 === 0) {
         const terminal = await scanCryptoDepositsOnce("terminal", terminalCursor);
         terminalCursor = terminal.nextId;

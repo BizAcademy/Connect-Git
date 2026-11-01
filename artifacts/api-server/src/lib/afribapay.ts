@@ -72,7 +72,7 @@ async function fetchNewToken(): Promise<TokenEntry> {
   let body: any = null;
   try { body = await r.json(); } catch { /* ignore */ }
   if (!r.ok) {
-    logger.error({ status: r.status, body }, "AfribaPay token fetch failed");
+    logger.error({ status: r.status }, "AfribaPay token fetch failed");
     // Activate backoff so concurrent/subsequent callers don't immediately retry
     tokenBackoffUntil = Date.now() + TOKEN_BACKOFF_MS;
     throw new AfribapayApiError(r.status, body, "Échec récupération du jeton de paiement");
@@ -165,6 +165,7 @@ export interface CountryOperator {
   name: string;          // display name
   otp_required: boolean;
   currency?: string;
+  ussd_code?: string;
 }
 export interface CountryEntry {
   code: string;          // ISO2, e.g. "CI"
@@ -210,6 +211,7 @@ function isOperatorAvailable(op: any): boolean {
   if (op.available !== undefined && falsy(op.available)) return false;
   if (op.is_active !== undefined && falsy(op.is_active)) return false;
   if (op.is_enabled !== undefined && falsy(op.is_enabled)) return false;
+  if (op.payin !== undefined && (falsy(op.payin) || String(op.payin).toLowerCase() === "no")) return false;
   // Boolean truthy short-circuits (in case other fields are missing)
   if (truthy(op.enabled) || truthy(op.active) || truthy(op.available)) return true;
 
@@ -252,7 +254,11 @@ export async function listCountries(forceRefresh = false): Promise<CountryEntry[
 
 async function fetchCountriesFresh(): Promise<CountryEntry[]> {
   const data = await authedFetch("/v1/countries", { method: "GET" });
+  return normalizeCountries(data);
+}
 
+/** Merge documented new PAYIN methods, without overriding explicit outages. */
+export function normalizeCountries(data: any): CountryEntry[] {
   // Normalize to a flat array of raw country rows regardless of API shape:
   //   • array:  [{country_code, operators, ...}, ...]          (production)
   //   • object: {BF: {country_code, currencies: {XOF: {operators}}, ...}, ...} (sandbox)
@@ -263,12 +269,13 @@ async function fetchCountriesFresh(): Promise<CountryEntry[]> {
     rows = inner;
   } else if (inner && typeof inner === "object") {
     // sandbox: keys are ISO-2 country codes, values are country objects
-    rows = Object.values(inner);
+    rows = Object.entries(inner).map(([code, row]) =>
+      row && typeof row === "object" ? { country_code: code, ...row } : row);
   } else {
     rows = [];
   }
 
-  const normalized: CountryEntry[] = rows.map((row: any) => {
+  const normalized: CountryEntry[] = rows.filter(isOperatorAvailable).map((row: any) => {
     const code = String(row.code || row.country_code || row.iso2 || "").toUpperCase();
 
     // Operators may live directly on row.operators OR nested inside row.currencies.<CUR>.operators
@@ -281,6 +288,8 @@ async function fetchCountriesFresh(): Promise<CountryEntry[]> {
       ops = Array.isArray(firstCur?.operators) ? firstCur.operators : [];
     } else if (Array.isArray(row.providers)) {
       ops = row.providers;
+    } else if (row.operators && typeof row.operators === "object") {
+      ops = Object.entries(row.operators).map(([operator_code, op]) => ({ operator_code, ...(op as object) }));
     }
 
     // Derive currency
@@ -289,6 +298,24 @@ async function fetchCountriesFresh(): Promise<CountryEntry[]> {
       currency = String(row.currency);
     } else if (row.currencies && typeof row.currencies === "object") {
       currency = Object.keys(row.currencies)[0];
+    }
+
+    // Codes are those documented in PAYIN Djamo, PAYMENT METHODS and
+    // PAYIN with Wallet OTP (not the inconsistent wallet label in its response).
+    const additions: Record<string, CountryOperator[]> = {
+      CI: [{ code: "djamo", name: "Djamo", otp_required: false, currency: "XOF" }],
+      BF: [
+        { code: "wave", name: "Wave Money", otp_required: false, currency: "XOF" },
+        { code: "wligdicash", name: "Wallet LigdiCash", otp_required: true, currency: "XOF" },
+      ],
+    };
+    const advertised = new Set(ops.map((op) =>
+      String(op.code || op.operator_code || op.id || op.name || "").toLowerCase()));
+    for (const op of additions[code] || []) {
+      // An advertised disabled entry must stay disabled. Never replace it.
+      const walletAlias = op.code === "wligdicash"
+        && [...advertised].some((value) => /ligdicash/.test(value));
+      if (!advertised.has(op.code) && !walletAlias) ops.push(op);
     }
 
     return {
@@ -305,6 +332,7 @@ async function fetchCountriesFresh(): Promise<CountryEntry[]> {
             op.otp_required === true || op.otp_required === 1 || op.otp_required === "1",
           ),
           currency,
+          ussd_code: typeof op.ussd_code === "string" ? op.ussd_code : undefined,
         }))
         .filter((op) => op.code),
     };
@@ -340,6 +368,8 @@ export interface PayinParams {
   order_id: string;
   notify_url: string;
   otp_code?: string;
+  return_url?: string;
+  cancel_url?: string;
 }
 export interface PayinResponse {
   transaction_id?: string;
@@ -367,6 +397,9 @@ export async function payin(params: PayinParams): Promise<PayinResponse> {
     notify_url: params.notify_url,
   };
   if (params.otp_code) body["otp_code"] = params.otp_code;
+  if (params.return_url) body["return_url"] = params.return_url;
+  if (params.cancel_url) body["cancel_url"] = params.cancel_url;
+  body["lang"] = "fr";
 
   let data: any;
   try {
@@ -404,23 +437,33 @@ export async function payin(params: PayinParams): Promise<PayinResponse> {
     markOperatorOk(params.country, params.operator);
   }
 
-  // Wave operators return a checkout/redirect URL to open in the Wave app
+  // Official Wave and Djamo examples both use data.provider_link.
   const redirectUrl: string | undefined =
-    inner?.payment_url || inner?.checkout_url || inner?.redirect_url ||
+    inner?.provider_link || inner?.payment_link || inner?.payment_url || inner?.checkout_url || inner?.redirect_url ||
     inner?.wave_url || inner?.paymentUrl || inner?.checkoutUrl ||
-    data?.payment_url || data?.checkout_url || data?.redirect_url || undefined;
+    data?.provider_link || data?.payment_link || data?.payment_url || data?.checkout_url || data?.redirect_url || undefined;
 
   return {
     transaction_id: inner?.transaction_id || inner?.transactionId || undefined,
     order_id: inner?.order_id || params.order_id,
     status,
     message,
-    redirect_url: typeof redirectUrl === "string" && redirectUrl.startsWith("http") ? redirectUrl : undefined,
+    redirect_url: safeCheckoutUrl(redirectUrl),
     raw: data,
   };
 }
 
-export async function requestOtp(params: { operator: string; country: string; phone_number: string }): Promise<unknown> {
+export function safeCheckoutUrl(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password ? url.href : undefined;
+  } catch { return undefined; }
+}
+
+export async function requestOtp(params: {
+  operator: string; country: string; phone_number: string; amount: number; currency: string;
+}): Promise<unknown> {
   ensureConfigured();
   if (isCountryExcluded(params.country)) {
     throw new AfribapayApiError(400, null, "Pays non supporté");
@@ -432,6 +475,8 @@ export async function requestOtp(params: { operator: string; country: string; ph
         operator: params.operator,
         country: String(params.country).toUpperCase(),
         phone_number: params.phone_number,
+        amount: params.amount,
+        currency: params.currency,
         merchant_key: MERCHANT_KEY,
       }),
     });
@@ -462,8 +507,11 @@ export type StatusLookupBy = "order_id" | "transaction_id";
 
 export async function getStatus(
   identifier: string,
-  lookupBy: StatusLookupBy = "order_id",
+  lookupBy: StatusLookupBy = /^(PIM|POM)[A-Za-z0-9_-]+$/.test(identifier) ? "transaction_id" : "order_id",
 ): Promise<StatusResponse> {
+  if (!identifier || (lookupBy === "transaction_id" && !/^(PIM|POM)[A-Za-z0-9_-]+$/.test(identifier))) {
+    throw new AfribapayApiError(400, null, "Identifiant de transaction AfribaPAY invalide");
+  }
   let data: any;
   const fallbackOrderId = lookupBy === "order_id" ? identifier : undefined;
   const fallbackTransactionId = lookupBy === "transaction_id" ? identifier : undefined;
@@ -477,7 +525,7 @@ export async function getStatus(
       const inner = p?.data ?? p;
       if (inner && typeof inner === "object") {
         const s = String((inner as any).status || "").toUpperCase();
-        if (s) {
+        if (["SUCCESS", "FAILED", "PENDING"].includes(s)) {
           return {
             status: s,
             transaction_id: (inner as any).transaction_id || (inner as any).transactionId || fallbackTransactionId,
@@ -500,6 +548,25 @@ export async function getStatus(
   };
 }
 
+/** Prefer AfribaPAY's transaction ID; old rows can still use merchant order_id.
+ * Cross-check the response before any caller can credit a deposit. */
+export async function getPaymentStatus(payment: {
+  order_id?: string | null; transaction_id?: string | null;
+}): Promise<StatusResponse> {
+  const transactionId = payment.transaction_id?.trim() || "";
+  const orderId = payment.order_id?.trim() || "";
+  const useTransaction = /^(PIM|POM)[A-Za-z0-9_-]+$/.test(transactionId);
+  const remote = await getStatus(
+    useTransaction ? transactionId : orderId,
+    useTransaction ? "transaction_id" : "order_id",
+  );
+  if ((orderId && remote.order_id && remote.order_id !== orderId)
+    || (useTransaction && remote.transaction_id && remote.transaction_id !== transactionId)) {
+    throw new AfribapayApiError(502, null, "Références AfribaPAY incohérentes");
+  }
+  return remote;
+}
+
 // ---------------------------------------------------------------------------
 // Webhook signature verification (HMAC-SHA256 of raw body, secret = API_KEY)
 // ---------------------------------------------------------------------------
@@ -520,10 +587,10 @@ export function verifyWebhookSignature(rawBody: string | Buffer, headerSign: str
 export function isSuccessStatus(s: string | undefined | null): boolean {
   if (!s) return false;
   const x = String(s).toUpperCase();
-  return ["SUCCESS", "SUCCESSFUL", "COMPLETED", "PAID", "OK", "APPROVED"].includes(x);
+  return x === "SUCCESS";
 }
 export function isFailureStatus(s: string | undefined | null): boolean {
   if (!s) return false;
   const x = String(s).toUpperCase();
-  return ["FAILED", "REJECTED", "CANCELLED", "CANCELED", "ERROR", "EXPIRED", "DECLINED"].includes(x);
+  return x === "FAILED";
 }

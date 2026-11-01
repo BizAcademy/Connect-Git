@@ -284,8 +284,8 @@ router.get(
 
       const orderId = payment["order_id"] == null ? "" : String(payment["order_id"]).trim();
       const transactionId = payment["transaction_id"] == null ? "" : String(payment["transaction_id"]).trim();
-      const lookupBy: StatusLookupBy = orderId ? "order_id" : "transaction_id";
-      const lookupValue = orderId || transactionId;
+      const lookupBy: StatusLookupBy = /^(PIM|POM)[A-Za-z0-9_-]+$/.test(transactionId) ? "transaction_id" : "order_id";
+      const lookupValue = lookupBy === "transaction_id" ? transactionId : orderId;
       if (!lookupValue) {
         res.status(409).json({ error: "Aucune référence AfribaPAY n’est enregistrée pour ce dépôt." });
         return;

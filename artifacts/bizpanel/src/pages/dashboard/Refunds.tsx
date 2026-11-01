@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,13 +55,17 @@ export default function Refunds() {
     return providerLabels[n] || `Fournisseur #${n}`;
   };
 
-  const load = async () => {
-    if (!user) return;
-    setLoading(true);
+  const loadingRef = useRef(false);
+  const load = async (silent = false) => {
+    if (!user || loadingRef.current) return;
+    loadingRef.current = true;
+    if (!silent) setLoading(true);
     try {
       // On ne récupère QUE les commandes ayant un remboursement effectif
       const r = await authedFetch("/api/smm/user-orders");
-      const allOrders: any[] = r.ok ? (await r.json() as any[]) : [];
+      if (!r.ok) throw new Error("Commandes temporairement indisponibles");
+      const allOrders: any[] = await r.json();
+      if (!Array.isArray(allOrders)) throw new Error("Réponse de commandes invalide");
       const initial = allOrders
         .filter((o: any) => o.refunded_at !== null && o.refunded_at !== undefined && Number(o.refunded_amount) > 0)
         .sort((a: any, b: any) => new Date(b.refunded_at).getTime() - new Date(a.refunded_at).getTime());
@@ -77,7 +81,9 @@ export default function Refunds() {
         );
         // Recharger pour voir les nouveaux remboursements (via API pour bypasser RLS)
         const r2 = await authedFetch("/api/smm/user-orders");
-        const allRefreshed: any[] = r2.ok ? (await r2.json()) : [];
+        if (!r2.ok) throw new Error("Remboursements temporairement indisponibles");
+        const allRefreshed: any[] = await r2.json();
+        if (!Array.isArray(allRefreshed)) throw new Error("Réponse de remboursements invalide");
         setOrders(
           allRefreshed
             .filter((o: any) => o.refunded_at !== null && o.refunded_at !== undefined && Number(o.refunded_amount) > 0)
@@ -86,6 +92,8 @@ export default function Refunds() {
       }
     } catch {
       setLoading(false);
+    } finally {
+      loadingRef.current = false;
     }
   };
 
@@ -97,7 +105,9 @@ export default function Refunds() {
   // Cookie API polling replaces the former realtime subscription.
   useEffect(() => {
     if (!user) return;
-    const id = window.setInterval(() => { void load(); }, 20_000);
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void load(true);
+    }, 20_000);
     return () => window.clearInterval(id);
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [user]);
@@ -172,7 +182,7 @@ export default function Refunds() {
             Toutes les sommes recréditées automatiquement sur votre solde
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={load}>
+        <Button variant="outline" size="sm" onClick={() => void load()}>
           <RefreshCw size={14} className="mr-1" /> Actualiser
         </Button>
       </div>

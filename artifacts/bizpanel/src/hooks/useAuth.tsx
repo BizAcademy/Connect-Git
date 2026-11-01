@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { authedFetch, notifyAuthEnding, notifyAuthChanged } from "@/lib/authFetch";
 
 export interface AuthUser { id: string; email: string; }
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<any | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     const res = await fetch("/api/auth/me", { credentials: "include" });
     if (!res.ok) {
       setUser(null); setSession(null); setProfile(null); setIsAdmin(false);
@@ -44,19 +44,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const data = await res.json();
     const currentUser = data.user as AuthUser & { profile: unknown; isAdmin: boolean };
-    setUser({ id: currentUser.id, email: currentUser.email });
+    // A balance/profile refresh must not restart all effects subscribed to user.
+    setUser((previous) => previous?.id === currentUser.id && previous.email === currentUser.email
+      ? previous : { id: currentUser.id, email: currentUser.email });
     setSession({ user: { id: currentUser.id, email: currentUser.email } });
     setProfile(currentUser.profile);
     setIsAdmin(currentUser.isAdmin);
-  };
+  }, []);
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     await fetchProfile();
-  };
+  }, [fetchProfile]);
 
-  const patchProfile = (patch: Record<string, unknown>) => {
+  const patchProfile = useCallback((patch: Record<string, unknown>) => {
     setProfile((prev: any) => (prev ? { ...prev, ...patch } : prev));
-  };
+  }, []);
 
   useEffect(() => {
     fetchProfile().finally(() => setLoading(false));

@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getAuthHeaders, authedFetch } from "@/lib/authFetch";
 import { formatBalance, getCurrencyInfo, toFcfa } from "@/lib/currency";
 import { toast } from "@/lib/toast";
+import { checkoutUrl, checkoutKey, restoreCheckout } from "@/lib/deposit-checkout";
 import CryptoDeposit from "./CryptoDeposit";
 import DepositMethodPicker from "@/components/dashboard/DepositMethodPicker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,7 @@ interface Operator {
   name: string;
   otp_required: boolean;
   currency?: string;
+  ussd_code?: string;
 }
 interface Country {
   code: string;
@@ -244,6 +246,7 @@ export default function Deposit() {
 
   const [submitting, setSubmitting] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [transactionId, setTransactionId] = useState<string | null>(null);
   const [waitMessage, setWaitMessage] = useState<string>("");
   const [waveRedirectUrl, setWaveRedirectUrl] = useState<string | null>(null);
   const [pollingExpired, setPollingExpired] = useState(false);
@@ -253,30 +256,59 @@ export default function Deposit() {
 
   const pollTimerRef = useRef<number | null>(null);
   const pollStartRef = useRef<number>(0);
+  const countriesLoadingRef = useRef(false);
+
+  const clearCheckout = () => {
+    try { if (user) sessionStorage.removeItem(checkoutKey(user.id)); } catch { /* storage unavailable */ }
+  };
+
+  // Restore the existing deposit on return from Wave/Djamo instead of creating another one.
+  useEffect(() => {
+    if (!user) return;
+    let pending = null;
+    try { pending = restoreCheckout(sessionStorage.getItem(checkoutKey(user.id))); } catch { /* no storage */ }
+    const returnedOrder = new URLSearchParams(window.location.search).get("payment");
+    if (!pending && !returnedOrder) return;
+    setMethod("mobile");
+    setOrderId(returnedOrder || pending!.orderId);
+    if (pending && (!returnedOrder || returnedOrder === pending.orderId)) {
+      setTransactionId(pending.transactionId || null);
+      setCountry(pending.country);
+      setOperator(pending.operator);
+      setAmount(pending.amount);
+      setWaveRedirectUrl(pending.redirectUrl);
+    }
+    setWaitMessage("Vérification du dépôt après votre retour…");
+    setStep("wait");
+  }, [user?.id]);
 
   // --- Load countries -------------------------------------------------------
-  const loadCountries = useCallback(async (force = false) => {
-    setLoadingCountries(true);
-    setCountriesError(null);
+  const loadCountries = useCallback(async (force = false, silent = false) => {
+    if (countriesLoadingRef.current) return;
+    countriesLoadingRef.current = true;
+    if (!silent) { setLoadingCountries(true); setCountriesError(null); }
     try {
       const url = force ? "/api/payments/countries?refresh=1" : "/api/payments/countries";
       const r = await fetch(url, { cache: "no-store" });
       const data = await r.json();
       if (!r.ok) {
-        setCountriesError(data?.error || "Impossible de charger la liste des pays");
+        if (!silent) setCountriesError(data?.error || "Impossible de charger la liste des pays");
       } else {
-        setCountries((data.countries || []) as Country[]);
+        if (!Array.isArray(data.countries)) throw new Error("Réponse des pays invalide");
+        setCountries(data.countries as Country[]);
+        setCountriesError(null);
       }
     } catch (e: any) {
-      setCountriesError(e?.message || "Erreur réseau");
+      if (!silent) setCountriesError(e?.message || "Erreur réseau");
     } finally {
       setLoadingCountries(false);
+      countriesLoadingRef.current = false;
     }
   }, []);
 
   useEffect(() => {
     loadCountries(false);
-    const onFocus = () => loadCountries(false);
+    const onFocus = () => loadCountries(false, true);
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [loadCountries]);
@@ -291,6 +323,8 @@ export default function Deposit() {
     if (step !== "wait" || !orderId) return;
     pollStartRef.current = Date.now();
     setPollingExpired(false);
+    let disposed = false;
+    const controller = new AbortController();
 
     const tick = async () => {
       if (Date.now() - pollStartRef.current >= POLL_DURATION_MS) {
@@ -299,8 +333,10 @@ export default function Deposit() {
       }
       try {
         const headers = await authHeaders();
-        const r = await fetch(`/api/payments/status/${encodeURIComponent(orderId)}`, { headers });
+        const r = await fetch(`/api/payments/status/${encodeURIComponent(orderId)}`, { headers, signal: controller.signal });
         const data = await r.json();
+        if (disposed) return;
+        if (!r.ok) throw new Error("Statut temporairement indisponible");
         if (r.ok && data?.status === "completed") {
           setCreditedSummary({
             amount: Number(data.amount_credited || finalAmount),
@@ -308,6 +344,7 @@ export default function Deposit() {
           });
           if (refreshProfile) await refreshProfile().catch(() => undefined);
           setStep("success");
+          clearCheckout();
           const credited = Number(data.amount_credited || finalAmount);
           const bonusGot = Number(data.bonus_credited || 0);
           toast.success(
@@ -321,16 +358,19 @@ export default function Deposit() {
         if (r.ok && (data?.status === "failed" || data?.status === "rejected")) {
           setFailedReason("Paiement refusé ou annulé.");
           setStep("failed");
+          clearCheckout();
           return;
         }
       } catch {
         // ignore transient network errors during polling
       }
-      pollTimerRef.current = window.setTimeout(tick, POLL_INTERVAL_MS);
+      if (!disposed) pollTimerRef.current = window.setTimeout(tick, POLL_INTERVAL_MS);
     };
 
-    pollTimerRef.current = window.setTimeout(tick, POLL_INTERVAL_MS);
+    void tick();
     return () => {
+      disposed = true;
+      controller.abort();
       if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
     };
   }, [step, orderId, finalAmount, refreshProfile, navigate]);
@@ -349,6 +389,7 @@ export default function Deposit() {
         });
         if (refreshProfile) await refreshProfile().catch(() => undefined);
         setStep("success");
+        clearCheckout();
         const credited = Number(data.amount_credited || finalAmount);
         const bonusGot = Number(data.bonus_credited || 0);
         toast.success(
@@ -360,6 +401,7 @@ export default function Deposit() {
       } else if (r.ok && (data?.status === "failed" || data?.status === "rejected")) {
         setFailedReason("Paiement refusé ou annulé.");
         setStep("failed");
+        clearCheckout();
       } else {
         toast.info("Paiement encore en attente. Vérifiez votre téléphone.");
       }
@@ -382,6 +424,7 @@ export default function Deposit() {
           country: country.code,
           operator: operator.code,
           phone_number: phone,
+          amount: finalAmount,
         }),
       });
       const data = await r.json();
@@ -390,7 +433,7 @@ export default function Deposit() {
         return;
       }
       setOtpRequested(true);
-      toast.success("Demande envoyée. Composez le code USSD pour recevoir votre OTP.");
+      toast.success("Code OTP demandé. Vérifiez les instructions de votre opérateur et vos SMS.");
     } catch (e: any) {
       toast.error(e?.message || "Erreur réseau");
     } finally {
@@ -421,9 +464,34 @@ export default function Deposit() {
         return;
       }
       setOrderId(data.order_id);
+      setTransactionId(data.transaction_id || null);
       setWaitMessage(data.message || "Confirmez la transaction sur votre téléphone.");
-      setWaveRedirectUrl(data.wave_redirect_url || null);
+      if (data.status === "FAILED") {
+        setFailedReason(data.message || "Paiement refusé par AfribaPAY.");
+        setStep("failed");
+        return;
+      }
+      const redirectUrl = checkoutUrl(data.payment_redirect_url || data.wave_redirect_url);
+      setWaveRedirectUrl(redirectUrl);
       setStep("wait");
+      let saved = false;
+      try {
+        sessionStorage.setItem(checkoutKey(user.id), JSON.stringify({
+          orderId: data.order_id, transactionId: data.transaction_id,
+          redirectUrl, amount: finalAmount,
+          country: { ...country, operators: [] }, operator,
+        }));
+        saved = true;
+      } catch { /* Keep the checkout button if navigation context cannot be saved. */ }
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set("payment", data.order_id);
+      window.history.replaceState(window.history.state, "", currentUrl);
+      if (redirectUrl && !["FAILED", "ERROR"].includes(String(data.status).toUpperCase())) {
+        // Same-tab navigation works on mobile and is not blocked as an async popup.
+        if (saved) window.location.assign(redirectUrl);
+      } else if (isWaveOperator(operator.code) && !redirectUrl && data.status !== "UNKNOWN") {
+        setWaitMessage("Dépôt enregistré, mais AfribaPAY n’a pas fourni le lien Wave. Ne créez pas un second dépôt : vérifiez le statut ou contactez le support.");
+      }
     } catch (e: any) {
       toast.error(e?.message || "Erreur réseau");
     } finally {
@@ -432,6 +500,11 @@ export default function Deposit() {
   };
 
   const reset = () => {
+    clearCheckout();
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete("payment");
+    window.history.replaceState(window.history.state, "", currentUrl);
+    setTransactionId(null);
     setStep("country");
     setCountry(null); setOperator(null); setPhone(""); setOtp(""); setOtpRequested(false);
     setAmount(0); setCustom("");
@@ -442,7 +515,7 @@ export default function Deposit() {
 
   // --- Stepper helpers ------------------------------------------------------
   const stepIndex: Record<Step, number> = {
-    country: 1, operator: 2, phone: 3, otp: 3, amount: 4, confirm: 5,
+    country: 1, operator: 2, phone: 3, otp: 4, amount: 4, confirm: 5,
     wait: 6, success: 6, failed: 6,
   };
   const totalSteps = 6;
@@ -451,9 +524,9 @@ export default function Deposit() {
   const goBack = () => {
     if (step === "operator") setStep("country");
     else if (step === "phone") setStep("operator");
-    else if (step === "otp") setStep("phone");
-    else if (step === "amount") setStep(operator?.otp_required ? "otp" : "phone");
-    else if (step === "confirm") setStep("amount");
+    else if (step === "otp") setStep("amount");
+    else if (step === "amount") setStep("phone");
+    else if (step === "confirm") setStep(operator?.otp_required ? "otp" : "amount");
   };
 
   // ---------------------------------------------------------------------------
@@ -634,7 +707,7 @@ export default function Deposit() {
             <Button
               className="w-full"
               disabled={phone.replace(/\D/g, "").length < 6}
-              onClick={() => setStep(operator.otp_required ? "otp" : "amount")}
+              onClick={() => setStep("amount")}
             >
               Continuer
             </Button>
@@ -658,7 +731,9 @@ export default function Deposit() {
 
             {/* USSD instruction block — shown before requesting OTP */}
             {(() => {
-              const ussd = getUssdCode(country.code, operator.code, finalAmount || 0);
+              const ussd = /ligdicash/i.test(operator.code) ? null
+                : (operator.ussd_code || getUssdCode(country.code, operator.code, chargeAmount || 0))
+                  ?.replace(/montant/gi, String(chargeAmount || 0));
               return ussd ? (
                 <div className="rounded-xl border-2 border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-4 space-y-2">
                   <div className="flex items-center gap-2 text-amber-800 dark:text-amber-100 font-semibold text-sm">
@@ -700,6 +775,7 @@ export default function Deposit() {
                 inputMode="numeric"
                 placeholder="Ex : 123456"
                 value={otp}
+                maxLength={6}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
               />
             </div>
@@ -707,7 +783,7 @@ export default function Deposit() {
             <Button
               className="w-full"
               disabled={otp.length < 4}
-              onClick={() => setStep("amount")}
+              onClick={() => setStep("confirm")}
             >
               Continuer
             </Button>
@@ -764,7 +840,10 @@ export default function Deposit() {
                 </span>
               )}
             </div>
-            <Button className="w-full" disabled={finalAmount < 500} onClick={() => setStep("confirm")}>
+            <Button className="w-full" disabled={finalAmount < 500} onClick={() => {
+              setOtp(""); setOtpRequested(false);
+              setStep(operator?.otp_required ? "otp" : "confirm");
+            }}>
               Continuer
             </Button>
           </CardContent>
@@ -836,6 +915,8 @@ export default function Deposit() {
                   Vérifiez votre téléphone {operator.name}.
                 </p>
               )}
+              <p className="text-xs text-muted-foreground break-all">Référence Buzz Booster (order_id) : {orderId}</p>
+              {transactionId && <p className="text-xs text-muted-foreground break-all">Transaction AfribaPAY : {transactionId}</p>}
             </div>
 
             {/* Wave redirect button */}
@@ -843,22 +924,22 @@ export default function Deposit() {
               <div className="w-full max-w-xs space-y-2">
                 <div className="rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-300 p-4 space-y-3">
                   <div className="flex justify-center">
-                    <OperatorLogo code="wave" name="Wave" size={52} logoUrl={operator ? operatorLogos[operator.code] : undefined} />
+                    <OperatorLogo code={operator?.code || "wave"} name={operator?.name || "Paiement"} size={52} logoUrl={operator ? operatorLogos[operator.code] : undefined} />
                   </div>
                   <p className="text-sm text-cyan-800 dark:text-cyan-200 font-medium">
-                    Ouvrez l'application Wave pour confirmer votre paiement.
+                    Ouvrez {operator?.name || "le site de paiement"} pour confirmer votre paiement.
                   </p>
                   <Button
                     className="w-full"
                     style={{ background: "#1DC8D0" }}
-                    onClick={() => window.open(waveRedirectUrl, "_blank", "noopener,noreferrer")}
+                    onClick={() => window.location.assign(waveRedirectUrl)}
                   >
                     <ExternalLink size={16} className="mr-2" />
-                    Ouvrir Wave
+                    Ouvrir {operator?.name || "le paiement"}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Après validation dans Wave, le dépôt sera crédité automatiquement.
+                  Le dépôt sera crédité uniquement après confirmation du paiement par AfribaPAY.
                 </p>
               </div>
             )}
