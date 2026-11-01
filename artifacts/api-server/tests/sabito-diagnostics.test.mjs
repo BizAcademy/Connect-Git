@@ -26,8 +26,16 @@ await build({
     },
   }],
 });
-const { runSabitoDiagnostics, diagnosticCode, shouldStartSabito } = await import(pathToFileURL(outfile).href);
+const { runSabitoDiagnostics, diagnosticCode, shouldStartSabito, inspectSabitoEnvironment } = await import(pathToFileURL(outfile).href);
 const env = { SABITO_URL: "https://sabito.example", SABITO_CLIENT_ID: "PRIVATE-ID", SABITO_CLIENT_SECRET: "PRIVATE-SECRET" };
+test("environment inspection exposes only fixed variable names and boolean presence", () => {
+  const inspected = inspectSabitoEnvironment({ ...env, MYSQL_PASSWORD: "PRIVATE-PASSWORD", UNRELATED_SECRET: "PRIVATE-OTHER" });
+  assert.equal(inspected.find(row => row.key === "SABITO_CLIENT_SECRET").present, true);
+  assert.equal(inspected.find(row => row.key === "MYSQL_HOST").present, false);
+  assert.equal(JSON.stringify(inspected).includes("PRIVATE"), false);
+  assert.equal(JSON.stringify(inspected).includes("UNRELATED_SECRET"), false);
+  assert.equal(inspected.length, 8);
+});
 const database = async sql => {
   assert.match(sql, /^SELECT /);
   assert.ok(sql === "SELECT 1" || sql.endsWith("LIMIT 0"));

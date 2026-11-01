@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
 import { useSabitoSettings, updateSabitoSettings, SABITO_SETTINGS_QUERY_KEY } from "@/hooks/useSabitoSettings";
+import { AdminSabitoDiagnostics } from "./AdminSabitoDiagnostics";
 
 export function AdminSabitoSettings() {
   const queryClient = useQueryClient();
@@ -44,6 +45,7 @@ export function AdminSabitoSettings() {
         </p>
         {settings.isError && <Button variant="outline" size="sm" onClick={() => void settings.refetch()}>Réessayer</Button>}
         {mutation.isError && <p role="alert" className="text-sm text-destructive">La modification n’a pas été enregistrée.</p>}
+        <AdminSabitoDiagnostics />
       </CardContent>
     </Card>
   );

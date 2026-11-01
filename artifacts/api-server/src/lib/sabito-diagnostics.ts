@@ -1,6 +1,16 @@
 import { getMysqlPool } from "./mysql";
 
 type Check = { stage: string; code: string; http?: number };
+const environmentKeys = [
+  "SABITO_URL", "SABITO_CLIENT_ID", "SABITO_CLIENT_SECRET",
+  "MYSQL_HOST", "MYSQL_DATABASE", "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_PORT",
+] as const;
+/** Fixed names and booleans only. Never serialize process.env or its values. */
+export function inspectSabitoEnvironment(env: Record<string, string | undefined> = process.env) {
+  return environmentKeys.map(key => ({
+    key, present: typeof env[key] === "string" && (key === "MYSQL_PASSWORD" || !!env[key]?.trim()),
+  }));
+}
 const safeCodes = new Set([
   "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND", "EAI_AGAIN", "ECONNRESET",
   "ER_ACCESS_DENIED_ERROR", "ER_BAD_DB_ERROR", "ER_BAD_FIELD_ERROR", "ER_NO_SUCH_TABLE",

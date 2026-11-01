@@ -13,6 +13,85 @@ tags:
   - name: admin
     description: Administrator operations
 paths:
+  /admin/sabito/diagnostics:
+    post:
+      operationId: runAdminSabitoDiagnostics
+      tags: [admin]
+      summary: Read-only diagnostic inside the web server's environment
+      description: |
+        Administrators only, matching Origin and JSON required. Maximum three
+        requests per minute and one diagnostic at a time per server process.
+        No jobs are claimed. No member rows, environment values or financial
+        writes. The supervisor is observed, never started from this request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        "200":
+          description: Safe diagnostic report; ok=false is a completed failed check
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, checks, environment, connector]
+                properties:
+                  ok:
+                    type: boolean
+                  checks:
+                    type: array
+                    items:
+                      type: object
+                      required: [stage, code]
+                      properties:
+                        stage:
+                          type: string
+                        code:
+                          type: string
+                        http:
+                          type: integer
+                  environment:
+                    type: array
+                    items:
+                      type: object
+                      required: [key, present]
+                      properties:
+                        key:
+                          type: string
+                        present:
+                          type: boolean
+                  connector:
+                    type: object
+                    required: [started, state, lastPollHttp, lastPollAt, lastErrorCode]
+                    properties:
+                      started:
+                        type: boolean
+                      state:
+                        type: string
+                        enum: [not_started, starting, ready, polling, waiting, backoff, stopped, error]
+                      lastPollHttp:
+                        type: [integer, "null"]
+                      lastPollAt:
+                        type: [string, "null"]
+                      lastErrorCode:
+                        type: [string, "null"]
+        "400":
+          description: Expected an empty JSON object
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator required or origin rejected
+        "409":
+          description: Diagnostic already running
+        "415":
+          description: JSON required
+        "429":
+          description: Rate limit exceeded
+        "503":
+          description: Diagnostic unavailable
   /sabito/settings:
     get:
       operationId: getSabitoVisibility

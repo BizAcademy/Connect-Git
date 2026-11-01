@@ -58,6 +58,86 @@ const payload = (overrides = {}) => ({
 });
 const upstream = (value = payload(), status = 200) => async () => Response.json(value, { status });
 
+test("web diagnostic requires real admin auth, same origin and empty JSON; returns no values", async () => {
+  let calls = 0;
+  const app = express();
+  app.use(cookieParser());
+  app.use(express.json());
+  app.use("/api", createSabitoRouter(undefined, {}, {
+    run: async () => { calls++; return { ok: false, checks: [{ stage: "database", code: "ECONNREFUSED" }] }; },
+    environment: () => [{ key: "SABITO_CLIENT_SECRET", present: true }],
+    connector: () => ({ started: true, state: "backoff", lastPollHttp: null, lastPollAt: null, lastErrorCode: "ECONNREFUSED" }),
+  }));
+  const adminToken = "diagnostic-admin";
+  sessions.set(createHash("sha256").update(adminToken).digest("hex"), { userId: "admin-toggle" });
+  sessions.set(createHash("sha256").update("diagnostic-member").digest("hex"), { userId: "member-A" });
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise(resolve => server.once("listening", resolve));
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const request = (token, body = "{}", extra = {}) => fetch(`${origin}/api/admin/sabito/diagnostics`, {
+    method: "POST", headers: { Origin: origin, "Content-Type": "application/json",
+      ...(token ? { Cookie: `bb_session=${token}` } : {}), ...extra }, body,
+  });
+  try {
+    assert.equal((await request()).status, 401);
+    assert.equal((await request("diagnostic-member")).status, 403);
+    assert.equal((await request(adminToken, "{}", { Origin: "https://foreign.example" })).status, 403);
+    assert.equal(calls, 0);
+    assert.equal((await request(adminToken, '{"external_user_id":"member-B"}')).status, 400);
+    const response = await request(adminToken);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    const result = await response.json();
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.environment, [{ key: "SABITO_CLIENT_SECRET", present: true }]);
+    assert.equal(result.connector.lastErrorCode, "ECONNREFUSED");
+    assert.equal(result.checks[0].code, "ECONNREFUSED");
+    assert.equal(calls, 1);
+    assert.equal((await request(adminToken)).status, 200);
+    assert.equal((await request(adminToken)).status, 429);
+    assert.equal(calls, 2);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
+});
+
+test("web diagnostic permits only one probe at a time and sanitizes unexpected failures", async () => {
+  let finish;
+  let started;
+  const entered = new Promise(resolve => { started = resolve; });
+  const pending = new Promise(resolve => { finish = resolve; });
+  let fail = false;
+  const app = express();
+  app.use(cookieParser()); app.use(express.json());
+  app.use("/api", createSabitoRouter(undefined, {}, {
+    run: async () => { started(); await pending; if (fail) throw new Error("PRIVATE-CREDENTIAL"); return { ok: true, checks: [] }; },
+    environment: () => [], connector: () => ({
+      started: false, state: "not_started", lastPollHttp: null, lastPollAt: null, lastErrorCode: null,
+    }),
+  }));
+  sessions.set(createHash("sha256").update("diagnostic-concurrency").digest("hex"), { userId: "admin-toggle" });
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise(resolve => server.once("listening", resolve));
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const request = () => fetch(`${origin}/api/admin/sabito/diagnostics`, {
+    method: "POST", headers: { Origin: origin, Cookie: "bb_session=diagnostic-concurrency", "Content-Type": "application/json" }, body: "{}",
+  });
+  try {
+    const first = request();
+    await entered;
+    assert.equal((await request()).status, 409);
+    finish();
+    assert.equal((await first).status, 200);
+    fail = true;
+    const failed = await request();
+    assert.equal(failed.status, 503);
+    assert.equal((await failed.text()).includes("PRIVATE-CREDENTIAL"), false);
+  } finally {
+    finish();
+    await new Promise(resolve => server.close(resolve));
+  }
+});
+
 test("exchange uses server-only Basic auth and returns only the four documented fields", async () => {
   const signal = new AbortController().signal;
   let calls = 0;

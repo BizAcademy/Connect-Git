@@ -4,6 +4,8 @@ import { requireUser, requireAdmin, type AuthedRequest } from "../lib/auth";
 import { logger } from "../lib/logger";
 import { exchangeSabitoSession, SabitoSessionError } from "../lib/sabito-session";
 import { isSabitoEnabled, saveSabitoEnabled } from "../lib/sabito-settings";
+import { runSabitoDiagnostics, inspectSabitoEnvironment } from "../lib/sabito-diagnostics";
+import { getSabitoConnectorState } from "../lib/sabito-supervisor";
 
 const sameOriginJson: RequestHandler = (req, res, next) => {
   let expected: string;
@@ -28,13 +30,48 @@ const sameOriginJson: RequestHandler = (req, res, next) => {
 export function createSabitoRouter(
   exchange = exchangeSabitoSession,
   settings: { read?: typeof isSabitoEnabled; write?: typeof saveSabitoEnabled } = {},
+  diagnostics: {
+    run?: typeof runSabitoDiagnostics;
+    environment?: typeof inspectSabitoEnvironment;
+    connector?: typeof getSabitoConnectorState;
+  } = {},
 ): IRouter {
   const router: IRouter = Router();
   const readEnabled = settings.read ?? isSabitoEnabled;
   const writeEnabled = settings.write ?? saveSabitoEnabled;
-  router.use(["/sabito/settings", "/admin/sabito/settings", "/sabito/session"], (_req, res, next) => {
+  router.use(["/sabito/settings", "/admin/sabito/settings", "/sabito/session", "/admin/sabito/diagnostics"], (_req, res, next) => {
     res.set({ "Cache-Control": "no-store", Pragma: "no-cache" });
     next();
+  });
+  let diagnosing = false;
+  const diagnosticLimiter = rateLimit({
+    windowMs: 60_000, limit: 3,
+    keyGenerator: (req: AuthedRequest) => `sabito-diagnostic:${req.userId}`,
+    standardHeaders: true, legacyHeaders: false,
+    handler: (_req, res) => res.status(429).json({ error: "Attends une minute avant de relancer le diagnostic." }),
+  });
+  router.post("/admin/sabito/diagnostics", requireUser, requireAdmin, sameOriginJson, diagnosticLimiter, async (req, res) => {
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body) || Object.keys(req.body).length) {
+      res.status(400).json({ error: "Le diagnostic attend un objet JSON vide." });
+      return;
+    }
+    if (diagnosing) {
+      res.status(409).json({ error: "Un diagnostic est déjà en cours." });
+      return;
+    }
+    diagnosing = true;
+    try {
+      const report = await (diagnostics.run ?? runSabitoDiagnostics)();
+      res.json({
+        ...report,
+        environment: (diagnostics.environment ?? inspectSabitoEnvironment)(),
+        connector: (diagnostics.connector ?? getSabitoConnectorState)(),
+      });
+    } catch {
+      res.status(503).json({ error: "Diagnostic serveur indisponible." });
+    } finally {
+      diagnosing = false;
+    }
   });
   router.get("/sabito/settings", async (_req, res) => {
     try {

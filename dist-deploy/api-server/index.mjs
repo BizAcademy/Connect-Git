@@ -95814,7 +95814,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-11-01T11:59:33.992Z";
+var BUILD_TIME = "2026-11-01T12:19:04.119Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -103252,6 +103252,242 @@ async function saveSabitoEnabled(enabled, adminId) {
   );
 }
 
+// src/lib/sabito-diagnostics.ts
+var environmentKeys = [
+  "SABITO_URL",
+  "SABITO_CLIENT_ID",
+  "SABITO_CLIENT_SECRET",
+  "MYSQL_HOST",
+  "MYSQL_DATABASE",
+  "MYSQL_USER",
+  "MYSQL_PASSWORD",
+  "MYSQL_PORT"
+];
+function inspectSabitoEnvironment(env = process.env) {
+  return environmentKeys.map((key2) => ({
+    key: key2,
+    present: typeof env[key2] === "string" && (key2 === "MYSQL_PASSWORD" || !!env[key2]?.trim())
+  }));
+}
+var safeCodes = /* @__PURE__ */ new Set([
+  "ECONNREFUSED",
+  "ETIMEDOUT",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "ECONNRESET",
+  "ER_ACCESS_DENIED_ERROR",
+  "ER_BAD_DB_ERROR",
+  "ER_BAD_FIELD_ERROR",
+  "ER_NO_SUCH_TABLE",
+  "CERT_HAS_EXPIRED",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE"
+]);
+function diagnosticCode(error, fallback) {
+  let candidate = error;
+  for (let depth = 0; depth < 3 && candidate && typeof candidate === "object"; depth++) {
+    const record2 = candidate;
+    if (safeCodes.has(String(record2.code))) return String(record2.code);
+    if (record2.name === "TimeoutError" || record2.name === "AbortError") return "ETIMEDOUT";
+    candidate = record2.cause;
+  }
+  return fallback;
+}
+var schemaChecks = {
+  users: "SELECT id, disabled_at, email_verified_at FROM users LIMIT 0",
+  profiles: "SELECT user_id, balance_minor, balance_usd_minor, referral_code FROM profiles LIMIT 0",
+  payments: `SELECT user_id, method, provider, operator, country, phone_number, transaction_id,
+    order_id, reference, provider_reference, credited_at, amount_minor, currency,
+    bonus_amount_minor, bonus_status, bonus_credited_at, wallet_credited FROM payments LIMIT 0`,
+  orders: `SELECT user_id, provider_order_id, external_order_id, status, quantity,
+    charge_minor, currency, refunded_at, refunded_amount_minor FROM orders LIMIT 0`,
+  movements: "SELECT user_id, type, amount_minor, currency, reference_id, reference_type, created_at FROM wallet_transactions LIMIT 0",
+  referrals: `SELECT referrer_user_id, referred_user_id, status, referrer_bonus_minor,
+    referred_bonus_minor, referrer_credited_at, referred_credited_at FROM referrals LIMIT 0`,
+  tickets: "SELECT user_id, order_local_id, order_external_id, provider_id, status FROM tickets LIMIT 0"
+};
+async function runSabitoDiagnostics(options = {}) {
+  const env = options.env ?? process.env;
+  const request = options.request ?? fetch;
+  const read = options.read ?? (async (sql) => {
+    await getMysqlPool().query({ sql, timeout: 5e3 });
+  });
+  const checks = [];
+  let ok = true;
+  const nodeMajor = options.nodeMajor ?? Number(process.versions.node.split(".")[0]);
+  checks.push({ stage: "runtime", code: nodeMajor >= 21 ? "NODE_SUPPORTED" : "NODE_21_REQUIRED" });
+  if (nodeMajor < 21) ok = false;
+  let url;
+  try {
+    url = new URL(env.SABITO_URL ?? "");
+    if (url.protocol !== "https:" || url.pathname !== "/" || url.username || url.password || url.search || url.hash) {
+      throw new Error("INVALID");
+    }
+    checks.push({ stage: "configuration", code: "SABITO_HTTPS_ORIGIN_VALID" });
+  } catch {
+    url = void 0;
+    ok = false;
+    checks.push({ stage: "configuration", code: "SABITO_URL_INVALID" });
+  }
+  const credentials = !!env.SABITO_CLIENT_ID && !!env.SABITO_CLIENT_SECRET;
+  if (!credentials) {
+    ok = false;
+    checks.push({ stage: "configuration", code: "SABITO_CREDENTIALS_MISSING" });
+  }
+  if (url && credentials) {
+    try {
+      const response = await request(new URL("/v1/backend/jobs/poll", url), {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${env.SABITO_CLIENT_ID}:${env.SABITO_CLIENT_SECRET}`).toString("base64")}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ operations: [] }),
+        signal: AbortSignal.timeout(1e4),
+        redirect: "error"
+      });
+      if (!response.ok) {
+        await response.body?.cancel();
+        ok = false;
+        checks.push({ stage: "https_auth", http: response.status, code: "POLL_REJECTED" });
+      } else {
+        const body = await response.json();
+        const valid = Array.isArray(body.jobs) && body.jobs.length === 0;
+        checks.push({
+          stage: "https_auth",
+          http: response.status,
+          code: valid ? "HTTPS_AUTH_OK_NO_OPERATIONS" : "UNEXPECTED_POLL_RESPONSE"
+        });
+        if (!valid) ok = false;
+      }
+    } catch (error) {
+      ok = false;
+      checks.push({ stage: "https_auth", code: diagnosticCode(error, "NETWORK_OR_TLS_FAILURE") });
+    }
+  }
+  try {
+    await read("SELECT 1");
+    checks.push({ stage: "database", code: "DATABASE_REACHABLE" });
+    for (const [name, sql] of Object.entries(schemaChecks)) {
+      try {
+        await read(sql);
+        checks.push({ stage: `schema_${name}`, code: "SCHEMA_READABLE" });
+      } catch (error) {
+        ok = false;
+        checks.push({ stage: `schema_${name}`, code: diagnosticCode(error, "SCHEMA_UNAVAILABLE") });
+      }
+    }
+  } catch (error) {
+    ok = false;
+    checks.push({ stage: "database", code: diagnosticCode(error, "DATABASE_UNAVAILABLE") });
+  }
+  return { ok, checks };
+}
+
+// src/lib/sabito-supervisor.ts
+init_logger();
+import { fork } from "node:child_process";
+
+// src/lib/sabito-operations.ts
+var SABITO_OPERATIONS = [
+  "deposit_status",
+  "order_status",
+  "order_refund_status",
+  "deposit_bonus_status",
+  "referral_code",
+  "referral_reward_status",
+  "referee_bonus_status",
+  "wallet_balance",
+  "wallet_movement_status",
+  "admin_adjustment_status"
+];
+
+// src/lib/sabito-supervisor.ts
+var running = false;
+var snapshot = { started: false, state: "not_started", lastPollHttp: null, lastPollAt: null, lastErrorCode: null };
+function getSabitoConnectorState() {
+  return { ...snapshot };
+}
+var EVENTS = /* @__PURE__ */ new Set(["ready", "poll", "delivery", "verification", "database", "waiting", "sdk", "fatal"]);
+var OPS = new Set(SABITO_OPERATIONS);
+var STATUSES = /* @__PURE__ */ new Set(["pending", "confirmed", "failed", "ok", "forbidden", "not_found", "error"]);
+function startSabitoSupervisor(workerFile) {
+  if (running) return;
+  running = true;
+  snapshot.started = true;
+  let child;
+  let retry;
+  let stopped = false;
+  let failures = 0;
+  function launch() {
+    if (stopped) return;
+    snapshot.state = "starting";
+    child = fork(workerFile, [], {
+      execArgv: [],
+      // No raw SDK stack, inherited command output or credential-bearing
+      // exception can reach the parent logs. Only allowlisted IPC fields.
+      stdio: ["ignore", "ignore", "ignore", "ipc"]
+    });
+    let ended = false;
+    child.on("message", (message) => {
+      if (!message || typeof message !== "object") return;
+      const m = message;
+      if (m.type !== "sabito" || !EVENTS.has(String(m.event))) return;
+      const safe = { event: m.event };
+      if (typeof m.http === "number" && Number.isInteger(m.http) && m.http >= 0 && m.http <= 599) safe.http = m.http;
+      if (OPS.has(String(m.operation))) safe.operation = m.operation;
+      if (STATUSES.has(String(m.status))) safe.status = m.status;
+      if (typeof m.code === "string" && /^[A-Z0-9_]{1,48}$/.test(m.code)) safe.code = m.code;
+      if (m.event === "ready") snapshot.state = "ready";
+      if (m.event === "waiting") snapshot.state = "waiting";
+      if (m.event === "fatal" || m.event === "database") snapshot.state = "error";
+      if (m.event === "poll") {
+        snapshot.lastPollHttp = typeof safe.http === "number" ? safe.http : null;
+        snapshot.lastPollAt = (/* @__PURE__ */ new Date()).toISOString();
+        snapshot.state = m.http === 200 ? "polling" : "error";
+      }
+      if (snapshot.state === "error" && typeof safe.code === "string") snapshot.lastErrorCode = safe.code;
+      if (m.event === "poll" && m.http === 200) failures = 0;
+      logger.info(safe, "Sabito connector");
+    });
+    const restart = () => {
+      if (ended) return;
+      ended = true;
+      child = void 0;
+      if (stopped) return;
+      snapshot.state = "backoff";
+      const delayMs = Math.min(6e4, 2e3 * 2 ** Math.min(failures++, 5));
+      logger.warn({ code: "CHILD_RESTART", delayMs }, "Sabito connector");
+      retry = setTimeout(launch, delayMs);
+    };
+    child.once("error", () => {
+      snapshot.lastErrorCode = "CHILD_START_FAILED";
+      logger.warn({ code: "CHILD_START_FAILED" }, "Sabito connector");
+      restart();
+    });
+    child.once("exit", restart);
+  }
+  const stop = () => {
+    stopped = true;
+    snapshot.state = "stopped";
+    if (retry) clearTimeout(retry);
+    child?.kill("SIGTERM");
+  };
+  const shutdown = () => {
+    stop();
+    if (!child) process.exit(0);
+    child.once("exit", () => process.exit(0));
+    setTimeout(() => {
+      child?.kill("SIGKILL");
+      process.exit(0);
+    }, 6e3).unref();
+  };
+  process.once("SIGTERM", shutdown);
+  process.once("SIGINT", shutdown);
+  process.once("exit", stop);
+  launch();
+}
+
 // src/routes/sabito.ts
 var sameOriginJson = (req, res, next) => {
   let expected;
@@ -103272,13 +103508,45 @@ var sameOriginJson = (req, res, next) => {
   }
   next();
 };
-function createSabitoRouter(exchange = exchangeSabitoSession, settings = {}) {
+function createSabitoRouter(exchange = exchangeSabitoSession, settings = {}, diagnostics = {}) {
   const router13 = (0, import_express12.Router)();
   const readEnabled = settings.read ?? isSabitoEnabled;
   const writeEnabled = settings.write ?? saveSabitoEnabled;
-  router13.use(["/sabito/settings", "/admin/sabito/settings", "/sabito/session"], (_req, res, next) => {
+  router13.use(["/sabito/settings", "/admin/sabito/settings", "/sabito/session", "/admin/sabito/diagnostics"], (_req, res, next) => {
     res.set({ "Cache-Control": "no-store", Pragma: "no-cache" });
     next();
+  });
+  let diagnosing = false;
+  const diagnosticLimiter = rate_limit_default({
+    windowMs: 6e4,
+    limit: 3,
+    keyGenerator: (req) => `sabito-diagnostic:${req.userId}`,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (_req, res) => res.status(429).json({ error: "Attends une minute avant de relancer le diagnostic." })
+  });
+  router13.post("/admin/sabito/diagnostics", requireUser, requireAdmin, sameOriginJson, diagnosticLimiter, async (req, res) => {
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body) || Object.keys(req.body).length) {
+      res.status(400).json({ error: "Le diagnostic attend un objet JSON vide." });
+      return;
+    }
+    if (diagnosing) {
+      res.status(409).json({ error: "Un diagnostic est d\xE9j\xE0 en cours." });
+      return;
+    }
+    diagnosing = true;
+    try {
+      const report = await (diagnostics.run ?? runSabitoDiagnostics)();
+      res.json({
+        ...report,
+        environment: (diagnostics.environment ?? inspectSabitoEnvironment)(),
+        connector: (diagnostics.connector ?? getSabitoConnectorState)()
+      });
+    } catch {
+      res.status(503).json({ error: "Diagnostic serveur indisponible." });
+    } finally {
+      diagnosing = false;
+    }
   });
   router13.get("/sabito/settings", async (_req, res) => {
     try {
@@ -103957,7 +104225,7 @@ var BATCH_SIZE = 20;
 var SCAN_INTERVAL_MS3 = 2 * 6e4;
 var timer4 = null;
 var initialTimer = null;
-var running = false;
+var running2 = false;
 var cycle = 0;
 var pendingCursor2 = null;
 var terminalCursor = null;
@@ -104000,8 +104268,8 @@ async function scanCryptoDepositsOnce(kind, afterId, list = listCandidates, reco
 function startCryptoDepositScanner() {
   if (timer4) return;
   const scan = async () => {
-    if (running || !process.env["IZIPAY_API_KEY"]) return;
-    running = true;
+    if (running2 || !process.env["IZIPAY_API_KEY"]) return;
+    running2 = true;
     try {
       const pending = await scanCryptoDepositsOnce("pending", pendingCursor2);
       pendingCursor2 = pending.nextId;
@@ -104013,7 +104281,7 @@ function startCryptoDepositScanner() {
     } catch (err) {
       logger.error({ err }, "crypto-deposit-scanner: scan failed; will retry");
     } finally {
-      running = false;
+      running2 = false;
     }
   };
   initialTimer = setTimeout(() => {
@@ -104023,92 +104291,6 @@ function startCryptoDepositScanner() {
     void scan();
   }, SCAN_INTERVAL_MS3);
   logger.info({ interval_ms: SCAN_INTERVAL_MS3 }, "crypto-deposit-scanner: started");
-}
-
-// src/lib/sabito-supervisor.ts
-init_logger();
-import { fork } from "node:child_process";
-
-// src/lib/sabito-operations.ts
-var SABITO_OPERATIONS = [
-  "deposit_status",
-  "order_status",
-  "order_refund_status",
-  "deposit_bonus_status",
-  "referral_code",
-  "referral_reward_status",
-  "referee_bonus_status",
-  "wallet_balance",
-  "wallet_movement_status",
-  "admin_adjustment_status"
-];
-
-// src/lib/sabito-supervisor.ts
-var running2 = false;
-var EVENTS = /* @__PURE__ */ new Set(["ready", "poll", "delivery", "verification", "database", "waiting", "sdk", "fatal"]);
-var OPS = new Set(SABITO_OPERATIONS);
-var STATUSES = /* @__PURE__ */ new Set(["pending", "confirmed", "failed", "ok", "forbidden", "not_found", "error"]);
-function startSabitoSupervisor(workerFile) {
-  if (running2) return;
-  running2 = true;
-  let child;
-  let retry;
-  let stopped = false;
-  let failures = 0;
-  function launch() {
-    if (stopped) return;
-    child = fork(workerFile, [], {
-      execArgv: [],
-      // No raw SDK stack, inherited command output or credential-bearing
-      // exception can reach the parent logs. Only allowlisted IPC fields.
-      stdio: ["ignore", "ignore", "ignore", "ipc"]
-    });
-    let ended = false;
-    child.on("message", (message) => {
-      if (!message || typeof message !== "object") return;
-      const m = message;
-      if (m.type !== "sabito" || !EVENTS.has(String(m.event))) return;
-      const safe = { event: m.event };
-      if (typeof m.http === "number" && Number.isInteger(m.http) && m.http >= 0 && m.http <= 599) safe.http = m.http;
-      if (OPS.has(String(m.operation))) safe.operation = m.operation;
-      if (STATUSES.has(String(m.status))) safe.status = m.status;
-      if (typeof m.code === "string" && /^[A-Z0-9_]{1,48}$/.test(m.code)) safe.code = m.code;
-      if (m.event === "poll" && m.http === 200) failures = 0;
-      logger.info(safe, "Sabito connector");
-    });
-    const restart = () => {
-      if (ended) return;
-      ended = true;
-      child = void 0;
-      if (stopped) return;
-      const delayMs = Math.min(6e4, 2e3 * 2 ** Math.min(failures++, 5));
-      logger.warn({ code: "CHILD_RESTART", delayMs }, "Sabito connector");
-      retry = setTimeout(launch, delayMs);
-    };
-    child.once("error", () => {
-      logger.warn({ code: "CHILD_START_FAILED" }, "Sabito connector");
-      restart();
-    });
-    child.once("exit", restart);
-  }
-  const stop = () => {
-    stopped = true;
-    if (retry) clearTimeout(retry);
-    child?.kill("SIGTERM");
-  };
-  const shutdown = () => {
-    stop();
-    if (!child) process.exit(0);
-    child.once("exit", () => process.exit(0));
-    setTimeout(() => {
-      child?.kill("SIGKILL");
-      process.exit(0);
-    }, 6e3).unref();
-  };
-  process.once("SIGTERM", shutdown);
-  process.once("SIGINT", shutdown);
-  process.once("exit", stop);
-  launch();
 }
 
 // src/lib/sabito-runtime.ts

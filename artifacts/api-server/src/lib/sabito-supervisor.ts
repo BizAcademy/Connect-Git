@@ -3,6 +3,14 @@ import { logger } from "./logger";
 import { SABITO_OPERATIONS } from "./sabito-operations";
 
 let running = false;
+type ConnectorState = "not_started" | "starting" | "ready" | "polling" | "waiting" | "backoff" | "stopped" | "error";
+const snapshot: {
+  started: boolean; state: ConnectorState; lastPollHttp: number | null;
+  lastPollAt: string | null; lastErrorCode: string | null;
+} = { started: false, state: "not_started", lastPollHttp: null, lastPollAt: null, lastErrorCode: null };
+export function getSabitoConnectorState() {
+  return { ...snapshot };
+}
 const EVENTS = new Set(["ready", "poll", "delivery", "verification", "database", "waiting", "sdk", "fatal"]);
 const OPS = new Set<string>(SABITO_OPERATIONS);
 const STATUSES = new Set(["pending", "confirmed", "failed", "ok", "forbidden", "not_found", "error"]);
@@ -11,12 +19,14 @@ const STATUSES = new Set(["pending", "confirmed", "failed", "ok", "forbidden", "
 export function startSabitoSupervisor(workerFile: string) {
   if (running) return;
   running = true;
+  snapshot.started = true;
   let child: ChildProcess | undefined;
   let retry: NodeJS.Timeout | undefined;
   let stopped = false;
   let failures = 0;
   function launch() {
     if (stopped) return;
+    snapshot.state = "starting";
     child = fork(workerFile, [], {
       execArgv: [],
       // No raw SDK stack, inherited command output or credential-bearing
@@ -33,6 +43,15 @@ export function startSabitoSupervisor(workerFile: string) {
       if (OPS.has(String(m.operation))) safe.operation = m.operation;
       if (STATUSES.has(String(m.status))) safe.status = m.status;
       if (typeof m.code === "string" && /^[A-Z0-9_]{1,48}$/.test(m.code)) safe.code = m.code;
+      if (m.event === "ready") snapshot.state = "ready";
+      if (m.event === "waiting") snapshot.state = "waiting";
+      if (m.event === "fatal" || m.event === "database") snapshot.state = "error";
+      if (m.event === "poll") {
+        snapshot.lastPollHttp = typeof safe.http === "number" ? safe.http : null;
+        snapshot.lastPollAt = new Date().toISOString();
+        snapshot.state = m.http === 200 ? "polling" : "error";
+      }
+      if (snapshot.state === "error" && typeof safe.code === "string") snapshot.lastErrorCode = safe.code;
       if (m.event === "poll" && m.http === 200) failures = 0;
       logger.info(safe, "Sabito connector");
     });
@@ -41,11 +60,13 @@ export function startSabitoSupervisor(workerFile: string) {
       ended = true;
       child = undefined;
       if (stopped) return;
+      snapshot.state = "backoff";
       const delayMs = Math.min(60_000, 2000 * 2 ** Math.min(failures++, 5));
       logger.warn({ code: "CHILD_RESTART", delayMs }, "Sabito connector");
       retry = setTimeout(launch, delayMs);
     };
     child.once("error", () => {
+      snapshot.lastErrorCode = "CHILD_START_FAILED";
       logger.warn({ code: "CHILD_START_FAILED" }, "Sabito connector");
       restart();
     });
@@ -53,6 +74,7 @@ export function startSabitoSupervisor(workerFile: string) {
   }
   const stop = () => {
     stopped = true;
+    snapshot.state = "stopped";
     if (retry) clearTimeout(retry);
     child?.kill("SIGTERM");
   };

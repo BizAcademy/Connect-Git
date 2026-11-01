@@ -12,6 +12,31 @@ n’est renvoyée.
 
 ## Démarrage production et diagnostic
 
+### Diagnostic dans l’environnement du serveur web
+
+Dans **Admin → Paramètres → Sabito AI → Diagnostic serveur**, cliquer
+**Lancer le diagnostic** après déploiement. Cette action utilise la session
+administrateur existante et s’exécute dans l’API web de Buzz Booster, pas dans
+le processus isolé de « Run Node.js commands ».
+
+Le rapport contient uniquement la présence des huit variables attendues,
+les codes techniques HTTPS/MySQL et l’état du superviseur de ce processus web.
+`MYSQL_PORT` est facultatif (3306 par défaut). Aucune valeur d’environnement,
+aucune donnée membre et aucun corps de réponse tiers ne sont retournés.
+L’accès est réservé aux administrateurs, exige la même origine et un objet
+JSON vide. Il est limité à trois essais par minute et à un diagnostic simultané.
+
+Si les variables sont présentes dans ce rapport mais absentes dans le
+diagnostic CLI, les deux processus ne reçoivent pas le même environnement :
+il ne faut pas recréer de clés pour corriger ce décalage. Si elles sont aussi
+absentes dans le rapport web, vérifier leur injection dans l’application web
+Buzz Booster de Cybrancy et redémarrer celle-ci.
+
+La sonde ne récupère aucune tâche et ne démarre pas le superviseur. Son HTTP 200
+est distinct du dernier appel SDK réel affiché dans l’état du superviseur.
+L’état `waiting` peut être normal si un autre processus détient le verrou du
+connecteur. Le test métier depuis un vrai membre reste indispensable.
+
 Le point d’entrée de l’API démarre le superviseur en production **et lorsque
 Passenger lance directement le serveur sans NODE_ENV**. Les modes explicites
 `development`, `test` et le proxy de preview ne le démarrent pas. Les commandes
