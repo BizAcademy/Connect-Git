@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
-    "start": "node --enable-source-maps ./dist/index.mjs",
+    "start": "NODE_ENV=${NODE_ENV:-production} node --enable-source-maps ./dist/index.mjs",
+    "sabito:check": "node ./dist/scripts/check-sabito-connection.mjs",
+    "sabito:start": "NODE_ENV=${NODE_ENV:-production} node ./dist/scripts/sabito-supervisor.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "migrate:mysql": "pnpm run build && node ./dist/scripts/migrate-mysql.mjs",
     "import:supabase-users": "node ./scripts/import-supabase-users.mjs",

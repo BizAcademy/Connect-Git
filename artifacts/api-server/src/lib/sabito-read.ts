@@ -10,8 +10,8 @@ export interface SabitoJob {
 export type Row = Record<string, unknown>;
 export type Scalar = string | number | boolean | null;
 export type SabitoResult = {
-  status: "ok" | "success" | "pending" | "confirmed" | "failed" |
-    "not_found" | "active" | "inactive" | "forbidden" | "error";
+  status: "ok" | "pending" | "confirmed" | "failed" |
+    "not_found" | "forbidden" | "error";
   data?: Record<string, Scalar>;
 };
 export type SabitoRead = (sql: string, params: string[], signal?: AbortSignal) => Promise<Row[]>;

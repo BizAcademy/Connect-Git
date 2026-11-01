@@ -49,14 +49,16 @@ cat > dist-deploy/api-server/package.json << 'EOF'
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node --enable-source-maps index.mjs",
+    "start": "NODE_ENV=${NODE_ENV:-production} node --enable-source-maps index.mjs",
+    "sabito:check": "node scripts/check-sabito-connection.mjs",
+    "sabito:start": "NODE_ENV=${NODE_ENV:-production} node scripts/sabito-supervisor.mjs",
     "import:supabase-users": "node scripts/import-supabase-users.mjs",
     "import:supabase-history": "node scripts/import-supabase-history.mjs",
     "migrate:mysql": "node scripts/migrate-mysql.mjs",
     "migrate:account-emails": "node scripts/migrate-mysql.mjs --from=008 --to=012"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=21"
   }
 }
 EOF

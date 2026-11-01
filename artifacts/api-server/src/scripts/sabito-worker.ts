@@ -3,6 +3,7 @@ import { createSabitoHandlers } from "../lib/sabito-handlers";
 import { getMysqlPool, closeMysqlPool } from "../lib/mysql";
 import type { PoolConnection, RowDataPacket } from "mysql2/promise";
 import { setTimeout as delay } from "node:timers/promises";
+import { diagnosticCode } from "../lib/sabito-diagnostics";
 
 const controller = new AbortController();
 const notify = (message: Record<string, unknown>) => {
@@ -19,6 +20,9 @@ let heartbeat: NodeJS.Timeout | undefined;
 const LOCK = "buzzbooster:sabito:connector";
 let phase: "configuration" | "database" | "sdk" = "configuration";
 try {
+  if (Number(process.versions.node.split(".")[0]) < 21) {
+    throw Object.assign(new Error("Unsupported runtime"), { code: "NODE_21_REQUIRED" });
+  }
   const url = new URL(process.env.SABITO_URL ?? "");
   if (
     url.protocol !== "https:" || url.pathname !== "/" || url.username || url.password ||
@@ -54,7 +58,13 @@ try {
     globalThis.fetch = async (input, init) => {
       const target = new URL(input instanceof Request ? input.url : String(input));
       try {
-        const response = await originalFetch(input, init);
+        const sabitoRequest = target.origin === url.origin && target.pathname.startsWith("/v1/backend/jobs/");
+        const response = await originalFetch(input, sabitoRequest ? {
+          ...init, redirect: "error",
+          signal: AbortSignal.any([
+            controller.signal, AbortSignal.timeout(60_000), ...(init?.signal ? [init.signal] : []),
+          ]),
+        } : init);
         if (target.origin === url.origin && target.pathname === "/v1/backend/jobs/poll") {
           if (response.status !== lastHttp || Date.now() - lastPoll >= 30_000) {
             notify({ event: "poll", http: response.status });
@@ -72,9 +82,9 @@ try {
           notify({ event: "delivery", http: response.status });
         }
         return response;
-      } catch {
+      } catch (error) {
         if (!controller.signal.aborted && lastHttp !== 0) {
-          notify({ event: "poll", http: 0, code: "NETWORK_OR_TLS_FAILURE" }); lastHttp = 0;
+          notify({ event: "poll", http: 0, code: diagnosticCode(error, "NETWORK_OR_TLS_FAILURE") }); lastHttp = 0;
         }
         throw new Error("SABITO_TRANSPORT_ERROR");
       }
@@ -106,7 +116,7 @@ try {
     "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND", "ER_ACCESS_DENIED_ERROR", "ER_BAD_DB_ERROR",
   ]);
   const candidate = error && typeof error === "object" && "code" in error ? String(error.code) : "";
-  const code = phase === "configuration" ? "CONFIGURATION_INVALID" :
+  const code = candidate === "NODE_21_REQUIRED" ? candidate : phase === "configuration" ? "CONFIGURATION_INVALID" :
     phase === "database" ? (databaseCodes.has(candidate) ? candidate : "DATABASE_UNAVAILABLE") :
     "CONNECTOR_RUNTIME_FAILURE";
   notify({ event: "fatal", code });

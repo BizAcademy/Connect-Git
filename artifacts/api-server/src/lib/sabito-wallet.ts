@@ -15,10 +15,12 @@ const movementLabels: Record<string, string> = {
   referral_referrer_bonus: "Commission de parrainage", referral_referred_bonus: "Bonus de filleul",
   admin_adjustment: "Ajustement du solde par l’administration",
 };
-export async function walletMovementStatus(ctx: ReadContext): Promise<SabitoResult> {
+export async function walletMovementStatus(ctx: ReadContext, requiredType?: "admin_adjustment"): Promise<SabitoResult> {
   const reference = field(ctx.job, "movement_number");
   if (!reference) return answer("error", "Référence du mouvement requise.");
-  const type = field(ctx.job, "movement_type");
+  const requestedType = field(ctx.job, "movement_type");
+  if (requiredType && requestedType && requestedType !== requiredType) return { status: "error" };
+  const type = requiredType || requestedType;
   if (type && !Object.hasOwn(movementLabels, type)) return { status: "error" };
   const rows = await ctx.read(`SELECT id, amount_minor, currency, type, created_at, reference_id
     FROM wallet_transactions WHERE user_id=? AND (id=? OR reference_id=?)${type ? " AND type=?" : ""} LIMIT 2`,

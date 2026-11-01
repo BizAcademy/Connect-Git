@@ -28,6 +28,7 @@ Slug produit : `buzzbooster`. Supprimer/désactiver l'intention
 | bonus de bienvenue du filleul ; mon bonus reçu comme filleul | Le bonus du filleul doit être enregistré sur son propre compte. | Voulez-vous consulter votre bonus de filleul ? | `referral_number` facultatif | `referee_bonus_status` | État : {statut}. {details_transaction} Montant : {montant} {devise}. |
 | mon solde ; solde USD ; solde local | Les portefeuilles local et USD sont distincts. | Voulez-vous consulter vos deux soldes ? | Aucun | `wallet_balance` | État : {statut}. Local : {solde_local} {devise_local}. USD : {solde_usd} {devise_usd}. {details_transaction} |
 | pourquoi mon solde a diminué ; vérifier un débit ; identifier un crédit ; ajustement du solde | Un changement de solde doit être expliqué par un mouvement enregistré. | Voulez-vous consulter ce mouvement précis ? | `movement_number` ; `movement_type` pour lever une ambiguïté | `wallet_movement_status` | État : {statut}. {details_transaction} Sens : {sens}. Montant : {montant} {devise}. Référence : {reference}. |
+| vérifier un ajustement administrateur ; correction manuelle du solde | Un ajustement doit correspondre à un mouvement déjà enregistré sur votre propre compte. | Voulez-vous consulter cet ajustement précis ? | `movement_number` ; ne pas demander le téléphone ni un identifiant d’administrateur | `admin_adjustment_status` | État : {statut}. {details_transaction} Sens : {sens}. Montant : {montant} {devise}. Date : {date}. Référence : {reference}. |
 
 Les déclencheurs ne doivent pas être réduits à « paiement », « bonus » ou
 « problème » seuls : ils confondraient plusieurs opérations.
@@ -51,6 +52,9 @@ Les déclencheurs ne doivent pas être réduits à « paiement », « bonus » o
   `referral_referrer_bonus`, `referral_referred_bonus`, `admin_adjustment`.
 - `referral_number` : référence de la récompense du membre. Ne pas demander
   le compte ou le paiement d'un filleul pour retrouver sa propre commission.
+- `admin_adjustment_status` accepte `movement_number` comme référence exacte du
+  mouvement ou de son opération. Il impose `type=admin_adjustment` ; un autre
+  `movement_type` est refusé. Il ne crée ni ne modifie aucun ajustement.
 - Une valeur `null` signifie indisponible/non enregistrée, pas zéro.
   Ne pas afficher « null » littéralement : adapter le modèle de réponse ou
   garder `{statut}` et `{details_transaction}` quand un champ est absent.

@@ -27,6 +27,7 @@ import { loadUsdRatesAtStartup } from "./routes/admin";
 import { validateMailtrapConfig } from "./lib/mailtrap-notification-client";
 import { startNotificationWorker } from "./lib/notification-outbox";
 import { startSabitoSupervisor } from "./lib/sabito-supervisor";
+import { shouldStartSabito } from "./lib/sabito-runtime";
 import { fileURLToPath } from "node:url";
 
 // PORT detection :
@@ -39,7 +40,7 @@ import { fileURLToPath } from "node:url";
 // incompletely. A completely absent integration does not prevent BizPanel
 // from serving its unrelated payment and account flows.
 validateMailtrapConfig();
-if (!livePreviewProxyEnabled && process.env.NODE_ENV === "production") {
+if (shouldStartSabito(process.env.NODE_ENV, livePreviewProxyEnabled)) {
   startSabitoSupervisor(fileURLToPath(new URL("./scripts/sabito-worker.mjs", import.meta.url)));
 }
 

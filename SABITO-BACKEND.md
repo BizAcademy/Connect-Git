@@ -2,6 +2,95 @@
 
 ## Périmètre métier
 
+Le connecteur expose désormais **dix** opérations, dont
+`admin_adjustment_status`, qui consulte uniquement les écritures
+`wallet_transactions.type=admin_adjustment` du membre. Champs :
+`movement_number` requis ; `movement_type` facultatif mais doit être
+`admin_adjustment` s’il est fourni. Montant, sens, devise et date sont lus
+dans l’écriture existante ; aucune note interne ni identité du personnel
+n’est renvoyée.
+
+## Démarrage production et diagnostic
+
+Le point d’entrée de l’API démarre le superviseur en production **et lorsque
+Passenger lance directement le serveur sans NODE_ENV**. Les modes explicites
+`development`, `test` et le proxy de preview ne le démarrent pas. Les commandes
+`start` prennent désormais `production` par défaut, sans écraser un mode
+explicitement fourni. Le bundle de déploiement exige Node.js **21 minimum**
+(Node.js 22/24 conseillé).
+
+Après le push et **Pull Now → Deploy Now → Restart Now**, exécuter dans le
+Shell **du serveur Cybrancy**, depuis la racine du dépôt, avec les variables
+serveur existantes disponibles dans ce processus :
+
+```bash
+node dist-deploy/api-server/scripts/check-sabito-connection.mjs
+```
+
+Ne pas exécuter une commande qui imprime l’environnement. La sonde ne demande
+aucune tâche (`operations: []`), ne lit aucune donnée membre et ne journalise
+ni l’URL, ni un en-tête, ni un corps de réponse. Elle contrôle :
+
+- Node et configuration HTTPS ;
+- authentification Basic : `HTTPS_AUTH_OK_NO_OPERATIONS` avec HTTP 200 ;
+- connexion MySQL : `DATABASE_REACHABLE` ;
+- accessibilité des colonnes nécessaires avec `SELECT ... LIMIT 0`.
+
+Un échec conserve son étape et un code sûr, par exemple `ECONNREFUSED`,
+`ETIMEDOUT`, `ER_ACCESS_DENIED_ERROR`, `ER_BAD_FIELD_ERROR` ou HTTP 401/403.
+`CHECKS_OK_MEMBER_TEST_REQUIRED` ne signifie **pas** qu’une vérification métier
+réelle a réussi.
+
+### Processus persistant si l’hébergement met Passenger en veille
+
+Un serveur HTTP suspendu par l’hébergeur ne peut pas garantir un connecteur
+permanent. Si Cybrancy autorise un gestionnaire de processus toujours actif,
+le fichier optionnel `ecosystem.sabito.config.cjs` lance le superviseur séparé,
+sans lancer les scanners de paiements de l’API et sans contenir de secrets :
+
+```bash
+# Seulement si PM2 est déjà disponible et pris en charge sur cet hébergement :
+pm2 start ecosystem.sabito.config.cjs
+pm2 save
+```
+
+PM2 doit être lancé avec le même environnement serveur existant que l’application
+(les variables de l’interface Passenger ne sont pas nécessairement héritées par
+le Shell). Ne pas recopier de clés dans le fichier de configuration.
+Le redémarrage après reboot exige aussi le service de démarrage PM2 du serveur :
+`pm2 save` seul ne crée pas ce service. Sa configuration dépend des droits et
+du gestionnaire d’hébergement ; elle ne peut pas être confirmée depuis Replit.
+
+Après un déploiement ultérieur, si ce service dédié est utilisé :
+
+```bash
+pm2 restart ecosystem.sabito.config.cjs --update-env
+```
+
+Le verrou partagé MySQL conserve un seul consommateur actif même si les
+superviseurs API et dédié coexistent. Le redémarrage couvre les sorties **et
+les erreurs de création du processus enfant**, avec temporisation.
+Les appels SDK sont bornés à 60 secondes et ne suivent pas de redirection.
+
+Le consommateur Replit a été arrêté et son workflow local retiré :
+l’aperçu ne doit pas prendre les tâches destinées à la production.
+
+### Preuve métier après déploiement
+
+1. Vérifier dans les logs `ready/DATABASE_READY`, puis `poll` HTTP 200.
+2. Confirmer l’état connecté du canal dans l’administration Sabito.
+3. Avec un membre autorisé, demander le statut d’un dépôt existant (Mobile Money
+   et crypto selon disponibilité) et comparer avec son historique réel.
+4. Vérifier les logs `verification` puis `delivery` réussie, sans identifiants
+   ni données personnelles.
+5. Avec ce même membre, utiliser une référence de transaction d’un autre membre :
+   `not_found` / `forbidden`, sans détail de cette transaction.
+6. Un essai ne doit pas modifier le solde, déclencher un crédit ou créer un
+   nouveau paiement. Ne pas tester en initiant un paiement réel.
+
+L’accès à Cybrancy et aux sessions membres n’étant pas disponible ici, ces preuves
+ne doivent jamais être annoncées comme obtenues à partir des seules sondes.
+
 Buzz Booster est une application SMM : dépôts, commandes de boost et parrainage.
 Il n'existe pas d'activation de compte à vérifier par Sabito ni de service de
 retrait. Les contrôles de session, de compte désactivé et de vérification e-mail
@@ -25,6 +114,7 @@ Ne jamais afficher leurs valeurs dans Git, les logs ou le navigateur.
 | `referee_bonus_status` | Bonus du membre en tant que filleul et son propre mouvement | `referral_number` facultatif |
 | `wallet_balance` | Solde local interne et solde USD du profil | Aucun |
 | `wallet_movement_status` | Mouvement précis dans le journal du membre | `movement_number`, `movement_type` facultatif |
+| `admin_adjustment_status` | Ajustement administrateur déjà inscrit dans le journal du membre, sans notes internes | `movement_number` ; type imposé `admin_adjustment` |
 
 `account_activation` et `withdrawal_status` ne sont pas annoncés.
 La liste des opérations du poller et celle autorisée dans les logs partagent
@@ -122,8 +212,8 @@ Vérifier les origines exactes dans Sabito pour le mode membre et le visiteur.
 Depuis la racine du dépôt importé :
 
 ```sh
-node --test artifacts/api-server/tests/sabito-backend.test.mjs artifacts/api-server/tests/sabito-session.test.mjs artifacts/api-server/tests/sabito-visibility.test.mjs
-pnpm --filter @workspace/api-server run typecheck
+node --test artifacts/api-server/tests/sabito-backend.test.mjs artifacts/api-server/tests/sabito-diagnostics.test.mjs artifacts/api-server/tests/sabito-session.test.mjs artifacts/api-server/tests/sabito-visibility.test.mjs
+pnpm --filter @workspace/api-server exec tsc --noEmit
 pnpm --filter @workspace/api-server run build
 ```
 

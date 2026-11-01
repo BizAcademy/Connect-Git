@@ -24382,7 +24382,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path = __require("path");
-        const outputDir = "/tmp/buzzbooster-sabito-push.4zKEem/Connect-Git/artifacts/api-server/dist";
+        const outputDir = "/tmp/buzzbooster-sabito-push.DumPvJ/Connect-Git/artifacts/api-server/dist";
         return path.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -25086,10 +25086,12 @@ var movementLabels = {
   referral_referred_bonus: "Bonus de filleul",
   admin_adjustment: "Ajustement du solde par l\u2019administration"
 };
-async function walletMovementStatus(ctx) {
+async function walletMovementStatus(ctx, requiredType) {
   const reference = field(ctx.job, "movement_number");
   if (!reference) return answer("error", "R\xE9f\xE9rence du mouvement requise.");
-  const type = field(ctx.job, "movement_type");
+  const requestedType = field(ctx.job, "movement_type");
+  if (requiredType && requestedType && requestedType !== requiredType) return { status: "error" };
+  const type = requiredType || requestedType;
   if (type && !Object.hasOwn(movementLabels, type)) return { status: "error" };
   const rows = await ctx.read(
     `SELECT id, amount_minor, currency, type, created_at, reference_id
@@ -25161,13 +25163,42 @@ function createSabitoHandlers(query = databaseRead, providerRead = providerStatu
     referral_reward_status: guard((ctx) => referralRewardStatus(ctx, false)),
     referee_bonus_status: guard((ctx) => referralRewardStatus(ctx, true)),
     wallet_balance: guard(walletBalance),
-    wallet_movement_status: guard(walletMovementStatus)
+    wallet_movement_status: guard(walletMovementStatus),
+    admin_adjustment_status: guard((ctx) => walletMovementStatus(ctx, "admin_adjustment"))
     // No account_activation (not a Buzz Booster feature) or withdrawal_status.
   };
 }
 
 // src/scripts/sabito-worker.ts
 import { setTimeout as delay } from "node:timers/promises";
+
+// src/lib/sabito-diagnostics.ts
+var safeCodes = /* @__PURE__ */ new Set([
+  "ECONNREFUSED",
+  "ETIMEDOUT",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "ECONNRESET",
+  "ER_ACCESS_DENIED_ERROR",
+  "ER_BAD_DB_ERROR",
+  "ER_BAD_FIELD_ERROR",
+  "ER_NO_SUCH_TABLE",
+  "CERT_HAS_EXPIRED",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE"
+]);
+function diagnosticCode(error, fallback) {
+  let candidate = error;
+  for (let depth = 0; depth < 3 && candidate && typeof candidate === "object"; depth++) {
+    const record = candidate;
+    if (safeCodes.has(String(record.code))) return String(record.code);
+    if (record.name === "TimeoutError" || record.name === "AbortError") return "ETIMEDOUT";
+    candidate = record.cause;
+  }
+  return fallback;
+}
+
+// src/scripts/sabito-worker.ts
 var controller = new AbortController();
 var notify = (message) => {
   if (process.connected) process.send?.({ type: "sabito", ...message });
@@ -25188,6 +25219,9 @@ var heartbeat;
 var LOCK = "buzzbooster:sabito:connector";
 var phase = "configuration";
 try {
+  if (Number(process.versions.node.split(".")[0]) < 21) {
+    throw Object.assign(new Error("Unsupported runtime"), { code: "NODE_21_REQUIRED" });
+  }
   const url = new URL(process.env.SABITO_URL ?? "");
   if (url.protocol !== "https:" || url.pathname !== "/" || url.username || url.password || url.search || url.hash || !process.env.SABITO_CLIENT_ID || !process.env.SABITO_CLIENT_SECRET) throw new Error("CONFIGURATION");
   phase = "database";
@@ -25223,7 +25257,16 @@ try {
     globalThis.fetch = async (input, init) => {
       const target = new URL(input instanceof Request ? input.url : String(input));
       try {
-        const response = await originalFetch(input, init);
+        const sabitoRequest = target.origin === url.origin && target.pathname.startsWith("/v1/backend/jobs/");
+        const response = await originalFetch(input, sabitoRequest ? {
+          ...init,
+          redirect: "error",
+          signal: AbortSignal.any([
+            controller.signal,
+            AbortSignal.timeout(6e4),
+            ...init?.signal ? [init.signal] : []
+          ])
+        } : init);
         if (target.origin === url.origin && target.pathname === "/v1/backend/jobs/poll") {
           if (response.status !== lastHttp || Date.now() - lastPoll >= 3e4) {
             notify({ event: "poll", http: response.status });
@@ -25241,9 +25284,9 @@ try {
           notify({ event: "delivery", http: response.status });
         }
         return response;
-      } catch {
+      } catch (error) {
         if (!controller.signal.aborted && lastHttp !== 0) {
-          notify({ event: "poll", http: 0, code: "NETWORK_OR_TLS_FAILURE" });
+          notify({ event: "poll", http: 0, code: diagnosticCode(error, "NETWORK_OR_TLS_FAILURE") });
           lastHttp = 0;
         }
         throw new Error("SABITO_TRANSPORT_ERROR");
@@ -25282,7 +25325,7 @@ try {
     "ER_BAD_DB_ERROR"
   ]);
   const candidate = error && typeof error === "object" && "code" in error ? String(error.code) : "";
-  const code = phase === "configuration" ? "CONFIGURATION_INVALID" : phase === "database" ? databaseCodes.has(candidate) ? candidate : "DATABASE_UNAVAILABLE" : "CONNECTOR_RUNTIME_FAILURE";
+  const code = candidate === "NODE_21_REQUIRED" ? candidate : phase === "configuration" ? "CONFIGURATION_INVALID" : phase === "database" ? databaseCodes.has(candidate) ? candidate : "DATABASE_UNAVAILABLE" : "CONNECTOR_RUNTIME_FAILURE";
   notify({ event: "fatal", code });
   process.exitCode = 1;
 } finally {

@@ -18,6 +18,7 @@ export function createSabitoHandlers(query: SabitoRead = databaseRead, providerR
     referee_bonus_status: guard(ctx => referralRewardStatus(ctx, true)),
     wallet_balance: guard(walletBalance),
     wallet_movement_status: guard(walletMovementStatus),
+    admin_adjustment_status: guard(ctx => walletMovementStatus(ctx, "admin_adjustment")),
     // No account_activation (not a Buzz Booster feature) or withdrawal_status.
   };
 }

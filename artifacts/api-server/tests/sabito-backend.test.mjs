@@ -138,9 +138,10 @@ function flat(result) {
   assert.ok(!JSON.stringify(result).includes("PRIVATE"));
 }
 
-test("exactly nine implemented operations; no activation or fictitious withdrawals", () => {
+test("exactly ten implemented operations; no activation or fictitious withdrawals", () => {
   const { handlers } = setup();
   assert.deepEqual(Object.keys(handlers), [...SABITO_OPERATIONS]);
+  assert.equal(Object.keys(handlers).length, 10);
   assert.equal(handlers.account_activation, undefined);
   assert.equal(handlers.withdrawal_status, undefined);
 });
@@ -302,6 +303,25 @@ test("precise owned movements expose direction and an approved label, never staf
   assert.equal(r.data.montant, 5);
   flat(r);
   assert.equal((await f.handlers.wallet_movement_status(job({ movement_number: "foreign" }))).status, "not_found");
+});
+test("dedicated admin adjustment reads only the member's recorded adjustments", async () => {
+  const f = setup(d => {
+    Object.assign(d.movements[0], { type: "admin_adjustment", amount_minor: -500, note: "PRIVATE", actor: "PRIVATE" });
+    d.movements.push({ ...d.movements[0], id: "foreign-adjustment", user_id: "member-B" });
+  });
+  const result = await f.handlers.admin_adjustment_status(job({ movement_number: "movement-A" }));
+  assert.equal(result.status, "confirmed");
+  assert.equal(result.data.montant, 5);
+  assert.equal(result.data.sens, "débit");
+  flat(result);
+  assert.equal((await f.handlers.admin_adjustment_status(job({ movement_number: "foreign-adjustment" }))).status, "not_found");
+  assert.equal((await setup().handlers.admin_adjustment_status(job({ movement_number: "movement-A" }))).status, "not_found");
+  assert.equal((await f.handlers.admin_adjustment_status(job({ movement_number: "movement-A", movement_type: "deposit" }))).status, "error");
+  const ambiguous = setup(d => {
+    d.movements[0].type = "admin_adjustment";
+    d.movements.push({ ...d.movements[0], id: "adjustment-B" });
+  });
+  assert.equal((await ambiguous.handlers.admin_adjustment_status(job({ movement_number: "payment-A" }))).status, "error");
 });
 test("all operations reject revoked business access, invalid identities and database errors without writes", async () => {
   for (const user of [null, { id: "member-A", disabled_at: now }, { id: "member-A", disabled_at: null, email_verified_at: null }]) {

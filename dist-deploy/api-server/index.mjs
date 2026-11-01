@@ -31309,7 +31309,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path7 = __require("path");
-        const outputDir = "/tmp/buzzbooster-sabito-push.4zKEem/Connect-Git/artifacts/api-server/dist";
+        const outputDir = "/tmp/buzzbooster-sabito-push.DumPvJ/Connect-Git/artifacts/api-server/dist";
         return path7.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -95810,7 +95810,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-11-01T02:48:34.233Z";
+var BUILD_TIME = "2026-11-01T03:14:11.155Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -104035,14 +104035,15 @@ var SABITO_OPERATIONS = [
   "referral_reward_status",
   "referee_bonus_status",
   "wallet_balance",
-  "wallet_movement_status"
+  "wallet_movement_status",
+  "admin_adjustment_status"
 ];
 
 // src/lib/sabito-supervisor.ts
 var running2 = false;
 var EVENTS = /* @__PURE__ */ new Set(["ready", "poll", "delivery", "verification", "database", "waiting", "sdk", "fatal"]);
 var OPS = new Set(SABITO_OPERATIONS);
-var STATUSES = /* @__PURE__ */ new Set(["active", "inactive", "pending", "confirmed", "failed", "ok", "forbidden", "not_found", "error"]);
+var STATUSES = /* @__PURE__ */ new Set(["pending", "confirmed", "failed", "ok", "forbidden", "not_found", "error"]);
 function startSabitoSupervisor(workerFile) {
   if (running2) return;
   running2 = true;
@@ -104058,6 +104059,7 @@ function startSabitoSupervisor(workerFile) {
       // exception can reach the parent logs. Only allowlisted IPC fields.
       stdio: ["ignore", "ignore", "ignore", "ipc"]
     });
+    let ended = false;
     child.on("message", (message) => {
       if (!message || typeof message !== "object") return;
       const m = message;
@@ -104070,14 +104072,20 @@ function startSabitoSupervisor(workerFile) {
       if (m.event === "poll" && m.http === 200) failures = 0;
       logger.info(safe, "Sabito connector");
     });
-    child.once("error", () => logger.warn({ code: "CHILD_START_FAILED" }, "Sabito connector"));
-    child.once("exit", () => {
+    const restart = () => {
+      if (ended) return;
+      ended = true;
       child = void 0;
       if (stopped) return;
       const delayMs = Math.min(6e4, 2e3 * 2 ** Math.min(failures++, 5));
       logger.warn({ code: "CHILD_RESTART", delayMs }, "Sabito connector");
       retry = setTimeout(launch, delayMs);
+    };
+    child.once("error", () => {
+      logger.warn({ code: "CHILD_START_FAILED" }, "Sabito connector");
+      restart();
     });
+    child.once("exit", restart);
   }
   const stop = () => {
     stopped = true;
@@ -104099,6 +104107,11 @@ function startSabitoSupervisor(workerFile) {
   launch();
 }
 
+// src/lib/sabito-runtime.ts
+function shouldStartSabito(nodeEnv, previewProxyEnabled) {
+  return !previewProxyEnabled && nodeEnv !== "development" && nodeEnv !== "test";
+}
+
 // src/index.ts
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 process.on("uncaughtException", (err) => {
@@ -104110,7 +104123,7 @@ process.on("unhandledRejection", (reason) => {
   process.exit(1);
 });
 validateMailtrapConfig();
-if (!livePreviewProxyEnabled && process.env.NODE_ENV === "production") {
+if (shouldStartSabito(process.env.NODE_ENV, livePreviewProxyEnabled)) {
   startSabitoSupervisor(fileURLToPath2(new URL("./scripts/sabito-worker.mjs", import.meta.url)));
 }
 var rawPort = process.env["PORT"];

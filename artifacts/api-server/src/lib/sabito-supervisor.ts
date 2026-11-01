@@ -5,7 +5,7 @@ import { SABITO_OPERATIONS } from "./sabito-operations";
 let running = false;
 const EVENTS = new Set(["ready", "poll", "delivery", "verification", "database", "waiting", "sdk", "fatal"]);
 const OPS = new Set<string>(SABITO_OPERATIONS);
-const STATUSES = new Set(["active", "inactive", "pending", "confirmed", "failed", "ok", "forbidden", "not_found", "error"]);
+const STATUSES = new Set(["pending", "confirmed", "failed", "ok", "forbidden", "not_found", "error"]);
 
 /** One child per API process; the DB named lock elects one connector globally. */
 export function startSabitoSupervisor(workerFile: string) {
@@ -23,6 +23,7 @@ export function startSabitoSupervisor(workerFile: string) {
       // exception can reach the parent logs. Only allowlisted IPC fields.
       stdio: ["ignore", "ignore", "ignore", "ipc"],
     });
+    let ended = false;
     child.on("message", (message: unknown) => {
       if (!message || typeof message !== "object") return;
       const m = message as Record<string, unknown>;
@@ -35,14 +36,20 @@ export function startSabitoSupervisor(workerFile: string) {
       if (m.event === "poll" && m.http === 200) failures = 0;
       logger.info(safe, "Sabito connector");
     });
-    child.once("error", () => logger.warn({ code: "CHILD_START_FAILED" }, "Sabito connector"));
-    child.once("exit", () => {
+    const restart = () => {
+      if (ended) return;
+      ended = true;
       child = undefined;
       if (stopped) return;
       const delayMs = Math.min(60_000, 2000 * 2 ** Math.min(failures++, 5));
       logger.warn({ code: "CHILD_RESTART", delayMs }, "Sabito connector");
       retry = setTimeout(launch, delayMs);
+    };
+    child.once("error", () => {
+      logger.warn({ code: "CHILD_START_FAILED" }, "Sabito connector");
+      restart();
     });
+    child.once("exit", restart);
   }
   const stop = () => {
     stopped = true;
