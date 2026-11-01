@@ -2,7 +2,7 @@
 
 ## Périmètre métier
 
-Le connecteur expose désormais **dix** opérations, dont
+Le connecteur expose désormais **douze** opérations, dont
 `admin_adjustment_status`, qui consulte uniquement les écritures
 `wallet_transactions.type=admin_adjustment` du membre. Champs :
 `movement_number` requis ; `movement_type` facultatif mais doit être
@@ -159,6 +159,8 @@ Ne jamais afficher leurs valeurs dans Git, les logs ou le navigateur.
 | `wallet_balance` | Solde local interne et solde USD du profil | Aucun |
 | `wallet_movement_status` | Mouvement précis dans le journal du membre | `movement_number`, `movement_type` facultatif |
 | `admin_adjustment_status` | Ajustement administrateur déjà inscrit dans le journal du membre, sans notes internes | `movement_number` ; type imposé `admin_adjustment` |
+| `service_catalog` | Catalogue fournisseur actuel, prix publics indicatifs et statistiques anonymes | Recherche, quantité, budget XAF, tri et pagination ; voir `SABITO-CATALOGUE.md` |
+| `service_recommendations` | Comparaison selon besoin, popularité, terminaisons ou fiabilité statistique | Même contrat ; voir `SABITO-CATALOGUE.md` et configurer aussi les intentions dans Sabito |
 
 `account_activation` et `withdrawal_status` ne sont pas annoncés.
 La liste des opérations du poller et celle autorisée dans les logs partagent

@@ -95814,7 +95814,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-11-01T12:19:04.119Z";
+var BUILD_TIME = "2026-11-01T15:34:44.271Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -103399,7 +103399,9 @@ var SABITO_OPERATIONS = [
   "referee_bonus_status",
   "wallet_balance",
   "wallet_movement_status",
-  "admin_adjustment_status"
+  "admin_adjustment_status",
+  "service_catalog",
+  "service_recommendations"
 ];
 
 // src/lib/sabito-supervisor.ts

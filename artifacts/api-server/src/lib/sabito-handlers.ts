@@ -2,11 +2,13 @@ import { createGuard, databaseRead, type SabitoRead } from "./sabito-read";
 import { depositStatus, depositBonusStatus } from "./sabito-deposits";
 import { orderStatus, orderRefundStatus, providerStatusRead, type ProviderStatusRead } from "./sabito-orders";
 import { referralCode, referralRewardStatus, walletBalance, walletMovementStatus } from "./sabito-wallet";
+import { catalogServices, providerCatalogRead, type CatalogRead } from "./sabito-catalog";
 
 export type { SabitoJob, SabitoRead, SabitoResult } from "./sabito-read";
 export { SABITO_OPERATIONS } from "./sabito-operations";
 
-export function createSabitoHandlers(query: SabitoRead = databaseRead, providerRead: ProviderStatusRead = providerStatusRead) {
+export function createSabitoHandlers(query: SabitoRead = databaseRead, providerRead: ProviderStatusRead = providerStatusRead,
+  catalogRead: CatalogRead = providerCatalogRead) {
   const guard = createGuard(query);
   return {
     deposit_status: guard(depositStatus),
@@ -19,6 +21,8 @@ export function createSabitoHandlers(query: SabitoRead = databaseRead, providerR
     wallet_balance: guard(walletBalance),
     wallet_movement_status: guard(walletMovementStatus),
     admin_adjustment_status: guard(ctx => walletMovementStatus(ctx, "admin_adjustment")),
+    service_catalog: guard(ctx => catalogServices(ctx, catalogRead)),
+    service_recommendations: guard(ctx => catalogServices(ctx, catalogRead, true)),
     // No account_activation (not a Buzz Booster feature) or withdrawal_status.
   };
 }

@@ -4392,7 +4392,9 @@ var SABITO_OPERATIONS = [
   "referee_bonus_status",
   "wallet_balance",
   "wallet_movement_status",
-  "admin_adjustment_status"
+  "admin_adjustment_status",
+  "service_catalog",
+  "service_recommendations"
 ];
 
 // src/lib/sabito-supervisor.ts

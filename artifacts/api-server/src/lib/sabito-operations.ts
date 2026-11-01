@@ -3,4 +3,5 @@ export const SABITO_OPERATIONS = [
   "deposit_status", "order_status", "order_refund_status", "deposit_bonus_status", "referral_code",
   "referral_reward_status", "referee_bonus_status", "wallet_balance", "wallet_movement_status",
   "admin_adjustment_status",
+  "service_catalog", "service_recommendations",
 ] as const;

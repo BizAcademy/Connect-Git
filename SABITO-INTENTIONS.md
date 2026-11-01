@@ -2,6 +2,15 @@
 
 Ces configurations sont **proposées, à valider dans le dashboard Sabito**.
 Aucune intention ni réponse approuvée n'a été créée depuis ce dépôt.
+
+Pour les questions « quels services ? », « quel fournisseur choisir ? »,
+« les plus commandés » ou « les plus terminés », configurer aussi les fonctions
+`service_catalog` et `service_recommendations` décrites dans
+[`SABITO-CATALOGUE.md`](SABITO-CATALOGUE.md). Ce document contient les champs,
+les résultats plats, les règles de classement et les limites à expliquer.
+Ne plus affirmer que le catalogue est inaccessible lorsque ces fonctions ont
+été déclarées et que leur consultation a réussi. Les gardes membre restent
+applicables ; ne pas annoncer une consultation réelle en mode visiteur.
 Slug produit : `buzzbooster`. Supprimer/désactiver l'intention
 `account_activation` et ne pas activer `withdrawal_status`.
 

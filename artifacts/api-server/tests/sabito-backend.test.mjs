@@ -138,10 +138,10 @@ function flat(result) {
   assert.ok(!JSON.stringify(result).includes("PRIVATE"));
 }
 
-test("exactly ten implemented operations; no activation or fictitious withdrawals", () => {
+test("exactly twelve implemented operations; no activation or fictitious withdrawals", () => {
   const { handlers } = setup();
   assert.deepEqual(Object.keys(handlers), [...SABITO_OPERATIONS]);
-  assert.equal(Object.keys(handlers).length, 10);
+  assert.equal(Object.keys(handlers).length, 12);
   assert.equal(handlers.account_activation, undefined);
   assert.equal(handlers.withdrawal_status, undefined);
 });
