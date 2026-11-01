@@ -1,9 +1,10 @@
 import { fork, type ChildProcess } from "node:child_process";
 import { logger } from "./logger";
+import { SABITO_OPERATIONS } from "./sabito-operations";
 
 let running = false;
 const EVENTS = new Set(["ready", "poll", "delivery", "verification", "database", "waiting", "sdk", "fatal"]);
-const OPS = new Set(["account_activation", "deposit_status", "referral_code"]);
+const OPS = new Set<string>(SABITO_OPERATIONS);
 const STATUSES = new Set(["active", "inactive", "pending", "confirmed", "failed", "ok", "forbidden", "not_found", "error"]);
 
 /** One child per API process; the DB named lock elects one connector globally. */

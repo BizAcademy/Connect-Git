@@ -22,7 +22,8 @@ export async function requireUser(req: AuthedRequest, res: Response, next: NextF
          AND (u.email_verified_at IS NOT NULL OR EXISTS (
            SELECT 1 FROM user_roles r WHERE r.user_id=u.id AND r.role='admin'
          ))
-       WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > NOW() LIMIT 1`,
+       WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > NOW()
+         AND u.disabled_at IS NULL LIMIT 1`,
       [hash],
     );
     if (!rows[0]?.user_id) { res.status(401).json({ error: "Session invalide" }); return; }

@@ -35,8 +35,10 @@ await build({
                 return [[hash === "admin-toggle" ? {role:"admin"} : undefined].filter(Boolean)];
               if (!sql.includes("s.revoked_at IS NULL") || !sql.includes("s.expires_at > NOW()"))
                 throw new Error("Authentication must check revocation and expiration");
+              if (!sql.includes("u.disabled_at IS NULL"))
+                throw new Error("Authentication must reject disabled accounts");
               const session = globalThis.__sabitoTestSessions.get(hash);
-              return [[session && !session.revoked && !session.expired ? {user_id:session.userId} : undefined].filter(Boolean)];
+              return [[session && !session.revoked && !session.expired && !session.disabled ? {user_id:session.userId} : undefined].filter(Boolean)];
             }
           }; }` : `export const logger = {warn(){}, error(){}};`,
         loader: "js",
@@ -168,6 +170,7 @@ test("member route checks real auth middleware, origin, body, renewal, errors an
   session("active-B", { userId: "member-B" });
   session("revoked", { userId: "member-A", revoked: true });
   session("expired", { userId: "member-A", expired: true });
+  session("disabled", { userId: "member-A", disabled: true });
   async function request({ token = "active-A", headers = {}, body = "{}" } = {}) {
     return fetch(`${origin}/api/sabito/session`, {
       method: "POST", headers: {
@@ -177,7 +180,7 @@ test("member route checks real auth middleware, origin, body, renewal, errors an
     });
   }
   try {
-    for (const token of [null, "unknown", "revoked", "expired"]) {
+    for (const token of [null, "unknown", "revoked", "expired", "disabled"]) {
       const response = await request({ token });
       assert.equal(response.status, 401);
       assert.equal(response.headers.get("cache-control"), "no-store");

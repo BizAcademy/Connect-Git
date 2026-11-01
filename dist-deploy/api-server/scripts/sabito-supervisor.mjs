@@ -4139,7 +4139,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path = __require("path");
-        const outputDir = "/tmp/buzzbooster-sabito-push.S5wZd9/Connect-Git/artifacts/api-server/dist";
+        const outputDir = "/tmp/buzzbooster-sabito-push.eP1Oko/Connect-Git/artifacts/api-server/dist";
         return path.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -4377,10 +4377,23 @@ var logger = (0, import_pino.default)({
   }
 });
 
+// src/lib/sabito-operations.ts
+var SABITO_OPERATIONS = [
+  "deposit_status",
+  "order_status",
+  "order_refund_status",
+  "deposit_bonus_status",
+  "referral_code",
+  "referral_reward_status",
+  "referee_bonus_status",
+  "wallet_balance",
+  "wallet_movement_status"
+];
+
 // src/lib/sabito-supervisor.ts
 var running = false;
 var EVENTS = /* @__PURE__ */ new Set(["ready", "poll", "delivery", "verification", "database", "waiting", "sdk", "fatal"]);
-var OPS = /* @__PURE__ */ new Set(["account_activation", "deposit_status", "referral_code"]);
+var OPS = new Set(SABITO_OPERATIONS);
 var STATUSES = /* @__PURE__ */ new Set(["active", "inactive", "pending", "confirmed", "failed", "ok", "forbidden", "not_found", "error"]);
 function startSabitoSupervisor(workerFile) {
   if (running) return;

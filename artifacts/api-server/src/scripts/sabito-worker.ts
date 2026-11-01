@@ -83,7 +83,8 @@ try {
     for (const operation of Object.keys(handlers) as (keyof typeof handlers)[]) {
       const original = handlers[operation];
       handlers[operation] = async job => {
-        const result = await original(job);
+        const signal = job.signal ? AbortSignal.any([controller.signal, job.signal]) : controller.signal;
+        const result = await original({ ...job, signal });
         notify({ event: "verification", operation, status: result.status });
         return result;
       };

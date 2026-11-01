@@ -37,6 +37,11 @@ d'invalidation, jamais d'identité, de jeton ou de conversation.
 La route `POST /api/sabito/session` est maintenant implémentée dans
 `artifacts/api-server/src/routes/sabito.ts`.
 
+Le contrôle de session existant refuse aussi les utilisateurs dont
+`users.disabled_at` est renseigné, même si leur cookie n'a pas encore expiré.
+Il conserve les contrôles d'expiration, de révocation et de vérification e-mail
+de la plateforme. Aucun mot de passe ou cookie Buzz Booster n'est envoyé à Sabito.
+
 - Le middleware `requireUser` existant vérifie le cookie `bb_session`, la présence
   du membre, l'expiration et la révocation de la session.
 - La protection CSRF exige un `Origin` identique à celui de la requête serveur,

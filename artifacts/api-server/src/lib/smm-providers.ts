@@ -62,10 +62,15 @@ export async function callProvider(
   providerId: number,
   action: string,
   extra: Record<string, string | number> = {},
+  options?: { signal?: AbortSignal },
 ): Promise<any> {
   const p = getProvider(providerId);
   if (!p || !p.configured) {
     throw new Error(`Fournisseur SMM #${providerId} non configuré`);
+  }
+  if (options) {
+    const url = new URL(p.apiUrl!);
+    if (url.protocol !== "https:" || url.username || url.password) throw new Error("PROVIDER_HTTPS_REQUIRED");
   }
   const body = new URLSearchParams({
     key: p.apiKey!,
@@ -76,7 +81,15 @@ export async function callProvider(
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
+    ...(options ? {
+      signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(8000)]) : AbortSignal.timeout(8000),
+      redirect: "error" as const,
+    } : {}),
   });
+  if (options && !res.ok) {
+    await res.body?.cancel();
+    throw new Error("PROVIDER_STATUS_UNAVAILABLE");
+  }
   const text = await res.text();
   try {
     return JSON.parse(text);

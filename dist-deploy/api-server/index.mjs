@@ -31309,7 +31309,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path7 = __require("path");
-        const outputDir = "/tmp/buzzbooster-sabito-push.S5wZd9/Connect-Git/artifacts/api-server/dist";
+        const outputDir = "/tmp/buzzbooster-sabito-push.eP1Oko/Connect-Git/artifacts/api-server/dist";
         return path7.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -95810,7 +95810,7 @@ function getMysqlPool() {
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
-var BUILD_TIME = "2026-10-28T10:48:22.808Z";
+var BUILD_TIME = "2026-11-01T01:50:26.812Z";
 router.get("/healthz", async (_req, res) => {
   try {
     await getMysqlPool().query("SELECT 1");
@@ -95856,7 +95856,8 @@ async function requireUser(req, res, next) {
          AND (u.email_verified_at IS NOT NULL OR EXISTS (
            SELECT 1 FROM user_roles r WHERE r.user_id=u.id AND r.role='admin'
          ))
-       WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > NOW() LIMIT 1`,
+       WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > NOW()
+         AND u.disabled_at IS NULL LIMIT 1`,
       [hash2]
     );
     if (!rows[0]?.user_id) {
@@ -96040,10 +96041,14 @@ function parseProviderId(v, fallback = 1) {
   if (n === 1 || n === 3 || n === 4 || n === 5) return n;
   return fallback;
 }
-async function callProvider(providerId, action, extra = {}) {
+async function callProvider(providerId, action, extra = {}, options) {
   const p = getProvider(providerId);
   if (!p || !p.configured) {
     throw new Error(`Fournisseur SMM #${providerId} non configur\xE9`);
+  }
+  if (options) {
+    const url = new URL(p.apiUrl);
+    if (url.protocol !== "https:" || url.username || url.password) throw new Error("PROVIDER_HTTPS_REQUIRED");
   }
   const body = new URLSearchParams({
     key: p.apiKey,
@@ -96053,8 +96058,16 @@ async function callProvider(providerId, action, extra = {}) {
   const res = await fetch(p.apiUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString()
+    body: body.toString(),
+    ...options ? {
+      signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(8e3)]) : AbortSignal.timeout(8e3),
+      redirect: "error"
+    } : {}
   });
+  if (options && !res.ok) {
+    await res.body?.cancel();
+    throw new Error("PROVIDER_STATUS_UNAVAILABLE");
+  }
   const text = await res.text();
   try {
     return JSON.parse(text);
@@ -103937,9 +103950,24 @@ function startCryptoDepositScanner() {
 // src/lib/sabito-supervisor.ts
 init_logger();
 import { fork } from "node:child_process";
+
+// src/lib/sabito-operations.ts
+var SABITO_OPERATIONS = [
+  "deposit_status",
+  "order_status",
+  "order_refund_status",
+  "deposit_bonus_status",
+  "referral_code",
+  "referral_reward_status",
+  "referee_bonus_status",
+  "wallet_balance",
+  "wallet_movement_status"
+];
+
+// src/lib/sabito-supervisor.ts
 var running2 = false;
 var EVENTS = /* @__PURE__ */ new Set(["ready", "poll", "delivery", "verification", "database", "waiting", "sdk", "fatal"]);
-var OPS = /* @__PURE__ */ new Set(["account_activation", "deposit_status", "referral_code"]);
+var OPS = new Set(SABITO_OPERATIONS);
 var STATUSES = /* @__PURE__ */ new Set(["active", "inactive", "pending", "confirmed", "failed", "ok", "forbidden", "not_found", "error"]);
 function startSabitoSupervisor(workerFile) {
   if (running2) return;
